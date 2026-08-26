@@ -8,7 +8,7 @@ passed=0 failed=0
 pass() { printf 'PASS: %s\n' "$1"; passed=$((passed + 1)); }
 fail() { printf 'FAIL: %s\n' "$1"; failed=$((failed + 1)); }
 
-jq -r '.plugins[].name' "$ROOT/vendor-lock.json" | sort > "$TMP_ROOT/expected"
+jq -r '.plugins[].name' "$ROOT/.agents/plugins/marketplace.json" | sort > "$TMP_ROOT/expected"
 find "$ROOT/plugins" -path '*/.codex-plugin/plugin.json' -type f -exec jq -r '.name' {} \; | sort > "$TMP_ROOT/actual"
 diff -u "$TMP_ROOT/expected" "$TMP_ROOT/actual" >/dev/null && pass "5 pluginだけを配布" || fail "plugin集合"
 for market in .agents/plugins/marketplace.json .claude-plugin/marketplace.json; do
@@ -22,7 +22,7 @@ while IFS='|' read -r name version rel; do
   else
     fail "$name manifest identity"
   fi
-done < <(jq -r '.plugins[] | [.name,.version,.path] | join("|")' "$ROOT/vendor-lock.json")
+done < <(jq -r '.plugins[] | [.name,.version,(.source.path | ltrimstr("./"))] | join("|")' "$ROOT/.agents/plugins/marketplace.json")
 
 pb="$ROOT/plugins/playbooks/authoring/write-doc"
 cmp -s "$ROOT/shared/playbook/resolve.sh" "$pb/scripts/resolve.sh" && pass "playbook resolver同期" || fail "playbook resolver同期"
