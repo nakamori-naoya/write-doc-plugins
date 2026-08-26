@@ -1,0 +1,21 @@
+# output: 出力形式、保存先、配色。dirは対象repositoryからの相対path。
+# instructions: 各themeの描画規則。paletteはHTML/SVGで使う色。
+version: 1
+output:
+  format: markdown
+  dir: docs
+  theme: auto
+instructions:
+  render:
+    directive: 解決されたformatとthemeに対応する指示を読み、外部参照のない完全な1ファイルを作る
+    themes:
+      dark:
+        directive: 濃紺背景と白文字で固定し、蛍光マーカーを使わない
+        palette: {background: "#060c17", surface: "#0d1828", raised: "#1d2e48", text: "#e8eef7", muted: "#a9b9cf", line: "#5b7aa6", accent: "#82c3ff"}
+        rules: [面を持つ要素へ文字色を明示する, SVGは同じCSS変数を使う, 要点は白太字、キーワードは濃紺チップにする]
+      light:
+        directive: 明色背景と濃色文字で固定する
+        palette: {background: "#f7f9fc", surface: "#edf2f8", text: "#172033", muted: "#5c6c82", line: "#ccd7e6", accent: "#245f9e"}
+      auto:
+        directive: prefers-color-schemeへ追従し、明暗両方のパレットを定義する
+        palette_source: assets/html-shell.html

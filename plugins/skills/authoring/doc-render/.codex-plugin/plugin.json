@@ -1,0 +1,19 @@
+{
+  "name": "doc-render",
+  "version": "0.7.14",
+  "description": "書けたものを媒体へ出す。意味上の役を HTML / Markdown の表現へ写し、上書き防止とアトミックな差し替えで保存する",
+  "author": {
+    "name": "NaoyaNakamori"
+  },
+  "interface": {
+    "displayName": "Doc Render",
+    "shortDescription": "書けたものを媒体へ出す。意味上の役を HTML / Markdown の表現へ写し、上書き防止とアトミックな差し替えで保存する",
+    "longDescription": "書けたものを媒体へ出す。意味上の役を HTML / Markdown の表現へ写し、上書き防止とアトミックな差し替えで保存する",
+    "developerName": "NaoyaNakamori",
+    "category": "Productivity",
+    "capabilities": [
+      "Scripts"
+    ],
+    "defaultPrompt": "doc-renderを使ってこの作業を進めてください。"
+  }
+}

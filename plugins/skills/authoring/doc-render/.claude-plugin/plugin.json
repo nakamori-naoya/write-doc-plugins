@@ -1,0 +1,8 @@
+{
+  "name": "doc-render",
+  "version": "0.7.14",
+  "description": "書けたものを媒体へ出す。意味上の役を HTML / Markdown の表現へ写し、上書き防止とアトミックな差し替えで保存する",
+  "author": {
+    "name": "NaoyaNakamori"
+  }
+}

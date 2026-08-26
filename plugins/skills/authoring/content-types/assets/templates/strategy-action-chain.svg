@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" role="img" aria-labelledby="title desc">
+  <title id="title">弱い環から価値と学習へつながる行動の鎖</title>
+  <desc id="desc">弱い環へ最初に働きかけ、その成果が次の行動を可能にし、価値提供から得た学習を前段へ戻す流れのテンプレート図。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12Z" fill="#53627a"/></marker>
+    <marker id="return-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12Z" fill="#247a4b"/></marker>
+  </defs>
+  <rect width="1400" height="560" rx="28" fill="#f7f8fa"/>
+  <text x="700" y="62" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="30" font-weight="700" fill="#172033">行動の鎖は、前の成果が次を可能にする</text>
+  <rect x="55" y="155" width="270" height="170" rx="20" fill="#fff0ed" stroke="#b6452f" stroke-width="3"/>
+  <text x="190" y="205" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="25" font-weight="700" fill="#8b321f">弱い環</text>
+  <text x="190" y="255" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#172033">〈全体を止める課題〉</text>
+  <rect x="395" y="155" width="270" height="170" rx="20" fill="#edf2ff" stroke="#4169b2" stroke-width="3"/>
+  <text x="530" y="205" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="25" font-weight="700" fill="#2f579c">最初の行動</text>
+  <text x="530" y="255" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#172033">〈最初に変えること〉</text>
+  <rect x="735" y="155" width="270" height="170" rx="20" fill="#edf2ff" stroke="#4169b2" stroke-width="3"/>
+  <text x="870" y="205" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="25" font-weight="700" fill="#2f579c">次の行動</text>
+  <text x="870" y="255" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#172033">〈成果を使って広げる〉</text>
+  <rect x="1075" y="155" width="270" height="170" rx="20" fill="#e8f5ee" stroke="#247a4b" stroke-width="3"/>
+  <text x="1210" y="205" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="25" font-weight="700" fill="#155d39">価値と学習</text>
+  <text x="1210" y="255" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#172033">〈届けて事実を得る〉</text>
+  <path d="M325 240H382" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M665 240H722" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1005 240H1062" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1210 325V415Q1210 455 1170 455H570Q530 455 530 415V340" fill="none" stroke="#247a4b" stroke-width="4" stroke-dasharray="10 8" marker-end="url(#return-arrow)"/>
+  <text x="870" y="490" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="21" font-weight="700" fill="#155d39">得た事実を診断と前の行動へ戻す</text>
+  <text x="700" y="110" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#53627a">まず到達する状態：〈到達すれば次の障害が見える状態〉</text>
+</svg>

@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="720" viewBox="0 0 1400 720" role="img" aria-labelledby="title desc">
+  <title id="title">弱い環から一貫した行動が連なる鎖構造</title>
+  <desc id="desc">購入から救済まで入場権が分断されている弱い環に対し、入場権を一つにし、正規譲渡を成立させ、入場と救済へつなぎ、学習を前の行動へ戻す流れを示す図。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="var(--arrow)"/>
+    </marker>
+  </defs>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #526079;
+      --line: #cbd5e1;
+      --arrow: #475569;
+      --weak: #be123c;
+      --weak-soft: #fff1f2;
+      --step: #0369a1;
+      --step-soft: #e0f2fe;
+      --goal: #047857;
+      --goal-soft: #ecfdf5;
+      --learn: #6d28d9;
+      --learn-soft: #f5f3ff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101827;
+        --surface: #182235;
+        --text: #edf2f7;
+        --muted: #bdc8d8;
+        --line: #445169;
+        --arrow: #aab5c6;
+        --weak: #fb7185;
+        --weak-soft: #421c2a;
+        --step: #38bdf8;
+        --step-soft: #12334a;
+        --goal: #34d399;
+        --goal-soft: #12392f;
+        --learn: #c4b5fd;
+        --learn-soft: #302554;
+      }
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: var(--text); }
+    .heading { font-size: 30px; font-weight: 600; }
+    .node-title { font-size: 20px; font-weight: 600; }
+    .body { font-size: 18px; }
+    .small { font-size: 16px; fill: var(--muted); }
+    .arrow-label { font-size: 15px; fill: var(--muted); }
+  </style>
+
+  <rect width="1400" height="720" fill="var(--bg)" rx="20"/>
+  <text x="60" y="64" class="heading">一貫した行動：弱い環を鎖として強くする</text>
+
+  <rect x="60" y="100" width="1280" height="82" rx="16" fill="var(--weak-soft)" stroke="var(--weak)" stroke-width="2"/>
+  <text x="92" y="133" class="small" fill="var(--weak)">もっとも弱い環</text>
+  <text x="92" y="163" class="node-title">購入、正規譲渡、入場、救済で「現在の入場権」が分断され、同じ根拠から判断できない</text>
+
+  <line x1="270" y1="182" x2="270" y2="236" stroke="var(--arrow)" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="60" y="246" width="360" height="206" rx="18" fill="var(--surface)" stroke="var(--step)" stroke-width="3"/>
+  <circle cx="104" cy="287" r="22" fill="var(--step)"/>
+  <text x="104" y="295" font-size="22" font-weight="600" text-anchor="middle" fill="var(--surface)">1</text>
+  <text x="140" y="295" class="node-title">入場権を一つの根拠にする</text>
+  <text x="92" y="342" class="body">
+    <tspan x="92" dy="0">現在の保有者、正規の移転、</tspan>
+    <tspan x="92" dy="28">利用結果を同じ権利へ積む</tspan>
+  </text>
+  <line x1="92" y1="406" x2="388" y2="406" stroke="var(--line)"/>
+  <text x="92" y="435" class="small">次へ渡すもの：現在の権利状態</text>
+
+  <line x1="420" y1="349" x2="510" y2="349" stroke="var(--arrow)" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="465" y="329" class="arrow-label" text-anchor="middle">だから</text>
+
+  <rect x="520" y="246" width="360" height="206" rx="18" fill="var(--surface)" stroke="var(--step)" stroke-width="3"/>
+  <circle cx="564" cy="287" r="22" fill="var(--step)"/>
+  <text x="564" y="295" font-size="22" font-weight="600" text-anchor="middle" fill="var(--surface)">2</text>
+  <text x="600" y="295" class="node-title">正規に手放し、受け取る</text>
+  <text x="552" y="342" class="body">
+    <tspan x="552" dy="0">成立と同時に古い権利を終え、</tspan>
+    <tspan x="552" dy="28">新しい保有者へ権利を渡す</tspan>
+  </text>
+  <line x1="552" y1="406" x2="848" y2="406" stroke="var(--line)"/>
+  <text x="552" y="435" class="small">次へ渡すもの：確実に移った権利</text>
+
+  <line x1="880" y1="349" x2="970" y2="349" stroke="var(--arrow)" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="925" y="329" class="arrow-label" text-anchor="middle">だから</text>
+
+  <rect x="980" y="246" width="360" height="206" rx="18" fill="var(--surface)" stroke="var(--step)" stroke-width="3"/>
+  <circle cx="1024" cy="287" r="22" fill="var(--step)"/>
+  <text x="1024" y="295" font-size="22" font-weight="600" text-anchor="middle" fill="var(--surface)">3</text>
+  <text x="1060" y="295" class="node-title">入場と救済へつなぐ</text>
+  <text x="1012" y="342" class="body">
+    <tspan x="1012" dy="0">複製を拒み、正当な来場者を</tspan>
+    <tspan x="1012" dy="28">同じ履歴から回復する</tspan>
+  </text>
+  <line x1="1012" y1="406" x2="1308" y2="406" stroke="var(--line)"/>
+  <text x="1012" y="435" class="small">戻すもの：入場・救済で得た事実</text>
+
+  <path d="M1160 452 V500 Q1160 530 1130 530 H270 Q240 530 240 500 V465" fill="none" stroke="var(--learn)" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="530" y="504" width="340" height="52" rx="26" fill="var(--learn-soft)"/>
+  <text x="700" y="537" class="body" text-anchor="middle" fill="var(--learn)">学習を権利の扱いと正規経路へ戻す</text>
+
+  <rect x="120" y="596" width="1160" height="84" rx="18" fill="var(--goal-soft)" stroke="var(--goal)" stroke-width="2"/>
+  <text x="154" y="628" class="small" fill="var(--goal)">まず到達する状態</text>
+  <text x="154" y="660" class="body">限定公演で、正規購入から譲渡、新保有者の入場、問題時の救済までを一つの入場権から説明できる</text>
+</svg>

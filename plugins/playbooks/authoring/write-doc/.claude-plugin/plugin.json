@@ -1,0 +1,9 @@
+{
+  "name": "write-doc",
+  "version": "0.6.0",
+  "description": "資料を1本書く。content-types・writing-rules・visual-guidance・doc-renderを組み合わせる上段プラグイン",
+  "author": {
+    "name": "NaoyaNakamori"
+  },
+  "skills": "./skills"
+}

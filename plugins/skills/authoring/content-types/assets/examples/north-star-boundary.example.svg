@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1080" viewBox="0 0 1100 1080" role="img" aria-labelledby="title desc">
+  <title id="title">電子チケットのプロダクトが担う範囲と判断原則</title>
+  <desc id="desc">プロダクトが担う入場権、所有と利用の変化、判定と救済の根拠を、担わない販売条件、法規制、会場保安、市場全体の取り締まりから区別し、その境界で使う三つの判断原則を示す図。</desc>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #526079;
+      --line: #cbd5e1;
+      --inside: #0369a1;
+      --inside-soft: #e0f2fe;
+      --outside: #9f1239;
+      --outside-soft: #fff1f2;
+      --principle: #6d28d9;
+      --principle-soft: #f5f3ff;
+      --positive: #047857;
+      --negative: #be123c;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101827;
+        --surface: #182235;
+        --text: #edf2f7;
+        --muted: #bdc8d8;
+        --line: #445169;
+        --inside: #38bdf8;
+        --inside-soft: #12334a;
+        --outside: #fb7185;
+        --outside-soft: #421c2a;
+        --principle: #c4b5fd;
+        --principle-soft: #302554;
+        --positive: #34d399;
+        --negative: #fb7185;
+      }
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: var(--text); }
+    .heading { font-size: 30px; font-weight: 600; }
+    .panel-title { font-size: 22px; font-weight: 600; }
+    .principle-title { font-size: 19px; font-weight: 600; }
+    .body { font-size: 17px; }
+    .small { font-size: 15px; fill: var(--muted); }
+  </style>
+
+  <rect width="1100" height="1080" rx="20" fill="var(--bg)"/>
+  <text x="55" y="62" class="heading">プロダクトの責任境界と、境界で使う判断原則</text>
+
+  <rect x="50" y="110" width="475" height="360" rx="20" fill="var(--inside-soft)" stroke="var(--inside)" stroke-width="4"/>
+  <text x="85" y="157" class="panel-title">担う範囲</text>
+  <text x="85" y="190" class="small">入場権を一貫して扱い、説明する</text>
+  <text x="90" y="242" class="body">
+    <tspan x="90" dy="0">入場できる範囲と回数</tspan>
+    <tspan x="90" dy="39">所有者と正規譲渡による変化</tspan>
+    <tspan x="90" dy="39">入場・退場による利用の変化</tspan>
+    <tspan x="90" dy="39">入口の判断と救済の根拠</tspan>
+  </text>
+  <rect x="85" y="409" width="405" height="38" rx="19" fill="var(--surface)"/>
+  <text x="287" y="434" class="small" text-anchor="middle">外部条件を、判定と説明へ矛盾なく反映する</text>
+
+  <rect x="575" y="110" width="475" height="360" rx="20" fill="var(--outside-soft)" stroke="var(--outside)" stroke-width="3"/>
+  <text x="610" y="157" class="panel-title">担わない範囲</text>
+  <text x="610" y="190" class="small">他の責任主体が決め、実施すること</text>
+  <text x="615" y="242" class="body">
+    <tspan x="615" dy="0">イベントの販売条件</tspan>
+    <tspan x="615" dy="39">法令上の転売規制</tspan>
+    <tspan x="615" dy="39">会場の警備や危険物検査</tspan>
+    <tspan x="615" dy="39">不正転売市場全体の取り締まり</tspan>
+    <tspan x="615" dy="39">全来場者を一つの本人確認へ固定すること</tspan>
+  </text>
+
+  <line x1="550" y1="110" x2="550" y2="470" stroke="var(--line)" stroke-width="2" stroke-dasharray="8 8"/>
+  <rect x="478" y="264" width="144" height="48" rx="24" fill="var(--surface)" stroke="var(--principle)" stroke-width="2"/>
+  <text x="550" y="295" class="principle-title" text-anchor="middle">責任の境界</text>
+
+  <text x="55" y="530" class="panel-title">境界で迷ったときの判断原則</text>
+
+  <rect x="50" y="565" width="1000" height="135" rx="18" fill="var(--surface)" stroke="var(--principle)" stroke-width="2"/>
+  <text x="85" y="605" class="principle-title">判断できない来場者への対応</text>
+  <text x="85" y="642" class="small">優先する判断</text>
+  <text x="85" y="674" class="body" fill="var(--positive)">根拠によって正当な権利を回復できる</text>
+  <text x="565" y="642" class="small">選ばない判断</text>
+  <text x="565" y="674" class="body" fill="var(--negative)">判断不能なら例外なく拒否する</text>
+
+  <rect x="50" y="725" width="1000" height="135" rx="18" fill="var(--surface)" stroke="var(--principle)" stroke-width="2"/>
+  <text x="85" y="765" class="principle-title">入口で速さと確かさが衝突するとき</text>
+  <text x="85" y="802" class="small">優先する判断</text>
+  <text x="85" y="834" class="body" fill="var(--positive)">滞留を抑え、後から説明できる判断</text>
+  <text x="565" y="802" class="small">選ばない判断</text>
+  <text x="565" y="834" class="body" fill="var(--negative)">速さのために判定根拠を失う</text>
+
+  <rect x="50" y="885" width="1000" height="135" rx="18" fill="var(--surface)" stroke="var(--principle)" stroke-width="2"/>
+  <text x="85" y="925" class="principle-title">不正対策で本人情報を求めるとき</text>
+  <text x="85" y="962" class="small">優先する判断</text>
+  <text x="85" y="994" class="body" fill="var(--positive)">判断に必要な範囲の情報に限る</text>
+  <text x="565" y="962" class="small">選ばない判断</text>
+  <text x="565" y="994" class="body" fill="var(--negative)">あらゆる本人情報を集め続ける</text>
+
+  <rect x="190" y="1035" width="720" height="30" rx="15" fill="var(--principle-soft)"/>
+  <text x="550" y="1056" class="small" text-anchor="middle">約束した価値に照らし、魅力的でも境界外の責任を引き受けない</text>
+</svg>

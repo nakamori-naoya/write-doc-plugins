@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title desc">
+  <title id="title">基本方針で選ぶことと選ばないこと</title>
+  <desc id="desc">正規購入から救済まで入場権を一続きにする選択と、媒体の置換や入口だけの高速化など資源を配らない選択を比較する図。</desc>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #526079;
+      --line: #cad3df;
+      --chosen: #075985;
+      --chosen-soft: #e0f2fe;
+      --chosen-text: #0c4a6e;
+      --not: #9f1239;
+      --not-soft: #fff1f2;
+      --not-text: #881337;
+      --axis: #4338ca;
+      --axis-soft: #eef2ff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101827;
+        --surface: #182235;
+        --text: #edf2f7;
+        --muted: #bdc8d8;
+        --line: #445169;
+        --chosen: #38bdf8;
+        --chosen-soft: #12334a;
+        --chosen-text: #bae6fd;
+        --not: #fb7185;
+        --not-soft: #421c2a;
+        --not-text: #fecdd3;
+        --axis: #a5b4fc;
+        --axis-soft: #282b57;
+      }
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: var(--text); }
+    .heading { font-size: 30px; font-weight: 600; }
+    .lead { font-size: 21px; font-weight: 600; }
+    .body { font-size: 19px; }
+    .small { font-size: 17px; fill: var(--muted); }
+  </style>
+
+  <rect width="1200" height="650" fill="var(--bg)" rx="20"/>
+  <text x="60" y="66" class="heading">基本方針：資源をどこへ集中するか</text>
+  <text x="60" y="102" class="small">判断軸は「正当な来場者が、取得した権利を最後まで行使できるか」</text>
+
+  <rect x="60" y="140" width="510" height="390" rx="18" fill="var(--surface)" stroke="var(--chosen)" stroke-width="3"/>
+  <rect x="60" y="140" width="510" height="70" rx="18" fill="var(--chosen-soft)"/>
+  <path d="M60 192 V158 Q60 140 78 140 H552 Q570 140 570 158 V192" fill="var(--chosen-soft)"/>
+  <circle cx="102" cy="175" r="17" fill="var(--chosen)"/>
+  <path d="M94 175 l6 7 12 -15" fill="none" stroke="var(--surface)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="132" y="184" class="lead" fill="var(--chosen-text)">選ぶ：入場権を一続きにする</text>
+
+  <text x="100" y="258" class="body">
+    <tspan x="100" dy="0">正規購入 → 正規譲渡 → 入場 → 救済を</tspan>
+    <tspan x="100" dy="29">同じ入場権へつなぐ</tspan>
+  </text>
+  <line x1="100" y1="332" x2="530" y2="332" stroke="var(--line)"/>
+  <text x="100" y="373" class="body">
+    <tspan x="100" dy="0">券面や表示ではなく、現在の権利を</tspan>
+    <tspan x="100" dy="29">判断の正本にする</tspan>
+  </text>
+  <line x1="100" y1="447" x2="530" y2="447" stroke="var(--line)"/>
+  <text x="100" y="488" class="body">正規の経路を通った権利を行使可能にする</text>
+
+  <rect x="630" y="140" width="510" height="390" rx="18" fill="var(--surface)" stroke="var(--not)" stroke-width="2"/>
+  <rect x="630" y="140" width="510" height="70" rx="18" fill="var(--not-soft)"/>
+  <path d="M630 192 V158 Q630 140 648 140 H1122 Q1140 140 1140 158 V192" fill="var(--not-soft)"/>
+  <circle cx="672" cy="175" r="17" fill="var(--not)"/>
+  <path d="M665 168 l14 14 M679 168 l-14 14" stroke="var(--surface)" stroke-width="4" stroke-linecap="round"/>
+  <text x="702" y="184" class="lead" fill="var(--not-text)">選ばない：個別の改善へ分散する</text>
+
+  <text x="670" y="272" class="body">紙を便利な画面へ置き換えるだけ</text>
+  <line x1="670" y1="312" x2="1100" y2="312" stroke="var(--line)"/>
+  <text x="670" y="361" class="body">入口の読取速度だけを上げる</text>
+  <line x1="670" y1="401" x2="1100" y2="401" stroke="var(--line)"/>
+  <text x="670" y="450" class="body">
+    <tspan x="670" dy="0">入場方式の追加、価格最適化、</tspan>
+    <tspan x="670" dy="29">市場全体の監視、一斉展開</tspan>
+  </text>
+
+  <rect x="200" y="565" width="800" height="56" rx="28" fill="var(--axis-soft)"/>
+  <text x="600" y="601" class="lead" text-anchor="middle" fill="var(--axis)">媒体ではなく、正当な入場権が途切れないことを優先する</text>
+</svg>

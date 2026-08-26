@@ -1,0 +1,8 @@
+# rules: 規律名から規律ファイルpathへの対応。{}は同梱既定を使う。
+# extra: 既定規律へ追加する指示。instructionsは適用順序。
+version: 1
+rules: {}
+extra: ""
+instructions:
+  writing:
+    directive: rulesの各ファイルを読み、structure、section、emphasis、styleの順に適用し、citationとannotated-codeを該当時に適用する

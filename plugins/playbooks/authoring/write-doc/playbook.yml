@@ -1,0 +1,69 @@
+# write-doc — 資料を1本書いて保存する。
+#
+# **この playbook は個々の手順を知らない。** 何を、どの順で呼ぶかだけを持つ。
+# 順番を変えたい・工程を差し替えたいときは、
+# <repo>/.harness-plugins/write-doc.config.yml で上書きする。
+version: 2
+name: write-doc
+description: 資料を1本書いて保存する
+instructions:
+  execution:
+    directive: stepsを上から順に実行し、needsを前工程のprovidesから受け取る
+  config:
+    directive: 各工程の解決済みYAMLファイルから必要なinstructionsをプロパティアクセスで読む
+
+# 欠けていたら止める。黙って劣化した結果を出さない。
+requires:
+  - {plugin: content-types, marketplace: write-doc, version: 0.6.2}
+  - {plugin: writing-rules, marketplace: write-doc, version: 0.4.15}
+  - {plugin: visual-guidance, marketplace: write-doc, version: 0.2.0}
+  - {plugin: doc-render, marketplace: write-doc, version: 0.7.14}
+
+# 下段どうしをつなぐ契約。playbook が持つ。
+contract:
+  roles: [要点, キーワード, 一言でいうと, 要約項目]
+  figure_roles: [図の主張, 図の型, 図の内容]
+  figure_requirement: figures_required
+  save_modes: [create, replace-existing-target]
+  output_format_precedence: [caller, doc-render]
+  output_formats: [markdown, html]
+
+# 資料には既定で、主要な主張を理解させる図を最低1つ要求する。
+# 利用者設定で requirements.figures: false とすれば要求しない。
+requirements:
+  figures: true
+
+# stepsは上から実行する。skill/script/playbookは呼ぶ処理、needsは開始条件、
+# providesは完了時に登録する成果物。completionは完了判定、on_failureは失敗時の遷移。
+steps:
+  - id: type
+    skill: pick-content-type
+    purpose: 読み手と目的から型を1つ決め、その骨格を取る
+    provides: [type, template]
+    completion: artifact-set
+    on_failure: stop
+
+  - id: draft
+    skill: write-with-rules
+    purpose: 規律に従って本文を書く。強調は契約の役の名前で置く
+    needs: [type, template]
+    provides: [body, roles_applied]
+    completion: artifact-set
+    on_failure: stop
+
+  - id: visual
+    skill: choose-visual
+    purpose: 主要な主張に合う図を設計する
+    needs: [body]
+    provides: [figures_applied]
+    completion: artifact-set
+    on_failure: stop
+
+  - id: save
+    plugin: doc-render
+    script: scripts/write-doc.sh
+    purpose: 役を媒体の表現へ写し、上書きを防いで保存する
+    needs: [body, roles_applied, figures_applied]
+    provides: [path]
+    completion: artifact-set
+    on_failure: stop

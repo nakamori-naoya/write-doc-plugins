@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="540" viewBox="0 0 1300 540" role="img" aria-labelledby="title desc">
+  <title id="title">プロダクトが担う範囲と担わない範囲</title>
+  <desc id="desc">約束する価値を中心に、プロダクトが担う役割、担わない役割、迷ったときの判断原則を示すテンプレート図。</desc>
+  <rect width="1300" height="540" rx="28" fill="#f7f8fa"/>
+  <text x="650" y="62" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="30" font-weight="700" fill="#172033">約束する価値を守るため、役割の境界を決める</text>
+  <rect x="90" y="130" width="480" height="260" rx="24" fill="#e8f5ee" stroke="#247a4b" stroke-width="3"/><text x="330" y="185" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="27" font-weight="700" fill="#155d39">プロダクトが担う</text><text x="330" y="245" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="21" fill="#172033">〈固有に引き受ける責任〉</text><text x="330" y="300" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#247a4b">判断原則：〈迷ったときの優先〉</text>
+  <rect x="730" y="130" width="480" height="260" rx="24" fill="#f1f2f4" stroke="#697386" stroke-width="3"/><text x="970" y="185" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="27" font-weight="700" fill="#4c5565">プロダクトが担わない</text><text x="970" y="245" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="21" fill="#172033">〈他者へ残す責任〉</text><text x="970" y="300" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#697386">やらないこと：〈境界の外〉</text>
+  <path d="M650 108V415" stroke="#9aa3b2" stroke-width="3" stroke-dasharray="9 9"/>
+  <rect x="300" y="430" width="700" height="64" rx="32" fill="#172033"/><text x="650" y="471" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="22" font-weight="700" fill="#ffffff">中心に置く価値：〈対象者へ守る約束〉</text>
+</svg>

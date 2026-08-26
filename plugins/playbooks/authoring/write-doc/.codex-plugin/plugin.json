@@ -1,0 +1,20 @@
+{
+  "name": "write-doc",
+  "version": "0.6.0",
+  "description": "資料を1本書く。content-types・writing-rules・visual-guidance・doc-renderを組み合わせる上段プラグイン",
+  "skills": "./skills",
+  "author": {
+    "name": "NaoyaNakamori"
+  },
+  "interface": {
+    "displayName": "Write Doc",
+    "shortDescription": "資料を1本書く。content-types・writing-rules・visual-guidance・doc-renderを組み合わせる上段プラグイン",
+    "longDescription": "資料を1本書く。content-types・writing-rules・visual-guidance・doc-renderを組み合わせる上段プラグイン",
+    "developerName": "NaoyaNakamori",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": "write-docを使ってこの作業を進めてください。"
+  }
+}

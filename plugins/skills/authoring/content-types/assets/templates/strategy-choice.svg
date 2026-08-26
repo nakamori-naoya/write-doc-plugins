@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">基本方針で選ぶことと選ばないこと</title>
+  <desc id="desc">診断した最重要課題に対し、資源を集中する対象と、いまは選ばない対象の境界を示すテンプレート図。</desc>
+  <rect width="1200" height="520" rx="28" fill="#f7f8fa"/>
+  <text x="600" y="62" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="30" font-weight="700" fill="#172033">基本方針がつくる選択の境界</text>
+  <rect x="78" y="112" width="470" height="270" rx="22" fill="#e8f5ee" stroke="#247a4b" stroke-width="3"/>
+  <text x="313" y="163" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="27" font-weight="700" fill="#155d39">選ぶこと</text>
+  <text x="313" y="218" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="23" fill="#172033">〈最重要課題へ効く集中先〉</text>
+  <text x="313" y="263" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="21" fill="#435066">活かす強み・変える制約</text>
+  <text x="313" y="320" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="19" fill="#247a4b">ここへ資源と判断を揃える</text>
+  <rect x="652" y="112" width="470" height="270" rx="22" fill="#f1f2f4" stroke="#697386" stroke-width="3"/>
+  <text x="887" y="163" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="27" font-weight="700" fill="#4c5565">いまは選ばないこと</text>
+  <text x="887" y="218" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="23" fill="#172033">〈魅力的でも後回しにする対象〉</text>
+  <text x="887" y="263" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="21" fill="#435066">受け入れる制約・捨てる選択肢</text>
+  <text x="887" y="320" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="19" fill="#697386">集中を守るため境界を明示する</text>
+  <path d="M548 247H652" stroke="#9aa3b2" stroke-width="3" stroke-dasharray="8 8"/>
+  <rect x="250" y="420" width="700" height="62" rx="31" fill="#172033"/>
+  <text x="600" y="460" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="22" font-weight="700" fill="#ffffff">〈この境界によって可能になる一貫した行動〉</text>
+</svg>

@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "upstream": {"repository":"https://github.com/nakamori-naoya/harness-plugins","branch":"main","commit":"10852c3365df0c454160082b1458ca381e5d3dab","copied_at":"2026-08-26"},
+  "plugins": [
+    {"name":"write-doc","version":"0.6.0","path":"plugins/playbooks/authoring/write-doc"},
+    {"name":"content-types","version":"0.6.2","path":"plugins/skills/authoring/content-types"},
+    {"name":"writing-rules","version":"0.4.15","path":"plugins/skills/authoring/writing-rules"},
+    {"name":"visual-guidance","version":"0.2.0","path":"plugins/skills/authoring/visual-guidance"},
+    {"name":"doc-render","version":"0.7.14","path":"plugins/skills/authoring/doc-render"}
+  ],
+  "local_patches": [{"plugin":"write-doc","reason":"schema v2の完全修飾依存契約へ移行する"}]
+}

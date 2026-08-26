@@ -1,0 +1,20 @@
+{
+  "name": "content-types",
+  "version": "0.6.2",
+  "description": "何を書くかを決める。コンテンツタイプ27種のカタログと決定手順、型ごとの読み手・目的・成功条件、テンプレート、記載例",
+  "skills": "./skills",
+  "author": {
+    "name": "NaoyaNakamori"
+  },
+  "interface": {
+    "displayName": "Content Types",
+    "shortDescription": "何を書くかを決める。コンテンツタイプ27種のカタログと決定手順、型ごとの読み手・目的・成功条件、テンプレート、記載例",
+    "longDescription": "何を書くかを決める。コンテンツタイプ27種のカタログと決定手順、型ごとの読み手・目的・成功条件、テンプレート、記載例",
+    "developerName": "NaoyaNakamori",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": "content-typesを使ってこの作業を進めてください。"
+  }
+}

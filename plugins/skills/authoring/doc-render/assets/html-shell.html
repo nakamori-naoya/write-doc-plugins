@@ -1,0 +1,230 @@
+<!doctype html>
+<!-- data-theme は dark / light / auto。auto のときだけ閲覧環境の設定に従う -->
+<html lang="ja" data-theme="{{THEME}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+  /* 明るい配色を基準に置き、dark を上書きで当てる */
+  :root{
+    color-scheme:light;
+    --bg:#f7f9fc; --ink:#172033; --muted:#5c6c82; --line:#ccd7e6;
+    --panel:#edf2f8; --summary-bg:#e3edf8;
+    --accent:#245f9e; --accent2:#397da8; --imp:#b33b48;
+    /* マーカーは下半分だけを塗る。半透明にして文字を潰さない */
+    --mark:rgba(83,145,205,.28); --kw:rgba(72,153,181,.24);
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#060c17; --ink:#e8eef7; --strong:#fff; --muted:#a9b9cf; --line:#5b7aa6; --hair:#2b3e5b;
+    --panel:#0d1828; --summary-bg:#142236; --raised:#1d2e48;
+    --accent:#82c3ff; --accent2:#82c3ff; --imp:#ff97a2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root[data-theme="auto"]{
+      color-scheme:dark;
+      --bg:#060c17; --ink:#e8eef7; --strong:#fff; --muted:#a9b9cf; --line:#5b7aa6; --hair:#2b3e5b;
+      --panel:#0d1828; --summary-bg:#142236; --raised:#1d2e48;
+      --accent:#82c3ff; --accent2:#82c3ff; --imp:#ff97a2;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:2.2rem 1.2rem 4rem; background:var(--bg); color:var(--ink);
+    font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+    line-height:1.9; font-size:16px;
+  }
+  main{max-width:840px; margin:0 auto}
+  h1{font-size:1.7rem; line-height:1.4; margin:0 0 .4rem}
+  h2{font-size:1.25rem; margin:2.6rem 0 .8rem; padding-left:.6rem;
+     border-left:5px solid var(--accent); color:var(--accent)}
+  h3{font-size:1.05rem; margin:1.8rem 0 .6rem; color:var(--accent2)}
+  p,li{overflow-wrap:anywhere}
+  .meta{color:var(--muted); font-size:.86rem; margin:0 0 1.6rem}
+
+  /* 蛍光ペンで引いた線。文字の下半分にだけ色が乗る */
+  mark{
+    background:linear-gradient(transparent 55%, var(--mark) 55%);
+    color:inherit; padding:0 .1em;
+  }
+  /* キーワード用。要点マーカーと色で区別する */
+  mark.kw{
+    background:linear-gradient(transparent 55%, var(--kw) 55%);
+    font-weight:600;
+  }
+  :root[data-theme="dark"] mark{background:none; color:var(--strong); font-weight:600; padding:0; text-decoration:none}
+  :root[data-theme="dark"] mark.kw{background:var(--raised); color:var(--strong); font-weight:700; border-radius:4px; padding:.06em .45em}
+  @media (prefers-color-scheme: dark){
+    :root[data-theme="auto"] mark{background:none; color:var(--strong); font-weight:600; padding:0; text-decoration:none}
+    :root[data-theme="auto"] mark.kw{background:var(--raised); color:var(--strong); font-weight:700; border-radius:4px; padding:.06em .45em}
+  }
+
+  section.summary,section.review{
+    border:1px solid var(--line); border-radius:10px;
+    padding:1.1rem 1.3rem; margin:1.8rem 0;
+  }
+  section.summary{background:var(--summary-bg); color:var(--ink); border-left:5px solid var(--accent)}
+  section.review{background:var(--panel); color:var(--ink); border-left:5px solid var(--accent2)}
+  section.review h2{margin-top:0; border-left:none; padding-left:0; color:var(--accent2)}
+  .hitokoto{
+    font-size:1.05rem; font-weight:700; margin:.2rem 0 .9rem;
+    padding:.7em 1.1em; border:2px dashed var(--accent); border-radius:8px;
+  }
+  .badge{
+    display:inline-block; font-size:.72rem; font-weight:700; padding:.1rem .5rem;
+    border-radius:.25rem; margin-right:.45rem; vertical-align:.08em;
+    color:var(--bg);
+  }
+  .badge.imp{background:var(--imp)}
+  .badge.pt{background:var(--accent2)}
+  ul.structure{list-style:none; padding-left:0}
+  ul.structure li{margin:.55rem 0}
+  ul.structure b{color:var(--accent2); margin-right:.4em}
+  .scroll-x,.tablewrap{overflow-x:auto; margin:1.4rem 0}
+  table{border-collapse:collapse; width:100%; font-size:.93rem}
+  th,td{border:0; border-bottom:1px solid var(--hair,var(--line)); padding:.5rem .7rem; text-align:left; vertical-align:top}
+  th{background:var(--panel); color:var(--accent); white-space:nowrap}
+  td{color:var(--ink)}
+  code{background:var(--panel); color:var(--ink); border:1px solid var(--hair,var(--line)); padding:.1em .35em; border-radius:.2em; font-size:.9em}
+  pre{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:.9rem; overflow-x:auto}
+  pre code{background:none; padding:0}
+  blockquote{margin:1.6rem 1rem; padding:.4em 1.2em; border-left:3px solid var(--line); color:var(--muted)}
+  figure{margin:2rem 0; text-align:center}
+  figure svg,figure img{max-width:100%; height:auto}
+  figcaption{color:var(--muted); font-size:.85rem; margin-top:.5rem; line-height:1.6}
+  a{color:var(--accent)}
+  a:focus-visible,summary:focus-visible{outline:2px solid var(--strong,var(--ink)); outline-offset:2px; border-radius:2px}
+
+  /* --- 注釈つきコード（実装解説の型で使う） --- */
+  .code-listing{border:1px solid var(--line); color:var(--ink); border-radius:10px; overflow:hidden; margin:1.6rem 0}
+  .code-listing-head{
+    display:flex; justify-content:space-between; align-items:center; gap:.6rem; flex-wrap:wrap;
+    padding:.6rem 1rem; background:var(--panel); border-bottom:1px solid var(--line);
+  }
+  .code-listing-head .path a{font-family:ui-monospace,Menlo,monospace; font-size:.8rem; color:var(--muted)}
+  .code-listing-head .tag{
+    font-size:.7rem; font-weight:700; letter-spacing:.04em; padding:.15rem .5rem;
+    border-radius:999px; background:var(--summary-bg); color:var(--accent);
+  }
+  /* 横に長い。ページ全体ではなく、この箱だけを横スクロールさせる */
+  .code-block{overflow-x:auto}
+  table.code-table{width:100%; border-collapse:collapse; font-family:ui-monospace,Menlo,monospace; font-size:.8rem}
+  table.code-table td{padding:.05rem .5rem; white-space:pre; vertical-align:top; border:none}
+  table.code-table td.ln{
+    color:var(--muted); text-align:right; width:1%; padding-right:.9rem;
+    user-select:none;  /* コピーしたときに行番号が混ざらない */
+  }
+  table.code-table tr.blank td{height:.25rem}
+  /* 注釈。コードと違うフォントにして、コードの一部に見えないようにする */
+  table.code-table tr.anno-row td.anno{
+    font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+    font-size:.78rem; line-height:1.6; color:var(--ink);
+    white-space:normal; padding:.4rem .6rem .25rem 1.2rem;
+    background:var(--summary-bg); border-left:3px solid var(--accent);
+  }
+  table.code-table tr.anno-row td.anno b{color:var(--accent)}
+  /* このファイルの責務 */
+  .file-purpose{
+    background:var(--summary-bg); border-left:3px solid var(--accent);
+    border-radius:0 8px 8px 0; padding:.8rem 1.1rem; margin:1.2rem 0 .8rem; font-size:.92rem;
+  }
+  .file-purpose .label{
+    display:block; font-size:.7rem; font-weight:700; letter-spacing:.05em;
+    color:var(--accent); margin-bottom:.3rem;
+  }
+  /* 処理の流れ */
+  .flow{border:1px solid var(--line); border-radius:10px; padding:1rem 1.2rem; margin:1.2rem 0}
+  .flow .step{display:flex; gap:.9rem; align-items:flex-start; padding:.6rem 0; border-bottom:1px dashed var(--line)}
+  .flow .step:last-child{border-bottom:none}
+  .flow .num{
+    flex-shrink:0; width:1.6rem; height:1.6rem; border-radius:50%;
+    background:var(--summary-bg); color:var(--accent);
+    font-size:.75rem; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  /* 参照させるコード。閉じていても path と行数が見える */
+  details.code-listing.appendix > summary{
+    display:flex; justify-content:space-between; align-items:center; gap:.6rem; flex-wrap:wrap;
+    padding:.6rem 1rem; background:var(--panel); cursor:pointer; list-style:revert;
+  }
+  details.code-listing.appendix[open] > summary{border-bottom:1px solid var(--line)}
+  details.code-listing.appendix > summary .path{font-family:ui-monospace,Menlo,monospace; font-size:.8rem; color:var(--muted)}
+  details.code-listing.appendix > summary .tag{
+    font-size:.7rem; font-weight:700; padding:.15rem .5rem;
+    border-radius:999px; background:var(--summary-bg); color:var(--accent);
+  }
+  /* 省略の印。飛ばした行があることを、飛ばした場所で示す */
+  table.code-table tr.elision td{
+    color:var(--muted); font-style:italic; white-space:normal;
+    background:var(--panel); padding:.3rem .6rem;
+  }
+  table.code-table tr.elision td a{color:var(--accent)}
+
+  /* --- 段階ブロック（実行順に読ませるとき） --- */
+  section.stage{
+    border:1px solid var(--line); border-left:5px solid var(--accent2); border-radius:10px;
+    color:var(--ink); padding:1rem 1.3rem 1.2rem; margin:2rem 0;
+  }
+  .stage-head{display:flex; gap:.7rem; align-items:center; margin-bottom:.6rem}
+  .stage-head h3{margin:0}
+  .stage-head .num{
+    flex-shrink:0; width:1.8rem; height:1.8rem; border-radius:50%;
+    background:var(--accent2); color:var(--bg);
+    font-size:.8rem; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  ul.stage-io{
+    list-style:none; padding:.6rem .9rem; margin:.6rem 0 1rem;
+    background:var(--panel); border-radius:8px; font-size:.88rem;
+  }
+  ul.stage-io li{margin:.25rem 0}
+  ul.stage-io b{
+    display:inline-block; min-width:6.5em; color:var(--accent2); font-size:.78rem;
+    margin-right:.5em; vertical-align:top;
+  }
+  p.next{margin:.9rem 0 0; font-size:.9rem; text-align:right}
+  p.next a{font-weight:600}
+
+  /* 変更の区分・重大度 */
+  .chip{
+    display:inline-block; font-size:.7rem; font-weight:700; padding:.12rem .5rem;
+    border-radius:999px; background:var(--panel); color:var(--muted); border:1px solid var(--line);
+  }
+  .chip.new{background:var(--summary-bg); color:var(--accent); border-color:var(--accent)}
+  .chip.removed{color:var(--imp); border-color:var(--imp)}
+  .warn{
+    border:1px solid var(--imp); border-radius:10px; padding:.9rem 1.2rem; margin:1.2rem 0;
+    background:var(--panel);
+  }
+  .warn strong{color:var(--imp)}
+
+  /* --- 資料の末尾に載る静的情報 --- */
+  .doc-meta{
+    margin-top:3rem; padding-top:1.2rem; border-top:2px solid var(--line); font-size:.9rem;
+  }
+  .doc-meta h2{border-left:none; padding-left:0; font-size:1rem; color:var(--muted)}
+  table.doc-meta-table th{
+    background:none; color:var(--muted); white-space:nowrap; width:1%;
+    text-align:left; font-weight:600; border:none; padding:.3rem .9rem .3rem 0;
+  }
+  table.doc-meta-table td{border:none; padding:.3rem 0}
+  .doc-meta .label{
+    display:inline-block; font-size:.75rem; font-family:ui-monospace,Menlo,monospace;
+    padding:.1rem .5rem; margin:.1rem .2rem .1rem 0; border-radius:999px;
+    background:var(--panel); color:var(--accent2); border:1px solid var(--line);
+  }
+
+  /* --- 引用の帰属（出典の書式で使う） --- */
+  blockquote .attribution{
+    display:block; text-align:right; margin-top:.5em; font-size:.85rem; color:var(--muted);
+  }
+  blockquote .attribution a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>{{TITLE}}</h1>
+  <p class="meta">{{META}}</p>
+  {{BODY}}
+</main>
+</body>
+</html>

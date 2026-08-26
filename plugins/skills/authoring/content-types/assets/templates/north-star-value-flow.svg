@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="500" viewBox="0 0 1500 500" role="img" aria-labelledby="title desc">
+  <title id="title">対象から望む状態まで価値が届く流れ</title>
+  <desc id="desc">価値を受け取る人、現在損なわれている価値、プロダクトの役割、約束する価値、望む状態のつながりを示すテンプレート図。</desc>
+  <defs><marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12Z" fill="#53627a"/></marker></defs>
+  <rect width="1500" height="500" rx="28" fill="#f7f8fa"/>
+  <text x="750" y="62" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="30" font-weight="700" fill="#172033">North Starは、対象者へ価値が届く因果を示す</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" text-anchor="middle">
+    <rect x="45" y="145" width="250" height="170" rx="20" fill="#edf2ff" stroke="#4169b2" stroke-width="3"/><text x="170" y="198" font-size="24" font-weight="700" fill="#2f579c">対象</text><text x="170" y="250" font-size="19" fill="#172033">〈価値を受け取る人〉</text>
+    <rect x="335" y="145" width="250" height="170" rx="20" fill="#fff0ed" stroke="#b6452f" stroke-width="3"/><text x="460" y="198" font-size="24" font-weight="700" fill="#8b321f">損なわれた状態</text><text x="460" y="250" font-size="19" fill="#172033">〈現在の不利益〉</text>
+    <rect x="625" y="145" width="250" height="170" rx="20" fill="#fff7e6" stroke="#a86f12" stroke-width="3"/><text x="750" y="198" font-size="24" font-weight="700" fill="#7c520c">プロダクトの役割</text><text x="750" y="250" font-size="19" fill="#172033">〈固有に担うこと〉</text>
+    <rect x="915" y="145" width="250" height="170" rx="20" fill="#e8f5ee" stroke="#247a4b" stroke-width="3"/><text x="1040" y="198" font-size="24" font-weight="700" fill="#155d39">約束する価値</text><text x="1040" y="250" font-size="19" fill="#172033">〈対象者の進歩〉</text>
+    <rect x="1205" y="145" width="250" height="170" rx="20" fill="#e8f5ee" stroke="#247a4b" stroke-width="3"/><text x="1330" y="198" font-size="24" font-weight="700" fill="#155d39">望む状態</text><text x="1330" y="250" font-size="19" fill="#172033">〈実現したい未来〉</text>
+  </g>
+  <path d="M295 230H322" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/><path d="M585 230H612" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/><path d="M875 230H902" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/><path d="M1165 230H1192" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="300" y="375" width="900" height="64" rx="32" fill="#172033"/><text x="750" y="416" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="21" font-weight="700" fill="#ffffff">〈手段が変わっても残る価値のつながり〉</text>
+</svg>

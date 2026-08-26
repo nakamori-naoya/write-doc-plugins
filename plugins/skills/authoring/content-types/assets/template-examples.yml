@@ -1,0 +1,83 @@
+version: 1
+pairs:
+  adr:
+    template: templates/adr.md
+    example: examples/adr.example.md
+  api-reference:
+    template: templates/api-reference.md
+    example: examples/api-reference.example.md
+  code-comment:
+    template: templates/code-comment.md
+    example: examples/code-comment.example.md
+  code-map:
+    template: templates/code-map.md
+    example: examples/code-map.example.md
+  code-reading:
+    template: templates/code-reading.md
+    example: examples/code-reading.example.md
+  concept:
+    template: templates/concept.md
+    example: examples/concept.example.md
+  decision-log:
+    template: templates/decision-log.md
+    example: examples/decision-log.example.md
+  design-doc:
+    template: templates/design-doc.md
+    example: examples/design-doc.example.md
+  domain-rule:
+    template: templates/domain-rule.md
+    example: examples/domain-rule.example.md
+  getting-started:
+    template: templates/getting-started.md
+    example: examples/getting-started.example.md
+  glossary:
+    template: templates/glossary.md
+    example: examples/glossary.example.md
+  how-to:
+    template: templates/how-to.md
+    example: examples/how-to.example.md
+  landing-page:
+    template: templates/landing-page.md
+    example: examples/landing-page.example.md
+  onboarding:
+    template: templates/onboarding.md
+    example: examples/onboarding.example.md
+  open-questions:
+    template: templates/open-questions.md
+    example: examples/open-questions.example.md
+  period-digest:
+    template: templates/period-digest.md
+    example: examples/period-digest.example.md
+  postmortem:
+    template: templates/postmortem.md
+    example: examples/postmortem.example.md
+  north-star:
+    template: templates/north-star.md
+    example: examples/north-star.example.md
+  strategy:
+    template: templates/strategy.md
+    example: examples/strategy.example.md
+  pr-walkthrough:
+    template: templates/pr-walkthrough.md
+    example: examples/pr-walkthrough.example.md
+  rdb-logical-data-modeling:
+    template: templates/rdb-logical-data-modeling.md
+    example: examples/rdb-logical-data-modeling.example.md
+  rdb-physical-design:
+    template: templates/rdb-physical-design.md
+    example: examples/rdb-physical-design.example.md
+  readme:
+    template: templates/readme.md
+    example: examples/readme.example.md
+  release-notes:
+    template: templates/release-notes.md
+    example: examples/release-notes.example.md
+  runbook:
+    template: templates/runbook.md
+    example: examples/runbook.example.md
+  troubleshooting:
+    template: templates/troubleshooting.md
+    example: examples/troubleshooting.example.md
+  tutorial:
+    template: templates/tutorial.md
+    example: examples/tutorial.example.md

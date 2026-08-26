@@ -1,0 +1,7 @@
+# version: 設定形式。default_type: 指定が無いときの文書型。
+# instructions: skillが必ず従う実行規則（通常は変更しない）。
+version: 1
+default_type: concept
+instructions:
+  selection:
+    directive: catalogの選び方を上から判定し、型を1つだけ選ぶ
