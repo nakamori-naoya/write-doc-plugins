@@ -11,6 +11,8 @@
 
 **4つは互いを知らない。** つなぐのは「意味上の役」だけで、その契約はこのプラグインが持つ（[references/roles.md](references/roles.md)）。
 
+必要なidentityは`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`。versionは固定せず、解決先のmanifest identityと各工程が指すskillを検査する。
+
 ## 使う
 
 ```

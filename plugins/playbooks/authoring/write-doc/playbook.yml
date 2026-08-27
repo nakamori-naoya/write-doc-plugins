@@ -14,10 +14,10 @@ instructions:
 
 # 欠けていたら止める。黙って劣化した結果を出さない。
 requires:
-  - {plugin: content-types, marketplace: write-doc, version: 0.6.2}
-  - {plugin: writing-rules, marketplace: write-doc, version: 0.4.15}
-  - {plugin: visual-guidance, marketplace: write-doc, version: 0.2.0}
-  - {plugin: doc-render, marketplace: write-doc, version: 0.7.14}
+  - {plugin: content-types, marketplace: write-doc}
+  - {plugin: writing-rules, marketplace: write-doc}
+  - {plugin: visual-guidance, marketplace: write-doc}
+  - {plugin: doc-render, marketplace: write-doc}
 
 # 下段どうしをつなぐ契約。playbook が持つ。
 contract:

@@ -30,6 +30,8 @@ claude plugin install doc-render@write-doc
 
 `write-doc@write-doc`に外部pluginへの依存はない。BDDやproductなど呼び出し側の題材にも依存しない。
 
+内部playbookの依存は`plugin@marketplace`のidentityだけを宣言し、versionは固定しない。開発用map、同じrepository、runtimeのinstall cacheの順に候補を調べ、解決したmanifestのidentityと必要なskillを検査する。
+
 ## 設定の上書きと優先順位
 
 設定を持つpluginは、優先順位が最も高い1ファイルだけを選ぶ。複数層をマージしないため、上書きするYAMLには同梱設定と同じ必須項目をすべて含める。必須項目の不足、未知のキー、許可されていない値があれば実行を停止する。
