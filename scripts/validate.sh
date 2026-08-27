@@ -135,6 +135,7 @@ specialist_examples=(
   "$content_types/assets/examples/domain-rule.example.md"
   "$content_types/assets/examples/rdb-logical-data-modeling.example.md"
   "$content_types/assets/examples/rdb-physical-design.example.md"
+  "$content_types/assets/examples/e2e-bdd-scenarios.example.md"
 )
 specialist_boundary_ok=1
 for detail in "${specialist_details[@]}"; do
@@ -148,6 +149,20 @@ if [ "$specialist_boundary_ok" -eq 1 ] \
   pass "専門型は記載例を保ち実行規律を呼び出し元へ委譲"
 else
   fail "content-typesに専門領域の実行規律が混入"
+fi
+
+e2e_template="$content_types/assets/templates/e2e-bdd-scenarios.md"
+e2e_example="$content_types/assets/examples/e2e-bdd-scenarios.example.md"
+e2e_detail="$content_types/references/detail/e2e-bdd.md"
+if rg -F 'e2e-bdd-scenarios:' "$content_types/assets/template-examples.yml" >/dev/null \
+  && rg -F 'ユーザーが目的を達成するまで' "$content_types/references/catalog.md" >/dev/null \
+  && rg -F '呼び出し元' "$e2e_detail" >/dev/null \
+  && rg -F '**接続**:' "$e2e_template" >/dev/null \
+  && [ "$(rg -c '^## 場面 [0-9]+:' "$e2e_example")" -ge 4 ] \
+  && ! rg -n '実行環境|試行回数|実行証拠|flaky|APIを呼び出|画面を操作' "$e2e_example" >/dev/null; then
+  pass "E2E BDD型は目的達成ストーリーの構成だけを提供"
+else
+  fail "E2E BDD型に必要な構成が無いかテスト実行関心が混入"
 fi
 
 doc_render="$ROOT/plugins/skills/authoring/doc-render"
