@@ -2,6 +2,30 @@
 
 資料の型、文章規律、図の設計、HTML/Markdownへの保存を組み合わせ、資料を1本作るClaude Code/Codex両対応marketplaceである。
 
+## インストール
+
+Codexでは、marketplaceを登録した後、必要なpluginのコマンドを実行する。
+
+```bash
+codex plugin marketplace add nakamori-naoya/write-doc-plugins
+codex plugin add write-doc@write-doc
+codex plugin add content-types@write-doc
+codex plugin add writing-rules@write-doc
+codex plugin add visual-guidance@write-doc
+codex plugin add doc-render@write-doc
+```
+
+Claude Codeでは、marketplaceを登録した後、必要なpluginのコマンドを実行する。
+
+```bash
+claude plugin marketplace add nakamori-naoya/write-doc-plugins
+claude plugin install write-doc@write-doc
+claude plugin install content-types@write-doc
+claude plugin install writing-rules@write-doc
+claude plugin install visual-guidance@write-doc
+claude plugin install doc-render@write-doc
+```
+
 ## インストール済みである必要があるplugin
 
 `write-doc@write-doc`に外部pluginへの依存はない。BDDやproductなど呼び出し側の題材にも依存しない。
