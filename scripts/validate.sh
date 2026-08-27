@@ -44,6 +44,33 @@ for runtime in codex claude; do
   fi
 done
 
+content_types="$ROOT/plugins/skills/authoring/content-types"
+specialist_details=(
+  "$content_types/references/detail/product.md"
+  "$content_types/references/detail/domain.md"
+  "$content_types/references/detail/data-modeling.md"
+)
+specialist_examples=(
+  "$content_types/assets/examples/north-star.example.md"
+  "$content_types/assets/examples/strategy.example.md"
+  "$content_types/assets/examples/domain-rule.example.md"
+  "$content_types/assets/examples/rdb-logical-data-modeling.example.md"
+  "$content_types/assets/examples/rdb-physical-design.example.md"
+)
+specialist_boundary_ok=1
+for detail in "${specialist_details[@]}"; do
+  rg -F '呼び出し元' "$detail" >/dev/null || specialist_boundary_ok=0
+done
+for example in "${specialist_examples[@]}"; do
+  [ -s "$example" ] || specialist_boundary_ok=0
+done
+if [ "$specialist_boundary_ok" -eq 1 ] \
+  && ! rg -n '(^|[^A-Za-z])(Given|When|Then)([^A-Za-z]|$)|診断|基本方針|一貫した行動|分離レベル|transaction|rollback|再試行' "${specialist_details[@]}" >/dev/null; then
+  pass "専門型は記載例を保ち実行規律を呼び出し元へ委譲"
+else
+  fail "content-typesに専門領域の実行規律が混入"
+fi
+
 syntax_failed=0
 while IFS= read -r script; do bash -n "$script" || syntax_failed=1; done < <(find "$ROOT" -type f -name '*.sh' | sort)
 [ "$syntax_failed" -eq 0 ] && pass "shell構文" || fail "shell構文"
