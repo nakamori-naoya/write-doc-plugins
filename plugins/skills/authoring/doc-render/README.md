@@ -9,7 +9,7 @@
 | 役 | HTML | Markdown |
 |---|---|---|
 | 要点 | `<mark>` | `**太字**` |
-| キーワード（初出のみ） | `<mark class="kw">` | `` `バッククォート` `` |
+| キーワード | `<mark class="kw">` | `` `バッククォート` `` |
 | 一言でいうと | `<p class="hitokoto">` | `> 引用` |
 | 要約項目 | `<span class="badge imp/pt">` | `**[最重要]**` |
 

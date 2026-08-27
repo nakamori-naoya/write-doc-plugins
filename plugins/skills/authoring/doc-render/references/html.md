@@ -1,118 +1,42 @@
-# HTML で出す
+# HTML へ写す
 
-**1ファイルで完結させる。** 外部 CSS・外部フォント・CDN を参照しない。誰かへ送ってもそのまま開ける状態にする。
+受け取った本文、役、段落境界、図を HTML 表現へ変換する。本文の構成、強調箇所、図の採否と型は変更しない。
 
 ## 骨格
 
-```
-<header>      型・読み手・タイトル
-<section class="summary">   冒頭要約（長い文書のみ）
-<article>     本文
-<section class="review">    末尾総括（長い文書のみ）
-```
+[html-shell.html](../assets/html-shell.html) の `{{TITLE}}`、`{{META}}`、`{{BODY}}`、`{{THEME}}` を置換する。外部 CSS・外部フォント・CDN は追加せず、HTML 本体は1ファイルで完結させる。
 
-雛形は [html-shell.html](../assets/html-shell.html)。`{{TITLE}}` `{{META}}` `{{BODY}}` `{{THEME}}` を差し替えて使う。
-
-処理を実行順に読ませる文書では、`<article>` の中を**段階ブロック**（`section.stage`）の並びにする。マークアップは [annotated-code.md](annotated-code.md)。
-
-## 強調の書き方
-
-```html
-<mark>要点</mark>
-<mark class="kw">キーワード</mark>
-```
-
-**どこに引くかの規則は `emphasis` ガイド**（設定で差し替え可）。**キーワードは初出の1回だけ。**
-
-見た目は**蛍光ペンで引いた線**にする。文字全体を塗り潰さず、`linear-gradient(transparent 55%, 色 55%)` で**下半分にだけ色を乗せる**。塗り潰しは行が重く見え、暗い配色では文字が沈む。
-
-```css
-mark    { background: linear-gradient(transparent 55%, var(--mark) 55%); }
-mark.kw { background: linear-gradient(transparent 55%, var(--kw) 55%); font-weight: 600; }
-```
-
-**マーカー色は半透明（rgba）で持つ。** 明暗どちらの背景でも文字色を保てる。
-
-ダーク配色は、黒に近いネイビーをページ背景、少し明るいネイビーを面、青灰を罫線、白に近い色を本文にする。青はリンクと構造線へ限定する。**ダークテーマでは蛍光ペン状の背景マーカーを使わない。** 文の要点は白＋太字、短いキーワードだけ濃紺のチップで示し、下線はリンクのために空ける。
-
-面を持つ要素（要約・注記・段階・表・コード）には `color: var(--ink)` を明示する。`body` からの継承やブラウザ既定色だけに頼ると、プレビュー環境によって暗い面へ黒文字が残る。
-
-## 冒頭要約
-
-```html
-<section class="summary">
-  <p class="hitokoto">一言でいうと——<mark>主張を1文で</mark></p>
-  <ul>
-    <li><span class="badge imp">最重要</span> …</li>
-    <li><span class="badge pt">ポイント</span> …</li>
-  </ul>
-</section>
-```
-
-バッジの使い分け。
-
-| バッジ | 何に付けるか |
+| 受け取る役 | HTML |
 |---|---|
-| `imp`（最重要） | 定義（R11）、問い（R4）に対する結論 |
-| `pt`（ポイント） | 対比（R2・R3）、主張（R5 の本音）、要約表現（R6）から取った要点 |
+| 本文 | `<article>` |
+| 冒頭要約 | `<section class="summary">` |
+| 末尾総括 | `<section class="review"><ul class="structure">…</ul></section>` |
+| 要点 | `<mark>` |
+| キーワード | `<mark class="kw">` |
+| 一言でいうと | `<p class="hitokoto">` |
+| 要約項目 | `<span class="badge imp">` または `<span class="badge pt">` |
+| 出典の帰属 | `<span class="attribution">` |
+| 横長の入れ物 | `<div class="scroll-x">` |
 
-## 末尾総括
+段落境界は別々の `<p>`、箇条書き項目の境界は別々の `<li>` へ写す。内容を結合・分割しない。
 
-**構造で振り返る。要点の再掲にしない。**
+## テーマ
 
-```html
-<section class="review">
-  <ul class="structure">
-    <li><b>何を問うたか</b> …</li>
-    <li><b>どう答えたか</b> …</li>
-    <li><b>何が根拠か</b> …</li>
-    <li><b>何が未解決か</b> …</li>
-  </ul>
-</section>
-```
+設定 `output.theme` の値を `<html data-theme="{{THEME}}">` へそのまま入れる。
 
-## 配色とテーマ
-
-テーマは設定 `output.theme` で決まる。**既定は `auto`。すべてのHTML資料をライト／ダーク両対応にする。**
-
-| 値 | 挙動 |
+| 値 | 写像 |
 |---|---|
-| `dark` | 常に暗い配色 |
-| `light` | 常に明るい配色 |
-| `auto`（既定） | 閲覧環境の `prefers-color-scheme` に従う |
+| `dark` | dark 用 CSS 変数 |
+| `light` | light 用 CSS 変数 |
+| `auto` | `prefers-color-scheme` で両方の CSS 変数 |
 
-雛形の `<html data-theme="{{THEME}}">` へ、解決した値をそのまま入れる。**`{{THEME}}` を空にしない**（空にすると明るい配色に落ちる）。
+面を持つ要素には `color: var(--ink)` を指定する。図も HTML シェルと同じ CSS 変数を使い、固定 HEX 色へ変換しない。
 
-配色は CSS 変数で持つ。
+## 機械検査
 
-| 用途 | 変数 |
-|---|---|
-| 背景 / 面 | `--bg` / `--panel` |
-| 文字 / 補助文字 | `--ink` / `--muted` |
-| 罫線 | `--line` |
-| 見出し / 副見出し | `--accent` / `--accent2` |
-| 要点マーカー（半透明） | `--mark` |
-| キーワードマーカー（半透明） | `--kw` |
-
-図（インライン SVG）も同じCSS変数で描く。**ライト固定のHEX色を図へ埋め込まない。** 図だけ切り替わらず浮くのを避ける。
-
-## 段落
-
-**1段落＝1つの `<p>`。** 文章側が割った段落を1つの `<p>` へまとめない。`<br>` で改行しても段落は割れない（間隔が付かず、1つの塊に見える）。
-
-箇条書きの各項目も同じで、**役の違う内容は別の `<li>` へ置く**。
-
-## 表と図
-
-- 横に長い表・図は、`overflow-x: auto` の入れ物に入れる。**ページ全体を横スクロールさせない。**
-- 画像は `max-width: 100%`。
-
-## 出す前に
-
-- [ ] 単体で開ける（外部参照ゼロ）
-- [ ] 段落ごとに `<p>` が分かれている（1つの `<p>` へ複数段落を詰めていない）
-- [ ] 明・暗どちらでも読める
-- [ ] 引いた箇所だけを拾い読みして筋が通る
-- [ ] キーワードが初出だけ
-- [ ] 図に背景 rect があり、全図形に色が指定されている
-- [ ] 秘匿が入っていない
+- [ ] テンプレート変数が残っていない
+- [ ] 受け取った役が対応する要素へ一対一で写っている
+- [ ] 段落と箇条書きの境界が保持されている
+- [ ] 外部 CSS・外部フォント・CDN の参照がない
+- [ ] theme と CSS 変数が解決されている
+- [ ] 横長の表・図がページ全体を横スクロールさせない

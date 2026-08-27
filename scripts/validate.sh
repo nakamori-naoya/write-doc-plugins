@@ -150,6 +150,26 @@ else
   fail "content-typesに専門領域の実行規律が混入"
 fi
 
+doc_render="$ROOT/plugins/skills/authoring/doc-render"
+if rg -F '`writing-rules` が付与済みの役だけ' "$doc_render/references/emphasis.md" >/dev/null \
+  && rg -F '`writing-rules` が確定した出典リンク' "$doc_render/references/citation.md" >/dev/null \
+  && rg -F '`visual-guidance` から受け取る' "$doc_render/references/figures.md" >/dev/null \
+  && rg -F '受け取った意味上の役を媒体表現へ写す' "$doc_render/config/defaults.yml" >/dev/null \
+  && ! rg -n 'R[0-9]+|引用の量|表で足りるなら|何に付けるか' "$doc_render/references" >/dev/null; then
+  pass "doc-renderは確定済みの役から媒体表現への写像だけを持つ"
+else
+  fail "doc-renderに文章判断または図の選択が混入"
+fi
+
+roles="$pb/references/roles.md"
+if rg -F '役の付与は `writing-rules`' "$roles" >/dev/null \
+  && rg -F '| **図の型** | `visual-guidance` |' "$roles" >/dev/null \
+  && ! rg -n '<mark|<figure|<span class|インラインSVG|外部SVG' "$roles" >/dev/null; then
+  pass "write-docの役契約は判断者だけを接続"
+else
+  fail "write-docの役契約が媒体表現を再定義"
+fi
+
 syntax_failed=0
 while IFS= read -r script; do bash -n "$script" || syntax_failed=1; done < <(find "$ROOT" -type f -name '*.sh' | sort)
 [ "$syntax_failed" -eq 0 ] && pass "shell構文" || fail "shell構文"
