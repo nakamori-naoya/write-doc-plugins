@@ -1,2 +1,15 @@
 __pycache__/
 *.pyc
+
+# Repository-root allowlist
+# A new top-level path is ignored until it is explicitly approved here.
+/*
+!/.agents/
+!/.claude-plugin/
+!/.harness-plugins/
+!/plugins/
+!/scripts/
+!/shared/
+!/AGENTS.md
+!/README.md
+!/.gitignore
