@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Scenario: write-doc marketplaceが5 pluginで自己完結し、両runtimeで解決できる
+# Scenario: write-doc marketplaceが6 pluginで自己完結し、両runtimeで解決できる
 set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/write-doc-validation.XXXXXX") || exit 2
@@ -85,16 +85,78 @@ validate_dependency_resolution_contract() {
   return "$status"
 }
 
+validate_write_doc_cleanup_fixture() {
+  local plugin="$ROOT/plugins/skills/authoring/write-doc-cleanup"
+  local cleanup="$plugin/scripts/cleanup.py"
+  local fixture="$TMP_ROOT/write-doc-cleanup"
+  local repo="$fixture/repository"
+  local final="$repo/final/document.md"
+  local generated="$repo/work/generated/draft.md"
+  local tracked_file="$repo/input.md"
+  local status=0 out
+
+  mkdir -p "$repo/final" "$(dirname "$generated")"
+  git -C "$repo" init -q || return 1
+  printf '%s\n' '# 最終資料' > "$final"
+  printf '%s\n' '# 入力資料' > "$tracked_file"
+  git -C "$repo" add final/document.md input.md || return 1
+  git -C "$repo" -c user.name=fixture -c user.email=fixture@example.invalid commit -qm fixture || return 1
+  printf '%s\n' '一時生成物' > "$generated"
+
+  echo 'Scenario: 最終資料を残して明示した未追跡の中間生成物だけを削除する'
+  echo '  Given Git追跡済みの最終資料と未追跡の中間生成物がある'
+  out=$(python3 "$cleanup" check --repo-root "$repo" --delete "$generated" --keep "$final") || status=1
+  echo '  When 削除前検査を実行する'
+  jq -e '.status=="checked" and (.deletable|length)==1 and (.deletable[0]|endswith("/work/generated/draft.md")) and (.preserved|length)==1 and (.preserved[0]|endswith("/final/document.md"))' >/dev/null <<<"$out" || status=1
+  out=$(python3 "$cleanup" delete --repo-root "$repo" --delete "$generated" --keep "$final") || status=1
+  echo '  Then 最終資料を残し、中間生成物と空の親directoryを削除する'
+  jq -e '.status=="deleted" and (.deleted|length)==1 and (.deleted[0]|endswith("/work/generated/draft.md")) and (.preserved|length)==1 and (.preserved[0]|endswith("/final/document.md"))' >/dev/null <<<"$out" || status=1
+  [ -f "$final" ] && [ ! -e "$generated" ] && [ ! -d "$repo/work" ] || status=1
+
+  echo 'Scenario: 削除対象を明示しても追跡中の入力資料は削除しない'
+  echo '  Given Git追跡済みの入力資料がある'
+  if python3 "$cleanup" check --repo-root "$repo" --delete "$tracked_file" --keep "$final" > "$fixture/tracked.json"; then
+    status=1
+  else
+    echo '  When 追跡中のファイルを削除候補にする'
+    jq -e '.status=="rejected" and any(.errors[]; contains("Git追跡中"))' "$fixture/tracked.json" >/dev/null || status=1
+  fi
+  echo '  Then 拒否し、入力資料を残す'
+  [ -f "$tracked_file" ] || status=1
+
+  echo 'Scenario: 最終資料そのものを削除候補にしても削除しない'
+  echo '  Given 保持対象として指定した最終資料がある'
+  if python3 "$cleanup" check --repo-root "$repo" --delete "$final" --keep "$final" > "$fixture/keep-collision.json"; then
+    status=1
+  else
+    echo '  When 同じpathを削除対象と保持対象に指定する'
+    jq -e '.status=="rejected" and any(.errors[]; contains("保持対象と一致する"))' "$fixture/keep-collision.json" >/dev/null || status=1
+  fi
+  echo '  Then 拒否し、最終資料を残す'
+  [ -f "$final" ] || status=1
+
+  echo 'Scenario: repository外の明示パスは削除しない'
+  printf '%s\n' '外部ファイル' > "$fixture/outside.md"
+  if python3 "$cleanup" check --repo-root "$repo" --delete "$fixture/outside.md" --keep "$final" > "$fixture/outside.json"; then
+    status=1
+  else
+    jq -e '.status=="rejected" and any(.errors[]; contains("repository内のファイルではない"))' "$fixture/outside.json" >/dev/null || status=1
+  fi
+
+  return "$status"
+}
+
 jq -r '.plugins[].name' "$ROOT/.agents/plugins/marketplace.json" | sort > "$TMP_ROOT/expected"
 find "$ROOT/plugins" -path '*/.codex-plugin/plugin.json' -type f -exec jq -r '.name' {} \; | sort > "$TMP_ROOT/actual"
-diff -u "$TMP_ROOT/expected" "$TMP_ROOT/actual" >/dev/null && pass "5 pluginだけを配布" || fail "plugin集合"
+diff -u "$TMP_ROOT/expected" "$TMP_ROOT/actual" >/dev/null && pass "6 pluginだけを配布" || fail "plugin集合"
 for market in .agents/plugins/marketplace.json .claude-plugin/marketplace.json; do
   jq -r '.plugins[].name' "$ROOT/$market" | sort > "$TMP_ROOT/market"
   diff -u "$TMP_ROOT/expected" "$TMP_ROOT/market" >/dev/null && pass "$market plugin集合" || fail "$market plugin集合"
 done
 
 while IFS='|' read -r name version rel; do
-  if jq -e --arg n "$name" --arg v "$version" '.name==$n and .version==$v' "$ROOT/$rel/.codex-plugin/plugin.json" "$ROOT/$rel/.claude-plugin/plugin.json" >/dev/null; then
+  if jq -e --arg n "$name" --arg v "$version" '.name==$n and .version==$v' "$ROOT/$rel/.codex-plugin/plugin.json" >/dev/null \
+    && jq -e --arg n "$name" --arg v "$version" '.name==$n and .version==$v' "$ROOT/$rel/.claude-plugin/plugin.json" >/dev/null; then
     pass "$name manifest identity"
   else
     fail "$name manifest identity"
@@ -109,6 +171,12 @@ if yq -o=json -I=0 '.' "$pb/playbook.yml" | jq -e '.version==2 and (.requires|le
 else
   fail "playbook依存契約"
 fi
+if yq -o=json -I=0 '.' "$pb/playbook.yml" | jq -e 'all(.requires[]; .plugin!="write-doc-cleanup") and all(.steps[]; (.skill // "")!="remove-intermediate-artifacts" and (.playbook // "")!="write-doc-cleanup")' >/dev/null \
+  && rg -F '`write-doc` playbookは削除を実行せず' "$ROOT/plugins/skills/authoring/write-doc-cleanup/README.md" >/dev/null; then
+  pass "write-docとcleanupの責務境界"
+else
+  fail "write-docとcleanupの責務境界"
+fi
 
 mkdir -p "$TMP_ROOT/repo"
 for runtime in codex claude; do
@@ -122,6 +190,28 @@ for runtime in codex claude; do
 done
 
 validate_dependency_resolution_contract && pass "名前ベース依存解決の正常系とfail closed" || fail "名前ベース依存解決の正常系とfail closed"
+
+cleanup="$ROOT/plugins/skills/authoring/write-doc-cleanup"
+if cmp -s "$ROOT/shared/prepare.sh" "$cleanup/scripts/prepare.sh" \
+  && rg -F 'root直下の正本`SKILL.md`を全文読んで' "$cleanup/skills/remove-intermediate-artifacts/SKILL.md" >/dev/null \
+  && rg -F '明示パス' "$cleanup/SKILL.md" >/dev/null \
+  && rg -F '最終資料' "$cleanup/SKILL.md" >/dev/null; then
+  pass "write-doc-cleanupはwrite-doc内で一意に配布される"
+else
+  fail "write-doc-cleanupの配布物または安全境界"
+fi
+
+prepare_sync=1
+while IFS= read -r script; do cmp -s "$ROOT/shared/prepare.sh" "$script" || prepare_sync=0; done < <(find "$ROOT/plugins/skills" -path '*/scripts/prepare.sh' -type f | sort)
+resolve_sync=1
+while IFS= read -r script; do cmp -s "$ROOT/shared/skill/resolve.sh" "$script" || resolve_sync=0; done < <(find "$ROOT/plugins/skills" -path '*/scripts/resolve.sh' -type f | sort)
+if [ "$prepare_sync" -eq 1 ] && [ "$resolve_sync" -eq 1 ]; then
+  pass "shared prepare/skill resolver同期"
+else
+  fail "shared prepare/skill resolver同期"
+fi
+
+validate_write_doc_cleanup_fixture && pass "中間成果物の明示削除と保持境界" || fail "中間成果物の明示削除と保持境界"
 
 content_types="$ROOT/plugins/skills/authoring/content-types"
 specialist_details=(

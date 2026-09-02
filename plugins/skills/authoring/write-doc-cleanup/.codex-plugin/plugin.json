@@ -1,0 +1,20 @@
+{
+  "name": "write-doc-cleanup",
+  "version": "0.1.0",
+  "description": "最終成果物を残し、明示された未追跡の中間生成物だけを安全に削除する",
+  "skills": "./skills",
+  "author": {
+    "name": "NaoyaNakamori"
+  },
+  "interface": {
+    "displayName": "Write Doc Cleanup",
+    "shortDescription": "最終成果物を残し、明示された未追跡の中間生成物だけを安全に削除する",
+    "longDescription": "最終成果物を残し、明示された未追跡の中間生成物だけを安全に削除する",
+    "developerName": "NaoyaNakamori",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": "write-doc-cleanupを使ってこの作業を進めてください。"
+  }
+}

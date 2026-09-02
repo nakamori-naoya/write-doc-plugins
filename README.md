@@ -15,6 +15,7 @@ codex plugin add content-types@write-doc
 codex plugin add writing-rules@write-doc
 codex plugin add visual-guidance@write-doc
 codex plugin add doc-render@write-doc
+codex plugin add write-doc-cleanup@write-doc
 ```
 
 このrepositoryだけに分離したい場合は、repository専用の`CODEX_HOME`を作り、インストール時と利用時に同じ値を指定する。
@@ -29,6 +30,7 @@ codex plugin add content-types@write-doc
 codex plugin add writing-rules@write-doc
 codex plugin add visual-guidance@write-doc
 codex plugin add doc-render@write-doc
+codex plugin add write-doc-cleanup@write-doc
 codex
 ```
 
@@ -55,6 +57,7 @@ claude plugin install content-types@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
 claude plugin install writing-rules@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
 claude plugin install visual-guidance@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
 claude plugin install doc-render@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
+claude plugin install write-doc-cleanup@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
 ```
 
 ## インストール済みである必要があるplugin

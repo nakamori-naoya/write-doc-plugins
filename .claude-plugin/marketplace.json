@@ -7,6 +7,7 @@
     {"name":"content-types","source":"./plugins/skills/authoring/content-types","description":"資料の型を選びテンプレートと例を返す","version":"0.7.0"},
     {"name":"writing-rules","source":"./plugins/skills/authoring/writing-rules","description":"文章の構成、文体、出典、注釈の規律","version":"0.4.15"},
     {"name":"visual-guidance","source":"./plugins/skills/authoring/visual-guidance","description":"主張に合う図と画像生成の使い分けを設計する","version":"0.2.0"},
-    {"name":"doc-render","source":"./plugins/skills/authoring/doc-render","description":"資料をHTMLまたはMarkdownへ安全に保存する","version":"0.7.14"}
+    {"name":"doc-render","source":"./plugins/skills/authoring/doc-render","description":"資料をHTMLまたはMarkdownへ安全に保存する","version":"0.7.14"},
+    {"name":"write-doc-cleanup","source":"./plugins/skills/authoring/write-doc-cleanup","description":"最終資料を残し、明示された未追跡の中間生成物だけを安全に削除する","version":"0.1.0"}
   ]
 }

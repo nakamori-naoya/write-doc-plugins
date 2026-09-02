@@ -6,6 +6,7 @@
     {"name":"content-types","source":{"source":"local","path":"./plugins/skills/authoring/content-types"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.7.0"},
     {"name":"writing-rules","source":{"source":"local","path":"./plugins/skills/authoring/writing-rules"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.4.15"},
     {"name":"visual-guidance","source":{"source":"local","path":"./plugins/skills/authoring/visual-guidance"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.2.0"},
-    {"name":"doc-render","source":{"source":"local","path":"./plugins/skills/authoring/doc-render"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.7.14"}
+    {"name":"doc-render","source":{"source":"local","path":"./plugins/skills/authoring/doc-render"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.7.14"},
+    {"name":"write-doc-cleanup","source":{"source":"local","path":"./plugins/skills/authoring/write-doc-cleanup"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.1.0"}
   ]
 }
