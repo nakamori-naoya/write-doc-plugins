@@ -12,6 +12,23 @@ fail() {
   status=1
 }
 
+path_has_symlink_component() {
+  local current="$1"
+  local relative="$2"
+  local component
+  local saved_ifs="$IFS"
+  local -a components
+
+  IFS='/' read -r -a components <<< "$relative"
+  IFS="$saved_ifs"
+  for component in "${components[@]}"; do
+    [ -n "$component" ] || continue
+    current="$current/$component"
+    [ -L "$current" ] && return 0
+  done
+  return 1
+}
+
 root_license="$ROOT/LICENSE"
 codex_catalog="$ROOT/.agents/plugins/marketplace.json"
 claude_catalog="$ROOT/.claude-plugin/marketplace.json"
@@ -59,11 +76,20 @@ while IFS='|' read -r name version source; do
     fail "$name plugin root must be a regular directory"
     continue
   fi
+  if path_has_symlink_component "$ROOT" "${source#./}"; then
+    fail "$name plugin source subtree must not contain symlinks"
+    continue
+  fi
   resolved_root=$(cd "$plugin_root" && pwd -P)
   case "$resolved_root/" in
     "$ROOT/plugins/"*) ;;
     *) fail "$name plugin root escapes the repository plugins directory"; continue ;;
   esac
+  subtree_symlink=$(find "$plugin_root" -type l -print -quit)
+  if [ -n "$subtree_symlink" ]; then
+    fail "$name plugin source subtree must not contain symlinks"
+    continue
+  fi
 
   plugin_license="$plugin_root/LICENSE"
   if [ ! -f "$plugin_license" ] || [ -L "$plugin_license" ]; then
@@ -88,7 +114,17 @@ while IFS='|' read -r name version source; do
     continue
   fi
 
-  if [ -d "$plugin_root/skills" ]; then
+  skills_contract=0
+  jq -e 'has("skills")' "$codex_manifest" >/dev/null && skills_contract=1
+  jq -e 'has("skills")' "$claude_manifest" >/dev/null && skills_contract=1
+  jq -e '.interface.capabilities | type == "array" and index("Skills") != null' "$codex_manifest" >/dev/null \
+    && skills_contract=1
+  [ -d "$plugin_root/skills" ] && skills_contract=1
+
+  if [ "$skills_contract" -eq 1 ]; then
+    if [ ! -d "$plugin_root/skills" ] || [ -L "$plugin_root/skills" ]; then
+      fail "$name skills contract requires a physical non-symlink skills directory"
+    fi
     for runtime in codex claude; do
       manifest="$plugin_root/.$runtime-plugin/plugin.json"
       declared_skills=$(jq -er '.skills | select(type == "string" and length > 0)' "$manifest" 2>/dev/null) || {
@@ -114,8 +150,15 @@ while IFS='|' read -r name version source; do
           continue
           ;;
       esac
-      skill_entry=$(find "$resolved_skills" -type f -name SKILL.md -print -quit)
-      [ -n "$skill_entry" ] || fail "$name $runtime skills path contains no SKILL.md"
+      skill_count=0
+      while IFS= read -r -d '' skill_entry; do
+        skill_count=$((skill_count + 1))
+        if [ ! -f "$skill_entry" ] || [ -L "$skill_entry" ] \
+          || ! LC_ALL=C grep -q '[^[:space:]]' "$skill_entry"; then
+          fail "$name $runtime SKILL.md must contain non-whitespace content"
+        fi
+      done < <(find "$resolved_skills" -name SKILL.md -print0)
+      [ "$skill_count" -gt 0 ] || fail "$name $runtime skills path contains no SKILL.md"
     done
     jq -e '.interface.capabilities | type == "array" and index("Skills") != null' "$codex_manifest" >/dev/null \
       || fail "$name Codex capabilities must include Skills"
@@ -124,10 +167,34 @@ while IFS='|' read -r name version source; do
       || fail "$name manifests must not declare skills without a skills directory"
     jq -e '.interface.capabilities | type == "array" and index("Skills") == null' "$codex_manifest" >/dev/null \
       || fail "$name Codex capabilities must not include Skills"
-    if [ -d "$plugin_root/scripts" ]; then
-      jq -e '.interface.capabilities | type == "array" and index("Scripts") != null' "$codex_manifest" >/dev/null \
-        || fail "$name Codex capabilities must include Scripts"
+  fi
+
+  if jq -e '.interface.capabilities | type == "array" and index("Scripts") != null' "$codex_manifest" >/dev/null; then
+    if [ ! -d "$plugin_root/scripts" ] || [ -L "$plugin_root/scripts" ]; then
+      fail "$name Scripts capability requires a physical non-symlink scripts directory"
+    else
+      resolved_scripts=$(cd "$plugin_root/scripts" && pwd -P)
+      case "$resolved_scripts/" in
+        "$resolved_root/scripts/") ;;
+        *) fail "$name Scripts capability requires a top-level scripts directory" ;;
+      esac
+      nonempty_script=""
+      while IFS= read -r -d '' script_entry; do
+        if [ -f "$script_entry" ] && [ ! -L "$script_entry" ] && [ -s "$script_entry" ]; then
+          nonempty_script="$script_entry"
+          break
+        fi
+      done < <(find "$resolved_scripts" -type f -print0)
+      [ -n "$nonempty_script" ] \
+        || fail "$name Scripts capability requires at least one nonempty regular script"
     fi
+  fi
+
+  if [ "$name" = "doc-render" ]; then
+    jq -s -e 'all(.[]; has("skills") | not)' "$codex_manifest" "$claude_manifest" >/dev/null \
+      || fail 'doc-render manifests must not declare skills'
+    jq -e '.interface.capabilities | type == "array" and index("Skills") == null and index("Scripts") != null' "$codex_manifest" >/dev/null \
+      || fail 'doc-render must advertise Scripts without Skills'
   fi
 done < <(jq -r '.plugins[] | [.name,.version,.source.path] | join("|")' "$codex_catalog")
 
