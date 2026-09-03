@@ -12,6 +12,50 @@ fail() {
   status=1
 }
 
+file_has_non_whitespace() {
+  python3 - "$1" <<'PY'
+from pathlib import Path
+import sys
+
+try:
+    content = Path(sys.argv[1]).read_text(encoding="utf-8")
+except (OSError, UnicodeError):
+    raise SystemExit(1)
+raise SystemExit(0 if content.strip() else 1)
+PY
+}
+
+valid_hook_document() {
+  python3 - "$1" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+try:
+    document = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+except (OSError, UnicodeError, json.JSONDecodeError):
+    raise SystemExit(1)
+hooks = document.get("hooks") if isinstance(document, dict) else None
+if not isinstance(hooks, dict) or not hooks:
+    raise SystemExit(1)
+for event, groups in hooks.items():
+    if not isinstance(event, str) or not event.strip():
+        raise SystemExit(1)
+    if not isinstance(groups, list) or not groups:
+        raise SystemExit(1)
+    for group in groups:
+        commands = group.get("hooks") if isinstance(group, dict) else None
+        if not isinstance(commands, list) or not commands:
+            raise SystemExit(1)
+        for command in commands:
+            if not isinstance(command, dict) or command.get("type") != "command":
+                raise SystemExit(1)
+            value = command.get("command")
+            if not isinstance(value, str) or not value.strip():
+                raise SystemExit(1)
+PY
+}
+
 path_has_symlink_component() {
   local current="$1"
   local relative="$2"
@@ -43,6 +87,10 @@ fi
 
 jq -e 'all(.plugins[]; .source.source == "local" and (.source.path | type == "string"))' "$codex_catalog" >/dev/null \
   || fail 'Codex catalog sources must be local paths'
+jq -e 'all(.plugins[]; (.name | type == "string" and length > 0) and (.version | type == "string" and length > 0) and (.source.path | type == "string" and length > 0))' "$codex_catalog" >/dev/null \
+  || fail 'Codex catalog identities and source paths must be nonempty strings'
+jq -e 'all(.plugins[]; (.name | type == "string" and length > 0) and (.version | type == "string" and length > 0) and (.source | type == "string" and length > 0))' "$claude_catalog" >/dev/null \
+  || fail 'Claude catalog identities and source paths must be nonempty strings'
 jq -e '(.plugins | length) == ([.plugins[].name] | unique | length) and (.plugins | length) == ([.plugins[].source.path] | unique | length)' "$codex_catalog" >/dev/null \
   || fail 'Codex catalog contains duplicate names or sources'
 jq -e '(.plugins | length) == ([.plugins[].name] | unique | length) and (.plugins | length) == ([.plugins[].source] | unique | length)' "$claude_catalog" >/dev/null \
@@ -104,6 +152,8 @@ while IFS='|' read -r name version source; do
     manifest="$plugin_root/.$runtime-plugin/plugin.json"
     if [ ! -f "$manifest" ] || [ -L "$manifest" ]; then
       fail "$name $runtime manifest must be a regular non-symlink file"
+    elif ! jq -e '(.name | type == "string" and length > 0) and (.version | type == "string" and length > 0)' "$manifest" >/dev/null; then
+      fail "$name $runtime manifest name and version must be nonempty strings"
     elif ! jq -e --arg name "$name" --arg version "$version" '.name == $name and .version == $version' "$manifest" >/dev/null; then
       fail "$name $runtime manifest identity differs from catalog"
     fi
@@ -111,6 +161,10 @@ while IFS='|' read -r name version source; do
 
   if [ ! -f "$codex_manifest" ] || [ -L "$codex_manifest" ] \
     || [ ! -f "$claude_manifest" ] || [ -L "$claude_manifest" ]; then
+    continue
+  fi
+  if ! jq -e '.interface.capabilities | type == "array" and all(.[]; type == "string")' "$codex_manifest" >/dev/null; then
+    fail "$name Codex capabilities must be an array of strings"
     continue
   fi
 
@@ -154,7 +208,7 @@ while IFS='|' read -r name version source; do
       while IFS= read -r -d '' skill_entry; do
         skill_count=$((skill_count + 1))
         if [ ! -f "$skill_entry" ] || [ -L "$skill_entry" ] \
-          || ! LC_ALL=C grep -q '[^[:space:]]' "$skill_entry"; then
+          || ! file_has_non_whitespace "$skill_entry"; then
           fail "$name $runtime SKILL.md must contain non-whitespace content"
         fi
       done < <(find "$resolved_skills" -name SKILL.md -print0)
@@ -188,6 +242,53 @@ while IFS='|' read -r name version source; do
       [ -n "$nonempty_script" ] \
         || fail "$name Scripts capability requires at least one nonempty regular script"
     fi
+  fi
+
+  hooks_capability=0
+  codex_declares_hooks=0
+  claude_declares_hooks=0
+  jq -e '.interface.capabilities | index("Hooks") != null' "$codex_manifest" >/dev/null && hooks_capability=1
+  jq -e 'has("hooks")' "$codex_manifest" >/dev/null && codex_declares_hooks=1
+  jq -e 'has("hooks")' "$claude_manifest" >/dev/null && claude_declares_hooks=1
+  if [ "$hooks_capability" -ne "$codex_declares_hooks" ] \
+    || [ "$hooks_capability" -ne "$claude_declares_hooks" ]; then
+    fail "$name Hooks capability requires hooks declarations in both runtime manifests"
+  elif [ "$hooks_capability" -eq 1 ]; then
+    for runtime in codex claude; do
+      manifest="$plugin_root/.$runtime-plugin/plugin.json"
+      declared_hooks=$(jq -er '.hooks | select(type == "string" and length > 0)' "$manifest" 2>/dev/null) || {
+        fail "$name $runtime hooks path must be a nonempty string"
+        continue
+      }
+      case "$declared_hooks" in
+        /*)
+          fail "$name $runtime hooks path must be relative"
+          continue
+          ;;
+      esac
+      hooks_path="$plugin_root/$declared_hooks"
+      if [ ! -f "$hooks_path" ] || [ -L "$hooks_path" ]; then
+        fail "$name $runtime hooks path must be a regular non-symlink file"
+        continue
+      fi
+      hooks_parent=$(cd "$(dirname "$hooks_path")" && pwd -P) || {
+        fail "$name $runtime hooks path cannot be resolved"
+        continue
+      }
+      resolved_hooks="$hooks_parent/$(basename "$hooks_path")"
+      case "$resolved_hooks" in
+        "$resolved_root/"*) ;;
+        *)
+          fail "$name $runtime hooks path escapes the plugin root"
+          continue
+          ;;
+      esac
+      if [ ! -s "$hooks_path" ]; then
+        fail "$name $runtime hooks file must be nonempty"
+      elif ! valid_hook_document "$hooks_path"; then
+        fail "$name $runtime hooks file must contain nonempty command hook definitions"
+      fi
+    done
   fi
 
   if [ "$name" = "doc-render" ]; then

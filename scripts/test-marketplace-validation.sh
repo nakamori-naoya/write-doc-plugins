@@ -30,6 +30,77 @@ expect_rejected() {
   fi
 }
 
+expect_accepted() {
+  local fixture="$1"
+  local output="$fixture/validator.out"
+  if ! bash "$fixture/scripts/validate-marketplace.sh" "$fixture" > "$output" 2>&1; then
+    fail "valid synthetic fixture was rejected: $fixture"
+  fi
+}
+
+add_capability() {
+  local manifest="$1"
+  local capability="$2"
+  jq --arg capability "$capability" \
+    '.interface.capabilities |= (. + [$capability] | unique)' \
+    "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+}
+
+configure_hooks_fixture() {
+  local fixture="$1"
+  local relative="$2"
+  local plugin_root="$fixture/$relative"
+  mkdir -p "$plugin_root/hooks"
+  printf '%s\n' \
+    '{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"true"}]}]}}' \
+    > "$plugin_root/hooks/fixture-hooks.json"
+  for runtime in codex claude; do
+    manifest="$plugin_root/.$runtime-plugin/plugin.json"
+    jq '.hooks = "./hooks/fixture-hooks.json"' "$manifest" > "$manifest.tmp" \
+      && mv "$manifest.tmp" "$manifest"
+  done
+  add_capability "$plugin_root/.codex-plugin/plugin.json" Hooks
+}
+
+primary_source=$(jq -er '.plugins[0].source.path' "$ROOT/.agents/plugins/marketplace.json") || exit 1
+primary_relative_root=${primary_source#./}
+
+empty_catalog=$(new_fixture empty-catalog)
+for catalog in "$empty_catalog/.agents/plugins/marketplace.json" "$empty_catalog/.claude-plugin/marketplace.json"; do
+  jq '.plugins = []' "$catalog" > "$catalog.tmp" && mv "$catalog.tmp" "$catalog"
+done
+expect_rejected "$empty_catalog" 'catalog is invalid'
+
+absolute_source=$(new_fixture absolute-source)
+absolute_plugin="$absolute_source/$primary_relative_root"
+catalog="$absolute_source/.agents/plugins/marketplace.json"
+jq --arg source "$absolute_plugin" '.plugins[0].source.path = $source' "$catalog" > "$catalog.tmp" \
+  && mv "$catalog.tmp" "$catalog"
+catalog="$absolute_source/.claude-plugin/marketplace.json"
+jq --arg source "$absolute_plugin" '.plugins[0].source = $source' "$catalog" > "$catalog.tmp" \
+  && mv "$catalog.tmp" "$catalog"
+expect_rejected "$absolute_source" 'unsafe catalog source'
+
+catalog_intermediate_symlink=$(new_fixture catalog-intermediate-symlink)
+mv "$catalog_intermediate_symlink/plugins" "$catalog_intermediate_symlink/plugins-real"
+ln -s plugins-real "$catalog_intermediate_symlink/plugins"
+expect_rejected "$catalog_intermediate_symlink" 'plugin source subtree must not contain symlinks'
+
+empty_manifest_name=$(new_fixture empty-manifest-name)
+manifest="$empty_manifest_name/$primary_relative_root/.codex-plugin/plugin.json"
+jq '.name = ""' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+expect_rejected "$empty_manifest_name" 'manifest name and version must be nonempty strings'
+
+nonstring_manifest_version=$(new_fixture nonstring-manifest-version)
+manifest="$nonstring_manifest_version/$primary_relative_root/.claude-plugin/plugin.json"
+jq '.version = 1' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+expect_rejected "$nonstring_manifest_version" 'manifest name and version must be nonempty strings'
+
+nonstring_capability=$(new_fixture nonstring-capability)
+manifest="$nonstring_capability/$primary_relative_root/.codex-plugin/plugin.json"
+jq '.interface.capabilities += [1]' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+expect_rejected "$nonstring_capability" 'Codex capabilities must be an array of strings'
+
 skills_source=""
 while IFS= read -r source; do
   if [ -d "$ROOT/${source#./}/skills" ]; then
@@ -75,6 +146,11 @@ else
   printf ' \n\t\n' > "$skill_entry"
   expect_rejected "$whitespace_skill" 'SKILL.md must contain non-whitespace content'
 
+  unicode_whitespace_skill=$(new_fixture unicode-whitespace-skill)
+  skill_entry=$(find "$unicode_whitespace_skill/$relative_root/skills" -type f -name SKILL.md -print -quit)
+  printf '\302\240\343\200\200\n' > "$skill_entry"
+  expect_rejected "$unicode_whitespace_skill" 'SKILL.md must contain non-whitespace content'
+
   intermediate_symlink=$(new_fixture intermediate-symlink)
   plugin_root="$intermediate_symlink/$relative_root"
   ln -s . "$plugin_root/alias"
@@ -83,40 +159,89 @@ else
     jq '.skills = "alias/skills"' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
   done
   expect_rejected "$intermediate_symlink" 'plugin source subtree must not contain symlinks'
-
-  catalog_intermediate_symlink=$(new_fixture catalog-intermediate-symlink)
-  mv "$catalog_intermediate_symlink/plugins" "$catalog_intermediate_symlink/plugins-real"
-  ln -s plugins-real "$catalog_intermediate_symlink/plugins"
-  expect_rejected "$catalog_intermediate_symlink" 'plugin source subtree must not contain symlinks'
 fi
 
-scripts_source=""
-while IFS= read -r source; do
-  plugin_root="$ROOT/${source#./}"
-  if jq -e '.interface.capabilities | type == "array" and index("Scripts") != null' "$plugin_root/.codex-plugin/plugin.json" >/dev/null; then
-    scripts_source="$source"
-    break
-  fi
-done < <(jq -r '.plugins[].source.path' "$ROOT/.agents/plugins/marketplace.json")
+missing_scripts=$(new_fixture missing-scripts)
+plugin_root="$missing_scripts/$primary_relative_root"
+add_capability "$plugin_root/.codex-plugin/plugin.json" Scripts
+rm -rf "$plugin_root/scripts"
+expect_rejected "$missing_scripts" 'Scripts capability requires a physical non-symlink scripts directory'
 
-if [ -n "$scripts_source" ]; then
-  scripts_relative_root=${scripts_source#./}
+symlink_scripts=$(new_fixture symlink-scripts)
+plugin_root="$symlink_scripts/$primary_relative_root"
+add_capability "$plugin_root/.codex-plugin/plugin.json" Scripts
+rm -rf "$plugin_root/scripts" "$plugin_root/scripts-real"
+mkdir -p "$plugin_root/scripts"
+printf '#!/bin/sh\nexit 0\n' > "$plugin_root/scripts/run.sh"
+mv "$plugin_root/scripts" "$plugin_root/scripts-real"
+ln -s scripts-real "$plugin_root/scripts"
+expect_rejected "$symlink_scripts" 'plugin source subtree must not contain symlinks'
 
-  missing_scripts=$(new_fixture missing-scripts)
-  rm -rf "$missing_scripts/$scripts_relative_root/scripts"
-  expect_rejected "$missing_scripts" 'Scripts capability requires a physical non-symlink scripts directory'
+empty_scripts=$(new_fixture empty-scripts)
+plugin_root="$empty_scripts/$primary_relative_root"
+add_capability "$plugin_root/.codex-plugin/plugin.json" Scripts
+rm -rf "$plugin_root/scripts"
+mkdir -p "$plugin_root/scripts"
+: > "$plugin_root/scripts/empty.sh"
+expect_rejected "$empty_scripts" 'Scripts capability requires at least one nonempty regular script'
 
-  symlink_scripts=$(new_fixture symlink-scripts)
-  plugin_root="$symlink_scripts/$scripts_relative_root"
-  mv "$plugin_root/scripts" "$plugin_root/scripts-real"
-  ln -s scripts-real "$plugin_root/scripts"
-  expect_rejected "$symlink_scripts" 'plugin source subtree must not contain symlinks'
+valid_hooks=$(new_fixture valid-hooks)
+configure_hooks_fixture "$valid_hooks" "$primary_relative_root"
+expect_accepted "$valid_hooks"
 
-  empty_scripts=$(new_fixture empty-scripts)
-  rm -rf "$empty_scripts/$scripts_relative_root/scripts"
-  mkdir -p "$empty_scripts/$scripts_relative_root/scripts"
-  expect_rejected "$empty_scripts" 'Scripts capability requires at least one nonempty regular script'
-fi
+missing_claude_hooks=$(new_fixture missing-claude-hooks)
+configure_hooks_fixture "$missing_claude_hooks" "$primary_relative_root"
+manifest="$missing_claude_hooks/$primary_relative_root/.claude-plugin/plugin.json"
+jq 'del(.hooks)' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+expect_rejected "$missing_claude_hooks" 'Hooks capability requires hooks declarations in both runtime manifests'
+
+missing_hooks_capability=$(new_fixture missing-hooks-capability)
+configure_hooks_fixture "$missing_hooks_capability" "$primary_relative_root"
+manifest="$missing_hooks_capability/$primary_relative_root/.codex-plugin/plugin.json"
+jq '.interface.capabilities -= ["Hooks"]' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+expect_rejected "$missing_hooks_capability" 'Hooks capability requires hooks declarations in both runtime manifests'
+
+outside_hooks=$(new_fixture outside-hooks)
+configure_hooks_fixture "$outside_hooks" "$primary_relative_root"
+printf '%s\n' \
+  '{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"true"}]}]}}' \
+  > "$outside_hooks/$primary_relative_root/../outside-hooks.json"
+for runtime in codex claude; do
+  manifest="$outside_hooks/$primary_relative_root/.$runtime-plugin/plugin.json"
+  jq '.hooks = "../outside-hooks.json"' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+done
+expect_rejected "$outside_hooks" 'hooks path escapes the plugin root'
+
+symlink_hooks=$(new_fixture symlink-hooks)
+configure_hooks_fixture "$symlink_hooks" "$primary_relative_root"
+plugin_root="$symlink_hooks/$primary_relative_root"
+mv "$plugin_root/hooks/fixture-hooks.json" "$plugin_root/hooks/fixture-hooks-real.json"
+ln -s fixture-hooks-real.json "$plugin_root/hooks/fixture-hooks.json"
+expect_rejected "$symlink_hooks" 'plugin source subtree must not contain symlinks'
+
+empty_hooks=$(new_fixture empty-hooks)
+configure_hooks_fixture "$empty_hooks" "$primary_relative_root"
+: > "$empty_hooks/$primary_relative_root/hooks/fixture-hooks.json"
+expect_rejected "$empty_hooks" 'hooks file must be nonempty'
+
+invalid_hook_definition=$(new_fixture invalid-hook-definition)
+configure_hooks_fixture "$invalid_hook_definition" "$primary_relative_root"
+printf '%s\n' '{"hooks":{}}' > "$invalid_hook_definition/$primary_relative_root/hooks/fixture-hooks.json"
+expect_rejected "$invalid_hook_definition" 'hooks file must contain nonempty command hook definitions'
+
+invalid_hook_type=$(new_fixture invalid-hook-type)
+configure_hooks_fixture "$invalid_hook_type" "$primary_relative_root"
+hook_file="$invalid_hook_type/$primary_relative_root/hooks/fixture-hooks.json"
+jq '.hooks.UserPromptSubmit[0].hooks[0].type = "prompt"' "$hook_file" > "$hook_file.tmp" \
+  && mv "$hook_file.tmp" "$hook_file"
+expect_rejected "$invalid_hook_type" 'hooks file must contain nonempty command hook definitions'
+
+blank_hook_command=$(new_fixture blank-hook-command)
+configure_hooks_fixture "$blank_hook_command" "$primary_relative_root"
+hook_file="$blank_hook_command/$primary_relative_root/hooks/fixture-hooks.json"
+jq '.hooks.UserPromptSubmit[0].hooks[0].command = " \n\t"' "$hook_file" > "$hook_file.tmp" \
+  && mv "$hook_file.tmp" "$hook_file"
+expect_rejected "$blank_hook_command" 'hooks file must contain nonempty command hook definitions'
 
 if [ "$status" -eq 0 ]; then
   printf 'Marketplace negative validation: passed\n'
