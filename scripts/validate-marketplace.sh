@@ -72,6 +72,8 @@ while IFS='|' read -r name version source; do
     fail "$name LICENSE differs from root LICENSE"
   fi
 
+  codex_manifest="$plugin_root/.codex-plugin/plugin.json"
+  claude_manifest="$plugin_root/.claude-plugin/plugin.json"
   for runtime in codex claude; do
     manifest="$plugin_root/.$runtime-plugin/plugin.json"
     if [ ! -f "$manifest" ] || [ -L "$manifest" ]; then
@@ -80,6 +82,53 @@ while IFS='|' read -r name version source; do
       fail "$name $runtime manifest identity differs from catalog"
     fi
   done
+
+  if [ ! -f "$codex_manifest" ] || [ -L "$codex_manifest" ] \
+    || [ ! -f "$claude_manifest" ] || [ -L "$claude_manifest" ]; then
+    continue
+  fi
+
+  if [ -d "$plugin_root/skills" ]; then
+    for runtime in codex claude; do
+      manifest="$plugin_root/.$runtime-plugin/plugin.json"
+      declared_skills=$(jq -er '.skills | select(type == "string" and length > 0)' "$manifest" 2>/dev/null) || {
+        fail "$name $runtime manifest must declare skills for its skills directory"
+        continue
+      }
+      case "$declared_skills" in
+        /*)
+          fail "$name $runtime skills path must be relative"
+          continue
+          ;;
+      esac
+      skills_path="$plugin_root/$declared_skills"
+      if [ ! -d "$skills_path" ] || [ -L "$skills_path" ]; then
+        fail "$name $runtime skills path must be a regular directory"
+        continue
+      fi
+      resolved_skills=$(cd "$skills_path" && pwd -P)
+      case "$resolved_skills/" in
+        "$resolved_root/"*) ;;
+        *)
+          fail "$name $runtime skills path escapes the plugin root"
+          continue
+          ;;
+      esac
+      skill_entry=$(find "$resolved_skills" -type f -name SKILL.md -print -quit)
+      [ -n "$skill_entry" ] || fail "$name $runtime skills path contains no SKILL.md"
+    done
+    jq -e '.interface.capabilities | type == "array" and index("Skills") != null' "$codex_manifest" >/dev/null \
+      || fail "$name Codex capabilities must include Skills"
+  else
+    jq -s -e 'all(.[]; has("skills") | not)' "$codex_manifest" "$claude_manifest" >/dev/null \
+      || fail "$name manifests must not declare skills without a skills directory"
+    jq -e '.interface.capabilities | type == "array" and index("Skills") == null' "$codex_manifest" >/dev/null \
+      || fail "$name Codex capabilities must not include Skills"
+    if [ -d "$plugin_root/scripts" ]; then
+      jq -e '.interface.capabilities | type == "array" and index("Scripts") != null' "$codex_manifest" >/dev/null \
+        || fail "$name Codex capabilities must include Scripts"
+    fi
+  fi
 done < <(jq -r '.plugins[] | [.name,.version,.source.path] | join("|")' "$codex_catalog")
 
 if [ "$status" -eq 0 ]; then
