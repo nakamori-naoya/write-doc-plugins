@@ -1,6 +1,6 @@
 {
   "name": "visual-guidance",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "伝えたい主張と読み手の問いから、図にする箇所、図の型、画像生成を使うかを選び、描画可能な設計を返す",
   "author": {
     "name": "NaoyaNakamori"

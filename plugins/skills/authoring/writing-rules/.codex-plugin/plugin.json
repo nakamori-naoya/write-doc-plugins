@@ -1,6 +1,6 @@
 {
   "name": "writing-rules",
-  "version": "0.4.15",
+  "version": "0.4.16",
   "description": "文章を書くときの規律。構成・段落・強調・文体・出典・コード注釈。媒体を知らないので、資料に限らず PR の説明・チケット・レビューコメントにも使える",
   "skills": "./skills",
   "author": {

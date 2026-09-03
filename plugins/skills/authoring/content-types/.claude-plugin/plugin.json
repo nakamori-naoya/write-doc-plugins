@@ -1,6 +1,6 @@
 {
   "name": "content-types",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "何を書くかを決める。コンテンツタイプ28種のカタログと決定手順、型ごとの読み手・目的・成功条件、テンプレート、記載例",
   "author": {
     "name": "NaoyaNakamori"
