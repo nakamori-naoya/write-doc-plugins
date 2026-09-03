@@ -12,5 +12,7 @@ __pycache__/
 !/scripts/
 !/shared/
 !/AGENTS.md
+!/LICENSE
 !/README.md
+!/SECURITY.md
 !/.gitignore
