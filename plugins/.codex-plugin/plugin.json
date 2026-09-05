@@ -1,0 +1,33 @@
+{
+  "name": "write-doc",
+  "version": "1.0.0",
+  "description": "文書型、文章規律、図、保存、後始末を束ね、資料を1本作るPlaybookを提供する",
+  "author": {"name": "NaoyaNakamori"},
+  "skills": [
+    "./playbooks/authoring/write-doc",
+    "./skills/authoring/content-types",
+    "./skills/authoring/writing-rules",
+    "./skills/authoring/visual-guidance",
+    "./skills/authoring/write-doc-cleanup"
+  ],
+  "interface": {
+    "displayName": "Playbook Package",
+    "capabilities": ["Skills"]
+  },
+  "metadata": {
+    "harness": {
+      "installationSurface": "playbook-package",
+      "entryRoot": "./playbooks/authoring/write-doc",
+      "playbooks": {
+        "write-doc": "./playbooks/authoring/write-doc"
+      },
+      "internalPlugins": {
+        "content-types": "./skills/authoring/content-types",
+        "writing-rules": "./skills/authoring/writing-rules",
+        "visual-guidance": "./skills/authoring/visual-guidance",
+        "doc-render": "./skills/authoring/doc-render",
+        "write-doc-cleanup": "./skills/authoring/write-doc-cleanup"
+      }
+    }
+  }
+}

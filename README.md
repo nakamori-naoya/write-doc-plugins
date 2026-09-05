@@ -12,9 +12,9 @@
 - 既存ファイルを意図せず上書きせず、HTMLまたはMarkdownへ保存したい
 - 資料完成後に、中間生成物だけを安全に片付けたい
 
-## どのpluginを使うか
+## どの機能を使うか
 
-| やりたいこと | 選ぶplugin |
+| やりたいこと | 選ぶ機能 |
 |---|---|
 | 型の選択から保存まで一続きで資料を完成させる | `write-doc` |
 | 読み手と目的から文書の型だけを決める | `content-types` |
@@ -48,11 +48,6 @@ Codexのpluginコマンドには`--scope`がない。通常の手順はuser単�
 ```bash
 codex plugin marketplace add nakamori-naoya/write-doc-plugins
 codex plugin add write-doc@write-doc
-codex plugin add content-types@write-doc
-codex plugin add writing-rules@write-doc
-codex plugin add visual-guidance@write-doc
-codex plugin add doc-render@write-doc
-codex plugin add write-doc-cleanup@write-doc
 ```
 
 このrepositoryだけに分離したい場合は、repository専用の`CODEX_HOME`を作り、インストール時と利用時に同じ値を指定する。
@@ -63,11 +58,6 @@ export CODEX_HOME="$PWD/.codex-home"
 
 codex plugin marketplace add nakamori-naoya/write-doc-plugins
 codex plugin add write-doc@write-doc
-codex plugin add content-types@write-doc
-codex plugin add writing-rules@write-doc
-codex plugin add visual-guidance@write-doc
-codex plugin add doc-render@write-doc
-codex plugin add write-doc-cleanup@write-doc
 codex
 ```
 
@@ -90,18 +80,15 @@ CLAUDE_PLUGIN_SCOPE=project
 
 claude plugin marketplace add nakamori-naoya/write-doc-plugins --scope "$CLAUDE_PLUGIN_SCOPE"
 claude plugin install write-doc@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
-claude plugin install content-types@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
-claude plugin install writing-rules@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
-claude plugin install visual-guidance@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
-claude plugin install doc-render@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
-claude plugin install write-doc-cleanup@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
 ```
+
+利用者がインストールするのは`write-doc@write-doc`だけである。型選択、文章規律、図の選択、保存、後片付けは同じplaybook packageへ内包し、個別のインストール対象にはしない。
 
 ## インストール済みである必要があるplugin
 
 `write-doc@write-doc`に外部pluginへの依存はない。BDDやproductなど呼び出し側の題材にも依存しない。
 
-内部playbookの依存は`plugin@marketplace`のidentityだけを宣言し、versionは固定しない。開発用map、同じrepository、runtimeのinstall cacheの順に候補を調べ、解決したmanifestのidentityと必要なskillを検査する。
+内部playbookは同じpackage内の機能を内部契約で解決する。別repositoryから利用するときの公開契約は`write-doc@write-doc`だけであり、内部機能名をインストールまたは依存先として公開しない。
 
 ## 設定の上書きと優先順位
 

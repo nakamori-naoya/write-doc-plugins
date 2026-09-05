@@ -2,11 +2,6 @@
   "name": "write-doc",
   "interface": {"displayName": "Write Doc"},
   "plugins": [
-    {"name":"write-doc","source":{"source":"local","path":"./plugins/playbooks/authoring/write-doc"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.6.1"},
-    {"name":"content-types","source":{"source":"local","path":"./plugins/skills/authoring/content-types"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.8.0"},
-    {"name":"writing-rules","source":{"source":"local","path":"./plugins/skills/authoring/writing-rules"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.4.16"},
-    {"name":"visual-guidance","source":{"source":"local","path":"./plugins/skills/authoring/visual-guidance"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.2.1"},
-    {"name":"doc-render","source":{"source":"local","path":"./plugins/skills/authoring/doc-render"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.7.15"},
-    {"name":"write-doc-cleanup","source":{"source":"local","path":"./plugins/skills/authoring/write-doc-cleanup"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"0.1.1"}
+    {"name":"write-doc","source":{"source":"local","path":"./plugins"},"policy":{"installation":"AVAILABLE","authentication":"ON_INSTALL"},"category":"Productivity","version":"1.0.0"}
   ]
 }
