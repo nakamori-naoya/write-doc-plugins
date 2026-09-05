@@ -220,6 +220,7 @@ specialist_details=(
   "$content_types/references/detail/product.md"
   "$content_types/references/detail/domain.md"
   "$content_types/references/detail/data-modeling.md"
+  "$content_types/references/detail/user-journey-bdd.md"
 )
 specialist_examples=(
   "$content_types/assets/examples/north-star.example.md"
@@ -227,7 +228,7 @@ specialist_examples=(
   "$content_types/assets/examples/domain-rule.example.md"
   "$content_types/assets/examples/rdb-logical-data-modeling.example.md"
   "$content_types/assets/examples/rdb-physical-design.example.md"
-  "$content_types/assets/examples/e2e-bdd-scenarios.example.md"
+  "$content_types/assets/examples/user-journey-bdd.example.md"
 )
 specialist_boundary_ok=1
 for detail in "${specialist_details[@]}"; do
@@ -243,18 +244,27 @@ else
   fail "content-typesに専門領域の実行規律が混入"
 fi
 
-e2e_template="$content_types/assets/templates/e2e-bdd-scenarios.md"
-e2e_example="$content_types/assets/examples/e2e-bdd-scenarios.example.md"
-e2e_detail="$content_types/references/detail/e2e-bdd.md"
-if rg -F 'e2e-bdd-scenarios:' "$content_types/assets/template-examples.yml" >/dev/null \
+journey_template="$content_types/assets/templates/user-journey-bdd.md"
+journey_example="$content_types/assets/examples/user-journey-bdd.example.md"
+journey_detail="$content_types/references/detail/user-journey-bdd.md"
+if rg -F 'user-journey-bdd:' "$content_types/assets/template-examples.yml" >/dev/null \
   && rg -F 'ユーザーが目的を達成するまで' "$content_types/references/catalog.md" >/dev/null \
-  && rg -F '呼び出し元' "$e2e_detail" >/dev/null \
-  && rg -F '**接続**:' "$e2e_template" >/dev/null \
-  && [ "$(rg -c '^## 場面 [0-9]+:' "$e2e_example")" -ge 4 ] \
-  && ! rg -n '実行環境|試行回数|実行証拠|flaky|APIを呼び出|画面を操作' "$e2e_example" >/dev/null; then
-  pass "E2E BDD型は目的達成ストーリーの構成だけを提供"
+  && rg -F '何がJourneyで何がJourneyでないか' "$journey_detail" >/dev/null \
+  && rg -F '呼び出し元' "$journey_detail" >/dev/null \
+  && rg -F '**接続**:' "$journey_template" >/dev/null \
+  && rg -F '**Journeyとして扱う理由**:' "$journey_template" >/dev/null \
+  && rg -F '**Journeyに含めない問い**:' "$journey_template" >/dev/null \
+  && [ "$(rg -c '^## 場面 [0-9]+:' "$journey_example")" -ge 4 ] \
+  && ! rg -n '実行環境|試行回数|実行証拠|flaky|APIを呼び出|画面を操作' "$journey_example" >/dev/null; then
+  pass "ユーザー目的達成BDD型は判定済みJourneyの構成だけを提供"
 else
-  fail "E2E BDD型に必要な構成が無いかテスト実行関心が混入"
+  fail "ユーザー目的達成BDD型に必要な構成が無いか別責務が混入"
+fi
+
+if ! rg -n 'e2e-bdd|E2E BDD|E2E-BDD' "$content_types" >/dev/null; then
+  pass "テスト実行と誤読される旧文書型名なし"
+else
+  fail "テスト実行と誤読される旧文書型名が残存"
 fi
 
 doc_render="$ROOT/plugins/skills/authoring/doc-render"

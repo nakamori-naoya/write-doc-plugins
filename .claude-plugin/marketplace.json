@@ -4,7 +4,7 @@
   "description": "資料の型、文章規律、図、保存を組み合わせて1本の資料を作るmarketplace",
   "plugins": [
     {"name":"write-doc","source":"./plugins/playbooks/authoring/write-doc","description":"資料を1本書いて保存する上段playbook","version":"0.6.1"},
-    {"name":"content-types","source":"./plugins/skills/authoring/content-types","description":"資料の型を選びテンプレートと例を返す","version":"0.7.1"},
+    {"name":"content-types","source":"./plugins/skills/authoring/content-types","description":"資料の型を選びテンプレートと例を返す","version":"0.8.0"},
     {"name":"writing-rules","source":"./plugins/skills/authoring/writing-rules","description":"文章の構成、文体、出典、注釈の規律","version":"0.4.16"},
     {"name":"visual-guidance","source":"./plugins/skills/authoring/visual-guidance","description":"主張に合う図と画像生成の使い分けを設計する","version":"0.2.1"},
     {"name":"doc-render","source":"./plugins/skills/authoring/doc-render","description":"資料をHTMLまたはMarkdownへ安全に保存する","version":"0.7.15"},

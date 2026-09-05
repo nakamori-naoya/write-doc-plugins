@@ -1,6 +1,6 @@
 ---
 name: pick-content-type
-description: 読み手と目的から、書くべき文書の型を決める。Product North Star／Product Strategy／業務知識・コアドメイン／E2E BDDシナリオ／RDB論理設計／README／チュートリアル／コンセプト／ADR／実装解説／期間ダイジェスト／コード地図など28種のカタログ、テンプレート、記載例を返す。「どの型で書くべき？」「E2Eシナリオを資料にして」「この文書は何？」と聞かれたときに使う。
+description: 読み手と目的から、書くべき文書の型を決める。Product North Star／Product Strategy／業務知識・コアドメイン／ユーザー目的達成BDD／RDB論理設計／README／チュートリアル／コンセプト／ADR／実装解説／期間ダイジェスト／コード地図など28種のカタログ、テンプレート、記載例を返す。「どの型で書くべき？」「User JourneyをBDD資料にして」「この文書は何？」と聞かれたときに使う。
 ---
 
 # pick-content-type（型を決める）
