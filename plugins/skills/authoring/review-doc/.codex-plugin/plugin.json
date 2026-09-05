@@ -1,0 +1,14 @@
+{
+  "name": "review-doc",
+  "version": "0.1.0",
+  "description": "完成文書を読み手の理解と判断の基準に照らして確認する",
+  "author": {
+    "name": "NaoyaNakamori"
+  },
+  "skills": "./",
+  "metadata": {
+    "harness": {
+      "contractVersion": 1
+    }
+  }
+}
