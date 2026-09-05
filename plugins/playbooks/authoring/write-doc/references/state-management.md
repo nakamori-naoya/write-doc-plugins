@@ -14,3 +14,5 @@ python3 "$STATE" complete --config "$CFG_FILE" --run-id "$RUN_ID" --step type \
 各工程の直前に`start`、成果物がすべて揃った後だけ`complete`を呼ぶ。失敗時は`fail --reason <理由>`を呼び、その後の工程へ進まない。`complete`は`provides`と同じ名前の`--provide key=value`が過不足なく揃わなければ拒否する。
 
 中断後は同じ`PLAYBOOK_RUN_ID`で`init`し直すと再開する。`status`で現在地を読む。開始後にplaybook設定が変わっていれば再開できない。状態JSONへ成果物本文は入れず、識別子、path、ハッシュなどの参照だけを値にする。
+
+失敗後の`init`は`needs_retry`を返す。修復後に`retry`を明示して失敗工程だけをpendingへ戻し、`start`する。自動retryはしない。別repository、開始時と異なる設定・依存identityは拒否する。run-idを変更して新しく開始する。全更新はrun単位の排他下で行い、壊れた状態を初期化し直さない。saveの`path`は実在する絶対pathの通常ファイルであることを検査する。
