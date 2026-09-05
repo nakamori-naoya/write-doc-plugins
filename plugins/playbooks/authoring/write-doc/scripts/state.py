@@ -48,7 +48,7 @@ def state_root() -> pathlib.Path:
     base = os.environ.get("XDG_STATE_HOME")
     if not base:
         base = str(pathlib.Path.home() / ".local" / "state")
-    return pathlib.Path(base) / "harness-plugins" / "playbooks"
+    return pathlib.Path(base).expanduser().resolve() / "harness-plugins" / "playbooks"
 
 
 def safe(value: str, label: str) -> str:
@@ -58,7 +58,14 @@ def safe(value: str, label: str) -> str:
 
 
 def state_path(playbook: dict, run_id: str) -> pathlib.Path:
-    return state_root() / safe(playbook["name"], "playbook名") / f"{safe(run_id, 'run-id')}.json"
+    root = state_root()
+    path = root / safe(playbook["name"], "playbook名") / f"{safe(run_id, 'run-id')}.json"
+    current = root.parent.parent
+    for part in path.relative_to(current).parts:
+        current /= part
+        if current.is_symlink():
+            die("状態pathの祖先またはfileにsymlinkは使えない: " + str(current))
+    return path
 
 
 def read_state(path: pathlib.Path) -> dict:
