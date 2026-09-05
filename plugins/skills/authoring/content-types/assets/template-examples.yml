@@ -27,9 +27,9 @@ pairs:
   domain-rule:
     template: templates/domain-rule.md
     example: examples/domain-rule.example.md
-  e2e-bdd-scenarios:
-    template: templates/e2e-bdd-scenarios.md
-    example: examples/e2e-bdd-scenarios.example.md
+  user-journey-bdd:
+    template: templates/user-journey-bdd.md
+    example: examples/user-journey-bdd.example.md
   getting-started:
     template: templates/getting-started.md
     example: examples/getting-started.example.md
