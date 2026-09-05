@@ -6,11 +6,7 @@
     "name": "NaoyaNakamori"
   },
   "skills": [
-    "./playbooks/authoring/write-doc",
-    "./skills/authoring/content-types",
-    "./skills/authoring/writing-rules",
-    "./skills/authoring/visual-guidance",
-    "./skills/authoring/write-doc-cleanup"
+    "./playbooks/authoring/write-doc"
   ],
   "interface": {
     "displayName": "Playbook Package",
