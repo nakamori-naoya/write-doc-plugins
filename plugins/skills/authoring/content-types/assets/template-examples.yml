@@ -1,86 +1,86 @@
 version: 1
 pairs:
   adr:
-    template: templates/adr.md
-    example: examples/adr.example.md
+    template: assets/templates/adr.md
+    example: assets/examples/adr.example.md
   api-reference:
-    template: templates/api-reference.md
-    example: examples/api-reference.example.md
+    template: assets/templates/api-reference.md
+    example: assets/examples/api-reference.example.md
   code-comment:
-    template: templates/code-comment.md
-    example: examples/code-comment.example.md
+    template: assets/templates/code-comment.md
+    example: assets/examples/code-comment.example.md
   code-map:
-    template: templates/code-map.md
-    example: examples/code-map.example.md
+    template: assets/templates/code-map.md
+    example: assets/examples/code-map.example.md
   code-reading:
-    template: templates/code-reading.md
-    example: examples/code-reading.example.md
+    template: assets/templates/code-reading.md
+    example: assets/examples/code-reading.example.md
   concept:
-    template: templates/concept.md
-    example: examples/concept.example.md
+    template: assets/templates/concept.md
+    example: assets/examples/concept.example.md
   decision-log:
-    template: templates/decision-log.md
-    example: examples/decision-log.example.md
+    template: assets/templates/decision-log.md
+    example: assets/examples/decision-log.example.md
   design-doc:
-    template: templates/design-doc.md
-    example: examples/design-doc.example.md
+    template: assets/templates/design-doc.md
+    example: assets/examples/design-doc.example.md
   domain-rule:
-    template: templates/domain-rule.md
-    example: examples/domain-rule.example.md
+    template: assets/templates/domain-rule.md
+    example: assets/examples/domain-rule.example.md
   user-journey-bdd:
-    template: templates/user-journey-bdd.md
-    example: examples/user-journey-bdd.example.md
+    template: assets/templates/user-journey-bdd.md
+    example: assets/examples/user-journey-bdd.example.md
   getting-started:
-    template: templates/getting-started.md
-    example: examples/getting-started.example.md
+    template: assets/templates/getting-started.md
+    example: assets/examples/getting-started.example.md
   glossary:
-    template: templates/glossary.md
-    example: examples/glossary.example.md
+    template: assets/templates/glossary.md
+    example: assets/examples/glossary.example.md
   how-to:
-    template: templates/how-to.md
-    example: examples/how-to.example.md
+    template: assets/templates/how-to.md
+    example: assets/examples/how-to.example.md
   landing-page:
-    template: templates/landing-page.md
-    example: examples/landing-page.example.md
+    template: assets/templates/landing-page.md
+    example: assets/examples/landing-page.example.md
   onboarding:
-    template: templates/onboarding.md
-    example: examples/onboarding.example.md
+    template: assets/templates/onboarding.md
+    example: assets/examples/onboarding.example.md
   open-questions:
-    template: templates/open-questions.md
-    example: examples/open-questions.example.md
+    template: assets/templates/open-questions.md
+    example: assets/examples/open-questions.example.md
   period-digest:
-    template: templates/period-digest.md
-    example: examples/period-digest.example.md
+    template: assets/templates/period-digest.md
+    example: assets/examples/period-digest.example.md
   postmortem:
-    template: templates/postmortem.md
-    example: examples/postmortem.example.md
+    template: assets/templates/postmortem.md
+    example: assets/examples/postmortem.example.md
   north-star:
-    template: templates/north-star.md
-    example: examples/north-star.example.md
+    template: assets/templates/north-star.md
+    example: assets/examples/north-star.example.md
   strategy:
-    template: templates/strategy.md
-    example: examples/strategy.example.md
+    template: assets/templates/strategy.md
+    example: assets/examples/strategy.example.md
   pr-walkthrough:
-    template: templates/pr-walkthrough.md
-    example: examples/pr-walkthrough.example.md
+    template: assets/templates/pr-walkthrough.md
+    example: assets/examples/pr-walkthrough.example.md
   rdb-logical-data-modeling:
-    template: templates/rdb-logical-data-modeling.md
-    example: examples/rdb-logical-data-modeling.example.md
+    template: assets/templates/rdb-logical-data-modeling.md
+    example: assets/examples/rdb-logical-data-modeling.example.md
   rdb-physical-design:
-    template: templates/rdb-physical-design.md
-    example: examples/rdb-physical-design.example.md
+    template: assets/templates/rdb-physical-design.md
+    example: assets/examples/rdb-physical-design.example.md
   readme:
-    template: templates/readme.md
-    example: examples/readme.example.md
+    template: assets/templates/readme.md
+    example: assets/examples/readme.example.md
   release-notes:
-    template: templates/release-notes.md
-    example: examples/release-notes.example.md
+    template: assets/templates/release-notes.md
+    example: assets/examples/release-notes.example.md
   runbook:
-    template: templates/runbook.md
-    example: examples/runbook.example.md
+    template: assets/templates/runbook.md
+    example: assets/examples/runbook.example.md
   troubleshooting:
-    template: templates/troubleshooting.md
-    example: examples/troubleshooting.example.md
+    template: assets/templates/troubleshooting.md
+    example: assets/examples/troubleshooting.example.md
   tutorial:
-    template: templates/tutorial.md
-    example: examples/tutorial.example.md
+    template: assets/templates/tutorial.md
+    example: assets/examples/tutorial.example.md

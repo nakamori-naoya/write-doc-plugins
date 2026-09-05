@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "id": "representative-boundary",
+      "skill": "../plugins/playbooks/authoring/write-doc/SKILL.md",
+      "messages": [
+        {
+          "role": "user",
+          "content": "型はADR、図は不要と明示します。まだprepareや保存は実行していません。この条件で資料を作り始めて。"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "caller-type",
+          "meaning": "明示済みADRを選び直したり図の必須確認を聞き直さず扱う"
+        },
+        {
+          "id": "truthful",
+          "meaning": "未実行の設定解決や保存を完了済みと報告しない"
+        }
+      ]
+    }
+  ]
+}

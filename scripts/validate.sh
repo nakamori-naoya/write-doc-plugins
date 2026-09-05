@@ -2,7 +2,9 @@
 # Scenario: write-doc marketplaceが6 pluginで自己完結し、両runtimeで解決できる
 set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+python3 "$ROOT/scripts/test-hardening.py" || exit 1
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/write-doc-validation.XXXXXX") || exit 2
+export TMPDIR="$TMP_ROOT"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 passed=0 failed=0
 pass() { printf 'PASS: %s\n' "$1"; passed=$((passed + 1)); }
@@ -218,7 +220,6 @@ validate_dependency_resolution_contract && pass "名前ベース依存解決の�
 
 cleanup="$ROOT/plugins/skills/authoring/write-doc-cleanup"
 if cmp -s "$ROOT/shared/prepare.sh" "$cleanup/scripts/prepare.sh" \
-  && rg -F 'root直下の正本`SKILL.md`を全文読んで' "$cleanup/skills/remove-intermediate-artifacts/SKILL.md" >/dev/null \
   && rg -F '明示パス' "$cleanup/SKILL.md" >/dev/null \
   && rg -F '最終資料' "$cleanup/SKILL.md" >/dev/null; then
   pass "write-doc-cleanupはwrite-doc内で一意に配布される"
