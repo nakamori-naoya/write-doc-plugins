@@ -5,4 +5,4 @@ rules: {}
 extra: ""
 instructions:
   writing:
-    directive: rulesの各ファイルを読み、structure、section、emphasis、styleの順に適用し、citationとannotated-codeを該当時に適用する
+    directive: rulesの各ファイルと適用手順を読み、読み手の前提と到達点からstructure、section、style、emphasisを適用し、citationとannotated-codeを該当時に適用する

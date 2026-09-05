@@ -1,0 +1,173 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "id": "approval-misconception",
+      "skill": "../plugins/skills/authoring/writing-rules/SKILL.md",
+      "stage": "draft-after-resolution",
+      "resources": [
+        "../plugins/skills/authoring/writing-rules/references/apply.md",
+        "../plugins/skills/authoring/writing-rules/references/structure.md",
+        "../plugins/skills/authoring/writing-rules/references/section.md",
+        "../plugins/skills/authoring/writing-rules/references/style.md",
+        "../plugins/skills/authoring/writing-rules/references/emphasis.md",
+        "../plugins/skills/authoring/writing-rules/references/citation.md",
+        "../plugins/skills/authoring/writing-rules/references/final-check.md"
+      ],
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "合成評価fixtureの前提: 設定解決と指定resourcesの読取は成功済み。媒体への保存は未実行。これから渡される確定事項だけを使い、本文の案と短い読者確認を作る段階である。"
+        },
+        {
+          "role": "user",
+          "content": "申請フォームを提出したら購入できると思っている社員向けに、購入してよい時点を短く説明して。確定事項: 提出は審査待ち。必要な承認が全てそろった通知後に購入可。10万円以上は部長承認も必要。監査ログの保存実装も資料にはあるが、社員は運用しない。説明用の架空例は使える。 本文案と、その本文を根拠にした短い読者確認を提示して。実ファイルへの保存はこの評価では行わない。"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "correct-model",
+          "meaning": "提出と承認を早めに区別し、提出済みだけでは購入不可と読み手が判断できる"
+        },
+        {
+          "id": "condition-transfer",
+          "meaning": "金額の条件を変えても必要な承認を判断でき、10万円ちょうどを範囲に含む"
+        },
+        {
+          "id": "relevant-scope",
+          "meaning": "監査実装を本文へ膨らませず、重要な承認条件は本文に残す"
+        },
+        {
+          "id": "evidence-review",
+          "meaning": "読者確認が問い・本文からの答え・根拠に基づき、未実行の読者テストや保存を成功と称さない"
+        }
+      ]
+    },
+    {
+      "id": "operator-timeout",
+      "skill": "../plugins/skills/authoring/writing-rules/SKILL.md",
+      "stage": "draft-after-resolution",
+      "resources": [
+        "../plugins/skills/authoring/writing-rules/references/apply.md",
+        "../plugins/skills/authoring/writing-rules/references/structure.md",
+        "../plugins/skills/authoring/writing-rules/references/section.md",
+        "../plugins/skills/authoring/writing-rules/references/style.md",
+        "../plugins/skills/authoring/writing-rules/references/emphasis.md",
+        "../plugins/skills/authoring/writing-rules/references/citation.md",
+        "../plugins/skills/authoring/writing-rules/references/final-check.md"
+      ],
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "合成評価fixtureの前提: 設定解決と指定resourcesの読取は成功済み。媒体への保存は未実行。これから渡される確定事項だけを使い、本文の案と短い読者確認を作る段階である。"
+        },
+        {
+          "role": "user",
+          "content": "取込画面を毎日使う当番に、タイムアウト時の操作を伝えて。確定事項: 画面がタイムアウトしても取込が完了していることがある。まず取込IDで結果確認。完了なら再実行しない。失敗なら同じIDで再試行。処理中または照会不能なら再実行せずIDを添えて担当者へ連絡。キューやロックの解説は当番の役割外。 本文案と、その本文を根拠にした短い読者確認を提示して。実ファイルへの保存はこの評価では行わない。"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "action-first",
+          "meaning": "当番が必要な最初の操作をすぐ特定でき、不要な構成図や概論から始めない"
+        },
+        {
+          "id": "not-failure",
+          "meaning": "タイムアウトを取込失敗と同一視せず、結果不明時の再実行を防ぐ"
+        },
+        {
+          "id": "sufficient-conditions",
+          "meaning": "完了・失敗・処理中・照会不能の各条件に対応する操作を読み取れる"
+        },
+        {
+          "id": "evidence-review",
+          "meaning": "読者確認が問い・本文からの答え・根拠に基づき、未実行の読者テストや保存を成功と称さない"
+        }
+      ]
+    },
+    {
+      "id": "reference-without-forced-examples",
+      "skill": "../plugins/skills/authoring/writing-rules/SKILL.md",
+      "stage": "draft-after-resolution",
+      "resources": [
+        "../plugins/skills/authoring/writing-rules/references/apply.md",
+        "../plugins/skills/authoring/writing-rules/references/structure.md",
+        "../plugins/skills/authoring/writing-rules/references/section.md",
+        "../plugins/skills/authoring/writing-rules/references/style.md",
+        "../plugins/skills/authoring/writing-rules/references/emphasis.md",
+        "../plugins/skills/authoring/writing-rules/references/citation.md",
+        "../plugins/skills/authoring/writing-rules/references/final-check.md"
+      ],
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "合成評価fixtureの前提: 設定解決と指定resourcesの読取は成功済み。媒体への保存は未実行。これから渡される確定事項だけを使い、本文の案と短い読者確認を作る段階である。"
+        },
+        {
+          "role": "user",
+          "content": "専門担当者向けに次の設定項目だけの短い参照資料を書いて。retry_limitは失敗時の追加試行回数、整数0〜3、既定1。0は最初の試行を止めず追加試行をしない。timeout_secondsは各試行の待機上限、整数1〜60、既定10。これ以外の仕様は未確認。 本文案と、その本文を根拠にした短い読者確認を提示して。実ファイルへの保存はこの評価では行わない。"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "lookup",
+          "meaning": "項目の意味・値域・既定値を容易に探せる"
+        },
+        {
+          "id": "zero-semantics",
+          "meaning": "retry_limit=0でも最初の試行は行うと判別できる"
+        },
+        {
+          "id": "no-padding",
+          "meaning": "不要な全体像・BDD・抽象具体の往復・総括を付加せず、未確認仕様を補完しない"
+        },
+        {
+          "id": "evidence-review",
+          "meaning": "読者確認が問い・本文からの答え・根拠に基づき、未実行の読者テストや保存を成功と称さない"
+        }
+      ]
+    },
+    {
+      "id": "novice-relations",
+      "skill": "../plugins/skills/authoring/writing-rules/SKILL.md",
+      "stage": "draft-after-resolution",
+      "resources": [
+        "../plugins/skills/authoring/writing-rules/references/apply.md",
+        "../plugins/skills/authoring/writing-rules/references/structure.md",
+        "../plugins/skills/authoring/writing-rules/references/section.md",
+        "../plugins/skills/authoring/writing-rules/references/style.md",
+        "../plugins/skills/authoring/writing-rules/references/emphasis.md",
+        "../plugins/skills/authoring/writing-rules/references/citation.md",
+        "../plugins/skills/authoring/writing-rules/references/final-check.md"
+      ],
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "合成評価fixtureの前提: 設定解決と指定resourcesの読取は成功済み。媒体への保存は未実行。これから渡される確定事項だけを使い、本文の案と短い読者確認を作る段階である。"
+        },
+        {
+          "role": "user",
+          "content": "社内通知を初めて設定する担当者に「購読」を説明して。確定事項: 発信元は通知を出す部署、購読は受信者が選んだ発信元との結びつき。受信者は購読中の発信元の新しい通知だけを受け取る。購読を解除すると今後の通知が止まるが受信済みの通知は消えない。解除手順の画面や配信内部構造は本書の対象外。 本文案と、その本文を根拠にした短い読者確認を提示して。実ファイルへの保存はこの評価では行わない。"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "relations",
+          "meaning": "用語を列挙するだけでなく発信元・購読・受信者の関係を初学者が説明できる"
+        },
+        {
+          "id": "boundary",
+          "meaning": "解除による今後の通知と受信済み通知への効果を区別できる"
+        },
+        {
+          "id": "examples",
+          "meaning": "例を使う場合は本文概念との対応が明確で、例だけの未説明ルールを足さない"
+        },
+        {
+          "id": "evidence-review",
+          "meaning": "読者確認が問い・本文からの答え・根拠に基づき、未実行の読者テストや保存を成功と称さない"
+        }
+      ]
+    }
+  ]
+}
