@@ -1,6 +1,6 @@
 # write-doc
 
-**資料を1本書いて保存する上段プラグイン。** 自分では型も規律も図の選択基準も媒体も持たず、4つを組み合わせる。
+**資料を1本書いて保存する上段プラグイン。** 自分では型も規律も図の選択基準も媒体も持たず、執筆・図・保存・最終確認を組み合わせる。
 
 | 下段 | 何を決めるか |
 |---|---|
@@ -8,10 +8,11 @@
 | `writing-rules` | **どう書くか** — 構成・段落・強調・文体・出典 |
 | `visual-guidance` | **何をどう図にするか** — 読み手の問いと図の型 |
 | `doc-render` | **どう出すか** — 媒体表現と保存 |
+| `review-doc` | **目的を満たすか** — 完成文書を基準と本文の根拠で評価 |
 
-**4つは互いを知らない。** 読み手の前提と到達点、本文の確認記録、意味上の役を引き継ぐ。その契約はこのプラグインが持つ（[読者への引き継ぎ](references/reader-contract.md)、[役](references/roles.md)）。
+各担当の間で、 読み手の前提と到達点、本文の確認記録、意味上の役を引き継ぐ。その契約はこのプラグインが持つ（[読者への引き継ぎ](references/reader-contract.md)、[役](references/roles.md)）。
 
-必要なidentityは`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`。versionは固定せず、解決先のmanifest identityと各工程が指すskillを検査する。
+必要なidentityは`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`、`review-doc@write-doc`。versionは固定せず、解決先のmanifest identityと各工程が指すskillを検査する。
 
 ## 使う
 
@@ -52,7 +53,7 @@ requirements: {figures: true}
 
 ## 読み手の理解を確認する
 
-型選択で`reader_context`を残し、執筆へ渡す。執筆では本文だけから目的の説明・判断・行動ができるかを試し、根拠付きの`reader_review`を保存前に渡す。確認方法はwriting-rulesが持ち、状態管理はその受け渡しを検査する。
+型選択で`reader_context`を残し、執筆へ渡す。執筆では本文だけから目的の説明・判断・行動ができるかを試し、根拠付きの`reader_review`を保存前に渡す。保存後の最後にreview-docが完成文書を読み直し、必要な修正と再確認を終えてdocument_reviewを返す。状態管理は記録の受け渡しを検査し、意味の評価はスキルが行う。
 
 既存のsteps全体を上書きしている設定には、新しい既定工程は自動で入らない。更新時は同梱playbook.ymlとの差分を確認し、これらの引き継ぎを取り込む。開始済みrunの設定は変更せず、新しいrunで使う。
 

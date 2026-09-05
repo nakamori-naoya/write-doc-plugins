@@ -10,7 +10,8 @@
     "./skills/authoring/content-types",
     "./skills/authoring/writing-rules",
     "./skills/authoring/visual-guidance",
-    "./skills/authoring/write-doc-cleanup"
+    "./skills/authoring/write-doc-cleanup",
+    "./skills/authoring/review-doc"
   ],
   "metadata": {
     "harness": {
@@ -24,7 +25,8 @@
         "writing-rules": "./skills/authoring/writing-rules",
         "visual-guidance": "./skills/authoring/visual-guidance",
         "doc-render": "./skills/authoring/doc-render",
-        "write-doc-cleanup": "./skills/authoring/write-doc-cleanup"
+        "write-doc-cleanup": "./skills/authoring/write-doc-cleanup",
+        "review-doc": "./skills/authoring/review-doc"
       },
       "contractVersion": 1
     }
