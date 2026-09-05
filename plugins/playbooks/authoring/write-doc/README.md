@@ -9,7 +9,7 @@
 | `visual-guidance` | **何をどう図にするか** — 読み手の問いと図の型 |
 | `doc-render` | **どう出すか** — 媒体表現と保存 |
 
-**4つは互いを知らない。** つなぐのは「意味上の役」だけで、その契約はこのプラグインが持つ（[references/roles.md](references/roles.md)）。
+**4つは互いを知らない。** 読み手の前提と到達点、本文の確認記録、意味上の役を引き継ぐ。その契約はこのプラグインが持つ（[読者への引き継ぎ](references/reader-contract.md)、[役](references/roles.md)）。
 
 必要なidentityは`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`。versionは固定せず、解決先のmanifest identityと各工程が指すskillを検査する。
 
@@ -28,12 +28,12 @@
 
 ## 設定
 
-出力する資料全体にかかる決定的な要件だけは、この上段が持つ。**既定では、主要な主張を理解させる図を最低1つ要求する。**
+出力する資料全体にかかる決定的な要件だけは、この上段が持つ。既定では図を必須にせず、読み手の理解に役立つかで選ぶ。最低1つ必要な場合は次を指定する。
 
 ```yaml
 # <repo>/.harness-plugins/write-doc.config.yml
 # 同梱playbook.ymlを丸ごと複製し、次の値を変更する
-requirements: {figures: false}
+requirements: {figures: true}
 ```
 
 外部設定は`version`、`name`、`instructions`、`requires`、`contract`、`requirements`、`steps`をすべて持つ。部分設定は受け付けない。
@@ -49,6 +49,12 @@ requirements: {figures: false}
 | `.harness-plugins/write-doc.config.yml` | 資料全体の要件・工程の上書き |
 
 呼び出し元playbookが`output_format`を固定した場合は、その値をdoc-render設定の`output.format`より優先する。これは、BDD資料のように媒体自体が上段の成果契約である場合に限る。指定が無い通常の呼び出しはdoc-render設定へ従う。
+
+## 読み手の理解を確認する
+
+型選択で`reader_context`を残し、執筆へ渡す。執筆では本文だけから目的の説明・判断・行動ができるかを試し、根拠付きの`reader_review`を保存前に渡す。確認方法はwriting-rulesが持ち、状態管理はその受け渡しを検査する。
+
+既存のsteps全体を上書きしている設定には、新しい既定工程は自動で入らない。更新時は同梱playbook.ymlとの差分を確認し、これらの引き継ぎを取り込む。開始済みrunの設定は変更せず、新しいrunで使う。
 
 ## 実行状態
 

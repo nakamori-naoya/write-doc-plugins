@@ -1,6 +1,6 @@
 # writing-rules
 
-**文章を書くときの規律。** 構成・段落・強調・文体・出典・コード注釈。
+**読み手が必要な理解を組み立て、目的の判断や行動ができる文章を書くための規律。** 前提と到達点から構成・範囲を設計し、本文から問いに答えて確かめる。抽象と具体の往復、要約、図や表は必要な箇所で選ぶ。
 
 **媒体を知らない。** HTML なのか Markdown なのかプレーンテキストなのかは決めない。だから資料に限らず使える——PR の説明文、チケット、レビューコメント、メール。
 
@@ -45,7 +45,7 @@ rules:
 extra: "docs/guides/terms.md, docs/guides/brand.md"   # 自由に足す
 instructions:
   writing:
-    directive: rulesの各ファイルを読み、structure、section、emphasis、styleの順に適用し、citationとannotated-codeを該当時に適用する
+    directive: rulesの各ファイルと適用手順を読み、読み手の前提と到達点からstructure、section、style、emphasisを適用し、citationとannotated-codeを該当時に適用する
 ```
 
 設定は自己完結させる。repository設定があればpersonalや同梱既定は読まれない。
