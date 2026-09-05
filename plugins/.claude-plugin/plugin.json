@@ -20,7 +20,8 @@
         "writing-rules": "./skills/authoring/writing-rules",
         "visual-guidance": "./skills/authoring/visual-guidance",
         "doc-render": "./skills/authoring/doc-render",
-        "write-doc-cleanup": "./skills/authoring/write-doc-cleanup"
+        "write-doc-cleanup": "./skills/authoring/write-doc-cleanup",
+        "review-doc": "./skills/authoring/review-doc"
       },
       "contractVersion": 1
     }
