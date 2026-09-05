@@ -18,6 +18,7 @@ requires:
   - {plugin: writing-rules, marketplace: write-doc}
   - {plugin: visual-guidance, marketplace: write-doc}
   - {plugin: doc-render, marketplace: write-doc}
+  - {plugin: review-doc, marketplace: write-doc}
 
 # 下段どうしをつなぐ契約。playbook が持つ。
 contract:
@@ -67,5 +68,14 @@ steps:
     purpose: 役を媒体の表現へ写し、上書きを防いで保存する
     needs: [body, roles_applied, figures_applied, reader_review]
     provides: [path]
+    completion: artifact-set
+    on_failure: stop
+
+  - id: review
+    skill: review-doc
+    purpose: 保存した完成文書を基準に照らして評価し、必要な修正後に読み直す
+    needs: [path, type, reader_context, reader_review]
+    provides: [document_review]
+    file_artifacts: [document_review]
     completion: artifact-set
     on_failure: stop
