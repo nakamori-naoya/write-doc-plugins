@@ -29,7 +29,7 @@ fi
 <!-- BEGIN shared:skill-entry/config-load -->
 ```bash
 CFG_FILE=$(bash "${PLUGIN_ROOT}/scripts/prepare.sh" "$(pwd)") || exit 2
-trap 'rm -f "$CFG_FILE"' EXIT
+printf '%s\n' "$CFG_FILE"
 ```
 
 **このコマンドは説明例ではない。必ず実行する。** 解決済みYAMLが空なら先へ進まない。設定ファイルを直接読んで代用しない。
@@ -45,7 +45,7 @@ trap 'rm -f "$CFG_FILE"' EXIT
 
 **exit 2 で止まったら先へ進まない。** 何が起きたかは `scripts/resolve.sh` の冒頭に書いてある。
 
-実行前に[状態管理](references/state-management.md)の`init`を行い、各工程を`start`してから着手し、`${.playbook.steps[].provides}`がすべて揃った後だけ`complete`する。失敗は`fail`で記録し、同じ`PLAYBOOK_RUN_ID`で再開する。状態ファイルをrepository内へ作らない。
+実行前に[状態管理](references/state-management.md)の`init`を行い、各工程を`start`してから着手し、`${.playbook.steps[].provides}`がすべて揃った後だけ`complete`する。失敗は`fail`で記録し、修復後に`retry`を明示して同じ`PLAYBOOK_RUN_ID`で再開する。状態ファイルをrepository内へ作らない。
 
 ## 2. 型を選び直させない
 
@@ -83,3 +83,9 @@ trap 'rm -f "$CFG_FILE"' EXIT
 ## 順番を変えたいとき
 
 `<repo>/.harness-plugins/write-doc.config.yml` に `steps` を書く。**書いたら丸ごと差し替わる。**
+
+## 実行設定の寿命
+
+prepareが返した絶対pathを実行記録へ保持する。別shellではそのpathを`CFG_FILE`へ明示して読み、shell変数の継承を前提にしない。完了時と失敗停止時のどちらも、最後の設定利用後に`python3 "${PLUGIN_ROOT}/scripts/run-config.py" cleanup --config "$CFG_FILE"`を実行する。他runの設定やdirectoryを削除しない。
+
+条件付き工程を含め、各工程を呼ぶ直前に`yq -o=json '.' "$CFG_FILE" | python3 "${PLUGIN_ROOT}/scripts/resolve-dependency.py" --check-steps <工程id>`を実行する。失敗時は工程を実行せず停止する。

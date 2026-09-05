@@ -1,8 +1,15 @@
 {
   "name": "write-doc",
-  "owner": {"name": "NaoyaNakamori"},
+  "owner": {
+    "name": "NaoyaNakamori"
+  },
   "description": "資料作成を一つのPlaybookパッケージとして配布するmarketplace",
   "plugins": [
-    {"name":"write-doc","source":"./plugins","description":"文書型、文章規律、図、保存、後始末を束ねて資料を1本作る","version":"1.0.0"}
+    {
+      "name": "write-doc",
+      "source": "./plugins",
+      "description": "文書型、文章規律、図、保存、後始末を束ねて資料を1本作る",
+      "version": "2.0.0"
+    }
   ]
 }
