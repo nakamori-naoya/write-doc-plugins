@@ -2,7 +2,7 @@
   "name": "content-types",
   "version": "0.8.0",
   "description": "何を書くかを決める。コンテンツタイプ28種のカタログと決定手順、型ごとの読み手・目的・成功条件、テンプレート、記載例",
-  "skills": "./skills",
+  "skills": "./",
   "author": {
     "name": "NaoyaNakamori"
   },
@@ -16,5 +16,10 @@
       "Skills"
     ],
     "defaultPrompt": "content-typesを使ってこの作業を進めてください。"
+  },
+  "metadata": {
+    "harness": {
+      "contractVersion": 1
+    }
   }
 }

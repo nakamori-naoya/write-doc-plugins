@@ -1,8 +1,10 @@
 {
   "name": "write-doc",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "文書型、文章規律、図、保存、後始末を束ね、資料を1本作るPlaybookを提供する",
-  "author": {"name": "NaoyaNakamori"},
+  "author": {
+    "name": "NaoyaNakamori"
+  },
   "skills": [
     "./playbooks/authoring/write-doc",
     "./skills/authoring/content-types",
@@ -23,7 +25,8 @@
         "visual-guidance": "./skills/authoring/visual-guidance",
         "doc-render": "./skills/authoring/doc-render",
         "write-doc-cleanup": "./skills/authoring/write-doc-cleanup"
-      }
+      },
+      "contractVersion": 1
     }
   }
 }

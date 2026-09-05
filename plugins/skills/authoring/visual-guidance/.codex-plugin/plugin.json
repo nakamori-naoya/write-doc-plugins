@@ -5,7 +5,7 @@
   "author": {
     "name": "NaoyaNakamori"
   },
-  "skills": "./skills",
+  "skills": "./",
   "interface": {
     "displayName": "Visual Guidance",
     "shortDescription": "伝えたい主張と読み手の問いから、図にする箇所、図の型、画像生成を使うかを選び、描画可能な設計を返す",
@@ -16,5 +16,10 @@
       "Skills"
     ],
     "defaultPrompt": "visual-guidanceを使ってこの作業を進めてください。"
+  },
+  "metadata": {
+    "harness": {
+      "contractVersion": 1
+    }
   }
 }

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fcntl
 import hashlib
 import json
 import os
@@ -32,8 +33,14 @@ def load_config(path: str) -> tuple[dict, str]:
         config = json.loads(raw)
     except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
         die(f"解決済みplaybookを読めない: {path} ({exc})")
+    if config.get("deps"):
+        resolver = pathlib.Path(__file__).with_name("resolve-dependency.py")
+        result = subprocess.run([sys.executable, str(resolver), "--check-steps"], input=json.dumps(config), text=True, capture_output=True)
+        if result.returncode:
+            die("依存実体の再検査に失敗: " + result.stderr.strip())
     playbook = config.get("playbook", config)
-    canonical = json.dumps(playbook, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    identity = {"playbook": playbook, "deps": config.get("deps", {}), "repo_root": config.get("repo_root")}
+    canonical = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return playbook, hashlib.sha256(canonical.encode()).hexdigest()
 
 
@@ -45,7 +52,7 @@ def state_root() -> pathlib.Path:
 
 
 def safe(value: str, label: str) -> str:
-    if not re.fullmatch(r"[A-Za-z0-9._-]+", value):
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", value) or ".." in value:
         die(f"{label}に使えない文字がある: {value}")
     return value
 
@@ -56,12 +63,54 @@ def state_path(playbook: dict, run_id: str) -> pathlib.Path:
 
 def read_state(path: pathlib.Path) -> dict:
     try:
-        return json.loads(path.read_text())
+        state = json.loads(path.read_text())
+        if not isinstance(state, dict) or state.get("version") != 2 or not isinstance(state.get("steps"), list) or not isinstance(state.get("artifacts"), dict):
+            die("実行状態schemaが壊れている")
+        if state.get("status") not in {"running", "failed", "completed"}:
+            die("実行状態statusが壊れている")
+        ids = []
+        running = []
+        for step in state["steps"]:
+            if not isinstance(step, dict) or not isinstance(step.get("id"), str) or step.get("status") not in {"pending", "running", "failed", "completed"} or type(step.get("attempts")) is not int:
+                die("工程状態が壊れている")
+            ids.append(step["id"])
+            if step["status"] == "running":
+                running.append(step["id"])
+        if len(ids) != len(set(ids)) or running != ([state["current_step"]] if state.get("current_step") else []):
+            die("工程状態の整合性が壊れている")
+        return state
     except FileNotFoundError:
         die(f"実行状態が無い: {path}")
     except json.JSONDecodeError:
         die(f"実行状態が壊れている: {path}")
 
+
+
+def validate_state(state: dict, playbook: dict) -> None:
+    records = state["steps"]
+    specs = playbook["steps"]
+    if [s["id"] for s in records] != [s["id"] for s in specs]:
+        die("状態の工程集合が設定と一致しない")
+    statuses = [s["status"] for s in records]
+    if state["status"] == "completed" and any(status != "completed" for status in statuses):
+        die("完了状態と工程状態が一致しない")
+    if state["status"] == "failed" and statuses.count("failed") != 1:
+        die("失敗状態と工程状態が一致しない")
+    if state["status"] == "running" and ("failed" in statuses or all(status == "completed" for status in statuses)):
+        die("実行状態と工程状態が一致しない")
+    expected = set()
+    incomplete = False
+    for record, spec in zip(records, specs):
+        if record["status"] == "completed":
+            if incomplete or record["attempts"] < 1:
+                die("工程の完了順序が壊れている")
+            expected.update(spec.get("provides", []))
+        else:
+            if incomplete and record["status"] != "pending":
+                die("後続工程が先に開始されている")
+            incomplete = True
+    if set(state["artifacts"]) != expected or any(not isinstance(v, str) or not v for v in state["artifacts"].values()):
+        die("完了工程と成果物集合が一致しない")
 
 def write_state(path: pathlib.Path, state: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -82,8 +131,13 @@ def checked(args: argparse.Namespace) -> tuple[dict, str, pathlib.Path, dict]:
     playbook, digest = load_config(args.config)
     path = state_path(playbook, args.run_id)
     state = read_state(path)
+    validate_state(state, playbook)
     if state.get("config_hash") != digest:
-        die("playbook設定が開始時から変わったため再開できない")
+        die("playbook設定または依存identityが開始時から変わったため再開できない")
+    if args.repo and state.get("repo_root") != str(pathlib.Path(args.repo).resolve()):
+        die("対象repositoryが開始時と異なる")
+    if [step["id"] for step in state["steps"]] != [step["id"] for step in playbook["steps"]]:
+        die("工程状態と設定が一致しない")
     return playbook, digest, path, state
 
 
@@ -92,14 +146,18 @@ def command_init(args: argparse.Namespace) -> None:
     path = state_path(playbook, args.run_id)
     if path.exists():
         state = read_state(path)
+        validate_state(state, playbook)
         if state.get("config_hash") != digest:
-            die("同じrun-idのplaybook設定が変わっている")
-        print(json.dumps({"status": "resumed", "state": str(path), "run_id": args.run_id}))
+            die("同じrun-idのplaybook設定または依存identityが変わっている")
+        if state.get("repo_root") != str(pathlib.Path(args.repo or os.getcwd()).resolve()):
+            die("同じrun-idは別repositoryで再利用できない")
+        status = "needs_retry" if state["status"] == "failed" else ("completed" if state["status"] == "completed" else "resumed")
+        print(json.dumps({"status": status, "state": str(path), "run_id": args.run_id}))
         return
     created = now()
     state = {
-        "version": 1, "playbook": playbook["name"], "run_id": args.run_id,
-        "config_hash": digest, "repo_root": str(pathlib.Path(args.repo).resolve()),
+        "version": 2, "playbook": playbook["name"], "run_id": args.run_id,
+        "config_hash": digest, "repo_root": str(pathlib.Path(args.repo or os.getcwd()).resolve()),
         "status": "running", "current_step": None, "artifacts": {},
         "created_at": created, "updated_at": created,
         "steps": [{"id": step["id"], "status": "pending", "attempts": 0,
@@ -151,6 +209,10 @@ def command_complete(args: argparse.Namespace) -> None:
     expected = set(spec.get("provides", []))
     if set(supplied) != expected:
         die(f"完了成果物が一致しない（必要: {', '.join(sorted(expected))}）")
+    for key in spec.get("file_artifacts", ["path"] if "path" in expected else []):
+        artifact = pathlib.Path(supplied[key])
+        if not artifact.is_absolute() or not artifact.is_file() or artifact.is_symlink():
+            die(f"file成果物が実在する通常ファイルではない: {key}")
     record = next(s for s in state["steps"] if s["id"] == args.step)
     record["status"] = "completed"
     record["completed_at"] = now()
@@ -175,6 +237,18 @@ def command_fail(args: argparse.Namespace) -> None:
     print(json.dumps({"status": "failed", "step": args.step, "reason": args.reason}))
 
 
+
+def command_retry(args: argparse.Namespace) -> None:
+    _, _, path, state = checked(args)
+    failed = [step for step in state["steps"] if step["status"] == "failed"]
+    if state["status"] != "failed" or len(failed) != 1:
+        die("retry対象の失敗工程が無い")
+    failed[0]["status"] = "pending"
+    failed[0]["error"] = None
+    state["status"] = "running"
+    write_state(path, state)
+    print(json.dumps({"status": "retry_ready", "step": failed[0]["id"]}))
+
 def command_status(args: argparse.Namespace) -> None:
     _, _, path, state = checked(args)
     print(json.dumps({"state": str(path), **state}, ensure_ascii=False, indent=2))
@@ -182,17 +256,26 @@ def command_status(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("init", "start", "complete", "fail", "status"))
+    parser.add_argument("command", choices=("init", "start", "complete", "fail", "status", "retry"))
     parser.add_argument("--config", required=True)
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--repo", default=os.getcwd())
+    parser.add_argument("--repo")
     parser.add_argument("--step")
     parser.add_argument("--provide", action="append", default=[])
     parser.add_argument("--reason", default="unspecified")
     args = parser.parse_args()
     if args.command in {"start", "complete", "fail"} and not args.step:
         die(f"{args.command}には--stepが要る")
-    globals()[f"command_{args.command}"](args)
+    playbook, _ = load_config(args.config)
+    path = state_path(playbook, args.run_id)
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    lock_path = path.with_suffix(".lock")
+    if path.is_symlink() or lock_path.is_symlink():
+        die("状態pathにsymlinkは使えない")
+    with open(lock_path, "a") as lock:
+        os.chmod(lock_path, 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        globals()[f"command_{args.command}"](args)
 
 
 if __name__ == "__main__":
