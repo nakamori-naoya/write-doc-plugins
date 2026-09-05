@@ -11,7 +11,12 @@ description: 最終資料や入力資料を残し、資料化後に不要とな�
 
 <!-- BEGIN shared:skill-entry/root-only -->
 ```bash
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-/absolute/path/to/this/plugin}"
+BUNDLE_ROOT="${CLAUDE_PLUGIN_ROOT:-/absolute/path/to/this/plugin}"
+if [ -d "${BUNDLE_ROOT}/skills/authoring/write-doc-cleanup" ]; then
+  PLUGIN_ROOT="${BUNDLE_ROOT}/skills/authoring/write-doc-cleanup"
+else
+  PLUGIN_ROOT="${BUNDLE_ROOT}"
+fi
 bash "${PLUGIN_ROOT}/scripts/prepare.sh" --root-only >/dev/null || exit 2
 ```
 
