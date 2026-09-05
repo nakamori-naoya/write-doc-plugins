@@ -29,7 +29,7 @@ fi
 <!-- BEGIN shared:skill-entry/config-load -->
 ```bash
 CFG_FILE=$(bash "${PLUGIN_ROOT}/scripts/prepare.sh" "$(pwd)") || exit 2
-trap 'rm -f "$CFG_FILE"' EXIT
+printf '%s\n' "$CFG_FILE"
 ```
 
 **このコマンドは説明例ではない。必ず実行する。** 解決済みYAMLが空なら先へ進まない。設定ファイルを直接読んで代用しない。
@@ -62,3 +62,7 @@ trap 'rm -f "$CFG_FILE"' EXIT
 **テンプレートは節の名前しか伝えない。** 節をどの粒度で切るか、図を何で描くか、具体例をどこまで具体的に書くかは、記載例を見ないと揃わない。記載例を読まずに書き始めない。
 
 記載例は題材が違っても構造は同じである。**題材の中身を写すのではなく、粒度と書きぶりを写す。**
+
+## 実行設定の寿命
+
+prepareが返した絶対pathを実行記録へ保持する。別shellではそのpathを`CFG_FILE`へ明示して読み、shell変数の継承を前提にしない。完了時と失敗停止時のどちらも、最後の設定利用後に`python3 "${PLUGIN_ROOT}/scripts/run-config.py" cleanup --config "$CFG_FILE"`を実行する。他runの設定やdirectoryを削除しない。

@@ -2,7 +2,7 @@
   "name": "write-doc",
   "version": "0.6.1",
   "description": "資料を1本書く。content-types・writing-rules・visual-guidance・doc-renderを組み合わせる上段プラグイン",
-  "skills": "./skills",
+  "skills": "./",
   "author": {
     "name": "NaoyaNakamori"
   },
@@ -16,5 +16,10 @@
       "Skills"
     ],
     "defaultPrompt": "write-docを使ってこの作業を進めてください。"
+  },
+  "metadata": {
+    "harness": {
+      "contractVersion": 1
+    }
   }
 }
