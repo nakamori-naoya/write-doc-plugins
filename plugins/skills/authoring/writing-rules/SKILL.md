@@ -46,11 +46,11 @@ printf '%s\n' "$CFG_FILE"
 
 ## 2. 書く
 
-[適用手順](references/apply.md)を必ず読み、structure→section→emphasisの順に進める。扱う役は4つだけで、出典の3点セットは設定でも解除できない。
+[適用手順](references/apply.md)を必ず読み、読み手の前提と到達点から理解の順序・本文の範囲を設計して執筆する。write-docから渡された`reader_context`を使い、単独使用なら依頼と資料から同じ情報を整理する。強調の役は4つから必要なものを使い、出典の3点セットは設定でも解除できない。
 
 ## 3. 出す前に
 
-[final-check.md](references/final-check.md)を読み、全項目を確認する。
+[final-check.md](references/final-check.md)を読み、本文だけから読後の説明・判断・行動ができるかを確認する。write-docで使う場合は、問い・答え・本文の根拠・修正・残る未確認を`reader_review`として残して次工程へ渡す。
 
 設定の形式と差し替え例は[README](README.md)を参照する。指定したファイルが無ければresolverが停止する。
 

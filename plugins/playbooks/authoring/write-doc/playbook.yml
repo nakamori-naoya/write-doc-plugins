@@ -28,26 +28,28 @@ contract:
   output_format_precedence: [caller, doc-render]
   output_formats: [markdown, html]
 
-# 資料には既定で、主要な主張を理解させる図を最低1つ要求する。
-# 利用者設定で requirements.figures: false とすれば要求しない。
+# 図の採用は読み手の理解に役立つかで決める。
+# 明示的に最低1つ必要な場合は requirements.figures: true を指定する。
 requirements:
-  figures: true
+  figures: false
 
 # stepsは上から実行する。skill/script/playbookは呼ぶ処理、needsは開始条件、
 # providesは完了時に登録する成果物。completionは完了判定、on_failureは失敗時の遷移。
 steps:
   - id: type
     skill: pick-content-type
-    purpose: 読み手と目的から型を1つ決め、その骨格を取る
-    provides: [type, template]
+    purpose: 読み手の前提と読後の到達点を記録し、型と骨格を取る
+    provides: [type, template, reader_context]
+    file_artifacts: [reader_context]
     completion: artifact-set
     on_failure: stop
 
   - id: draft
     skill: write-with-rules
-    purpose: 規律に従って本文を書く。強調は契約の役の名前で置く
-    needs: [type, template]
-    provides: [body, roles_applied]
+    purpose: 読み手の理解の順序を設計して本文を書き、本文だけで到達点を満たせるか検証する
+    needs: [type, template, reader_context]
+    provides: [body, roles_applied, reader_review]
+    file_artifacts: [reader_review]
     completion: artifact-set
     on_failure: stop
 
@@ -63,7 +65,7 @@ steps:
     plugin: doc-render
     script: scripts/write-doc.sh
     purpose: 役を媒体の表現へ写し、上書きを防いで保存する
-    needs: [body, roles_applied, figures_applied]
+    needs: [body, roles_applied, figures_applied, reader_review]
     provides: [path]
     completion: artifact-set
     on_failure: stop
