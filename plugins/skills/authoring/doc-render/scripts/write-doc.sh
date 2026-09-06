@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 資料を1本、出力先へ安全に置く。
 #
-#   write-doc.sh --config <json|path> (--name <ファイル名> | --target <既存絶対path>) --body-file <path> [--format <markdown|html>] [--replace]
+#   write-doc.sh --config <json|path> (--name <ファイル名> | --target <既存絶対path>) --body-file <path> [--template <文書型slug>] [--output-dir <明示された絶対path>] [--format <markdown|html>] [--replace]
 #
 #   -> {"decision":"written"|"replaced","path":"..."}
 #      既存があって --replace が無ければ {"decision":"exists",...} を出して exit 3
@@ -19,13 +19,15 @@ set -uo pipefail
 # 「引数が足りない」を無限ループとして表に出さない。
 need() { [ -n "$2" ] || { echo "[error] $1 に値が無い" >&2; exit 2; }; }
 
-cfg=""; name=""; target_arg=""; body=""; requested_format=""; replace=0
+cfg=""; name=""; target_arg=""; body=""; template=""; explicit_out=""; requested_format=""; replace=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --config)    need "$1" "${2:-}"; cfg="$2"; shift 2 ;;
     --name)      need "$1" "${2:-}"; name="$2"; shift 2 ;;
     --target)    need "$1" "${2:-}"; target_arg="$2"; shift 2 ;;
     --body-file) need "$1" "${2:-}"; body="$2"; shift 2 ;;
+    --template)  need "$1" "${2:-}"; template="$2"; shift 2 ;;
+    --output-dir) need "$1" "${2:-}"; explicit_out="$2"; shift 2 ;;
     --format)    need "$1" "${2:-}"; requested_format="$2"; shift 2 ;;
     --replace)   replace=1; shift ;;
     *) echo "{\"error\":\"不明な引数: $1\"}"; exit 2 ;;
@@ -37,6 +39,7 @@ fail() { printf '{"error":%s}\n' "$(jq -Rn --arg m "$1" '$m')"; exit "${2:-2}"; 
 [ -n "$cfg" ]  || fail "--config が無い"
 [ -n "$name" ] || [ -n "$target_arg" ] || fail "--name または --target が無い"
 [ -z "$name" ] || [ -z "$target_arg" ] || fail "--name と --target は同時に使えない"
+[ -z "$target_arg" ] || [ -z "$explicit_out" ] || fail "--target と --output-dir は同時に使えない"
 [ -n "$body" ] || fail "--body-file が無い"
 [ -f "$body" ] || fail "--body-file が読めない: ${body}"
 # 空の本文を written として受け入れると、「書けた」と報告されたのに
@@ -51,6 +54,52 @@ case "$cfg" in
        merged=$(yq -o=json -I=0 '.' "$cfg" 2>/dev/null) || fail "--config のYAMLが壊れている: ${cfg}" ;;
 esac
 jq -e . >/dev/null 2>&1 <<<"$merged" || fail "--config が JSON ではない"
+
+jq -e 'def clean_segments:
+    (contains("\\")|not) and (endswith("/")|not) and
+    (split("/") | all(.!="" and .!="." and .!=".."));
+  def routed_dir:
+    type=="object" and (keys|sort)==["path","type"] and
+    if .type=="relative" then
+      (.path|type=="string" and length>0 and
+        (startswith("/")|not) and (startswith("~")|not) and clean_segments)
+    elif .type=="absolute" then
+      (.path|type=="string" and
+        ((startswith("~/") and (.[2:]|clean_segments)) or
+         (startswith("/") and (.[1:]|clean_segments))))
+    else false end;
+  .output.default|type=="object" and keys==["dir"] and (.dir|routed_dir)' >/dev/null <<<"$merged" \
+  || fail "設定のoutput.defaultが不正"
+routes=$(jq -c '.output.routes // []' <<<"$merged")
+jq -e 'def clean_segments:
+    (contains("\\")|not) and (endswith("/")|not) and
+    (split("/") | all(.!="" and .!="." and .!=".."));
+  def routed_dir:
+    type=="object" and (keys|sort)==["path","type"] and
+    if .type=="relative" then
+      (.path|type=="string" and length>0 and
+        (startswith("/")|not) and (startswith("~")|not) and clean_segments)
+    elif .type=="absolute" then
+      (.path|type=="string" and
+        ((startswith("~/") and (.[2:]|clean_segments)) or
+         (startswith("/") and (.[1:]|clean_segments))))
+    else false end;
+  type=="array" and all(.[];
+  type=="object" and (keys|sort)==["dir","templates"] and
+  (.templates|type=="array" and length>0 and
+    all(.[]; type=="string" and test("^[a-z0-9]+(-[a-z0-9]+)*$")) and
+    length==(unique|length)) and
+  (.dir|routed_dir)) and
+  ((map(.templates[])|length)==(map(.templates[])|unique|length))' >/dev/null <<<"$routes" \
+  || fail "設定のoutput.routesが不正（templatesとdirを持ち、文書型が重複しない配列が必要）"
+if [ -n "$template" ]; then
+  [[ "$template" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] \
+    || fail "--template が不正: ${template}（小文字英数字とハイフンのみ）"
+fi
+if [ -n "$explicit_out" ]; then
+  case "$explicit_out" in /*) ;; *) fail "--output-dir は明示された絶対pathで指定する: ${explicit_out}" ;; esac
+  case "$explicit_out" in *'/../'*|*/..|*/./*|*/.|*//*|*/|*\\*) fail "--output-dir は正規化済みpathで指定する: ${explicit_out}" ;; esac
+fi
 
 configured_format=$(jq -r '.output.format // ""' <<<"$merged")
 theme=$(jq -r '.output.theme // ""' <<<"$merged")
@@ -105,8 +154,45 @@ case "$name" in
 esac
 
 if [ -z "$target_arg" ]; then
-  out_dir=$(jq -r '.output.dir // ""' <<<"$merged")
-  [ -n "$out_dir" ] || fail "設定に output.dir が無い"
+  destination_source="explicit"
+  if [ -n "$explicit_out" ]; then
+    out_dir="$explicit_out"
+  else
+    destination=$(jq -c --arg template "$template" '
+      ([.output.routes[]? | select(.templates | index($template))] | first) // .output.default' <<<"$merged")
+    dir_type=$(jq -r '.dir.type' <<<"$destination")
+    dir_path=$(jq -r '.dir.path' <<<"$destination")
+    destination_source="default"
+    if [ -n "$template" ] && jq -e --arg template "$template" \
+      'any(.output.routes[]?; .templates | index($template))' >/dev/null <<<"$merged"; then
+      destination_source="route"
+    fi
+    check_root=1
+    case "$dir_type" in
+      relative)
+        target_root=$(jq -r '.repo_root // empty' <<<"$merged")
+        [ -n "$target_root" ] || fail "解決済み設定にrepo_rootが無い"
+        [ -d "$target_root" ] || fail "作業repositoryが存在しない: ${target_root}"
+        real_root=$(cd "$target_root" 2>/dev/null && pwd -P) || fail "作業repositoryへ入れない: ${target_root}"
+        out_dir="${real_root}/${dir_path}"
+      ;;
+      absolute)
+        case "$dir_path" in
+          "~/"*)
+            [ -n "${HOME:-}" ] || fail "~/ を解決するHOMEが無い"
+            [ -d "$HOME" ] || fail "HOMEが存在しない: ${HOME}"
+            real_root=$(cd "$HOME" 2>/dev/null && pwd -P) || fail "HOMEへ入れない: ${HOME}"
+            out_dir="${real_root}/${dir_path:2}"
+          ;;
+          /*)
+            real_root="/"
+            out_dir="$dir_path"
+            check_root=0
+          ;;
+        esac
+      ;;
+    esac
+  fi
   mkdir -p "$out_dir" 2>/dev/null || fail "出力先を作れない: ${out_dir}"
 
   # 実パスで内包を確かめる。設定側に symlink があっても外へは書かせない。
@@ -116,6 +202,12 @@ if [ -z "$target_arg" ]; then
   declared=$(cd "$(dirname "$out_dir")" 2>/dev/null && pwd -P)/$(basename "$out_dir")
   if [ "$real_out" != "$declared" ]; then
     fail "出力先が symlink で別の場所を指している: ${out_dir} -> ${real_out}（設定した場所へ書けない）"
+  fi
+  if [ -z "$explicit_out" ] && [ "${check_root:-0}" = "1" ]; then
+    case "${real_out}/" in
+      "${real_root}/"|"${real_root}/"*) ;;
+      *) fail "解決した出力先が基準directoryの外にある: ${real_out}（基準: ${real_root}）" ;;
+    esac
   fi
   target="${real_out}/${name}"
 fi
@@ -151,5 +243,6 @@ else
   fi
 fi
 
-printf '{"decision":%s,"path":%s}\n' \
-  "$(jq -Rn --arg d "$decision" '$d')" "$(jq -Rn --arg p "$target" '$p')"
+printf '{"decision":%s,"path":%s,"destinationSource":%s}\n' \
+  "$(jq -Rn --arg d "$decision" '$d')" "$(jq -Rn --arg p "$target" '$p')" \
+  "$(jq -Rn --arg s "${destination_source:-existing-target}" '$s')"

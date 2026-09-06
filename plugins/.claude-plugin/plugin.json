@@ -1,6 +1,6 @@
 {
   "name": "write-doc",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "文書型、文章規律、図、保存、後始末を束ね、資料を1本作るPlaybookを提供する",
   "author": {
     "name": "NaoyaNakamori"
@@ -11,6 +11,7 @@
   "metadata": {
     "harness": {
       "installationSurface": "playbook-package",
+      "marketplace": "write-doc",
       "entryRoot": "./playbooks/authoring/write-doc",
       "playbooks": {
         "write-doc": "./playbooks/authoring/write-doc"
@@ -23,7 +24,45 @@
         "write-doc-cleanup": "./skills/authoring/write-doc-cleanup",
         "review-doc": "./skills/authoring/review-doc"
       },
-      "contractVersion": 1
+      "contractVersion": 1,
+      "implements": [
+        {
+          "id": "write-doc/write-doc",
+          "version": 1,
+          "kind": "playbook",
+          "playbook": "write-doc",
+          "types": [
+            "north-star",
+            "strategy",
+            "domain-rule",
+            "user-journey-bdd",
+            "rdb-logical-data-modeling",
+            "rdb-physical-design",
+            "code-comment",
+            "readme",
+            "landing-page",
+            "getting-started",
+            "tutorial",
+            "how-to",
+            "concept",
+            "onboarding",
+            "api-reference",
+            "glossary",
+            "troubleshooting",
+            "runbook",
+            "adr",
+            "design-doc",
+            "postmortem",
+            "release-notes",
+            "period-digest",
+            "decision-log",
+            "open-questions",
+            "pr-walkthrough",
+            "code-map",
+            "code-reading"
+          ]
+        }
+      ]
     }
   }
 }

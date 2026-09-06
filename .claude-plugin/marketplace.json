@@ -9,7 +9,7 @@
       "name": "write-doc",
       "source": "./plugins",
       "description": "文書型、文章規律、図、保存、後始末を束ねて資料を1本作る",
-      "version": "3.0.0"
+      "version": "4.0.0"
     }
   ]
 }
