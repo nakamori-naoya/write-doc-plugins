@@ -78,7 +78,7 @@ def read_state(path: pathlib.Path) -> dict:
         ids = []
         running = []
         for step in state["steps"]:
-            if not isinstance(step, dict) or not isinstance(step.get("id"), str) or step.get("status") not in {"pending", "running", "failed", "completed"} or type(step.get("attempts")) is not int:
+            if not isinstance(step, dict) or not isinstance(step.get("id"), str) or step.get("status") not in {"pending", "running", "failed", "completed", "skipped"} or type(step.get("attempts")) is not int:
                 die("工程状態が壊れている")
             ids.append(step["id"])
             if step["status"] == "running":
@@ -99,11 +99,11 @@ def validate_state(state: dict, playbook: dict) -> None:
     if [s["id"] for s in records] != [s["id"] for s in specs]:
         die("状態の工程集合が設定と一致しない")
     statuses = [s["status"] for s in records]
-    if state["status"] == "completed" and any(status != "completed" for status in statuses):
+    if state["status"] == "completed" and any(status not in {"completed", "skipped"} for status in statuses):
         die("完了状態と工程状態が一致しない")
     if state["status"] == "failed" and statuses.count("failed") != 1:
         die("失敗状態と工程状態が一致しない")
-    if state["status"] == "running" and ("failed" in statuses or all(status == "completed" for status in statuses)):
+    if state["status"] == "running" and ("failed" in statuses or all(status in {"completed", "skipped"} for status in statuses)):
         die("実行状態と工程状態が一致しない")
     expected = set()
     incomplete = False
@@ -112,6 +112,10 @@ def validate_state(state: dict, playbook: dict) -> None:
             if incomplete or record["attempts"] < 1:
                 die("工程の完了順序が壊れている")
             expected.update(spec.get("provides", []))
+        elif record["status"] == "skipped":
+            # 条件付き工程だけを飛ばせる。飛ばした工程の成果物は無い。
+            if incomplete or spec.get("when") is None:
+                die("条件の無い工程が飛ばされている")
         else:
             if incomplete and record["status"] != "pending":
                 die("後続工程が先に開始されている")
@@ -225,10 +229,29 @@ def command_complete(args: argparse.Namespace) -> None:
     record["completed_at"] = now()
     state["artifacts"].update(supplied)
     state["current_step"] = None
-    if all(s["status"] == "completed" for s in state["steps"]):
+    if all(s["status"] in {"completed", "skipped"} for s in state["steps"]):
         state["status"] = "completed"
     write_state(path, state)
     print(json.dumps({"status": record["status"], "step": args.step, "playbook_status": state["status"]}))
+
+
+def command_skip(args: argparse.Namespace) -> None:
+    playbook, _, path, state = checked(args)
+    if state["status"] != "running" or state["current_step"] is not None:
+        die("別の工程が実行中、またはplaybookが停止済み")
+    pending = next((s for s in state["steps"] if s["status"] == "pending"), None)
+    if not pending or pending["id"] != args.step:
+        die(f"次に開始できる工程は {pending['id'] if pending else '無し'}")
+    spec = next(s for s in playbook["steps"] if s["id"] == args.step)
+    if spec.get("when") is None:
+        die(f"条件（when）の無い工程は飛ばせない: {args.step}")
+    pending["status"] = "skipped"
+    pending["completed_at"] = now()
+    pending["error"] = args.reason
+    if all(s["status"] in {"completed", "skipped"} for s in state["steps"]):
+        state["status"] = "completed"
+    write_state(path, state)
+    print(json.dumps({"status": "skipped", "step": args.step, "when": spec["when"], "reason": args.reason}))
 
 
 def command_fail(args: argparse.Namespace) -> None:
@@ -263,7 +286,7 @@ def command_status(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("init", "start", "complete", "fail", "status", "retry"))
+    parser.add_argument("command", choices=("init", "start", "complete", "fail", "skip", "status", "retry"))
     parser.add_argument("--config", required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--repo")
@@ -271,7 +294,7 @@ def main() -> None:
     parser.add_argument("--provide", action="append", default=[])
     parser.add_argument("--reason", default="unspecified")
     args = parser.parse_args()
-    if args.command in {"start", "complete", "fail"} and not args.step:
+    if args.command in {"start", "complete", "fail", "skip"} and not args.step:
         die(f"{args.command}には--stepが要る")
     playbook, _ = load_config(args.config)
     path = state_path(playbook, args.run_id)

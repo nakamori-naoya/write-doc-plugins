@@ -31,7 +31,9 @@ class ReaderContractTest(unittest.TestCase):
 
             template = ROOT / 'plugins/skills/authoring/content-types/assets/templates/concept.md'
             context = base / 'reader-context.md'
+            questions = base / 'open-questions.md'
             review = base / 'reader-review.md'
+            path_table = base / 'reading-path.md'
             body = base / 'document.md'
             call('init', '--repo', str(base))
             call('start', '--step', 'type')
@@ -40,7 +42,12 @@ class ReaderContractTest(unittest.TestCase):
             call('complete', *type_args, expected=2)
             call('complete', *type_args, '--provide', f'reader_context={context}', expected=2)
             context.write_text('Reader knows room reservations; distinguish a hold from confirmation.\n')
-            call('complete', *type_args, '--provide', f'reader_context={context}')
+            questions.write_text('count: 0\n')
+            call('complete', *type_args, '--provide', f'reader_context={context}',
+                 '--provide', f'open_questions={questions}')
+            # settle は when 付きなので、問いが無ければ skip で飛ばす。条件の無い工程は飛ばせない。
+            call('skip', '--step', 'draft', expected=2)
+            call('skip', '--step', 'settle', '--reason', 'open_questions.count == 0')
             call('start', '--step', 'draft')
             body.write_text('# A reservation hold\nAn illustrative document for the contract test.\n')
             draft_args = ['--step', 'draft', '--provide', f'body={body}',
@@ -48,7 +55,12 @@ class ReaderContractTest(unittest.TestCase):
             call('complete', *draft_args, expected=2)
             call('complete', *draft_args, '--provide', f'reader_review={review}', expected=2)
             review.write_text('Contract fixture only; prose quality is not being evaluated here.\n')
-            call('complete', *draft_args, '--provide', f'reader_review={review}')
+            call('complete', *draft_args, '--provide', f'reader_review={review}', expected=2)
+            call('complete', *draft_args, '--provide', f'reader_review={review}',
+                 '--provide', f'reading_path={path_table}', expected=2)
+            path_table.write_text('| concept | foothold | introduced | first used |\n')
+            call('complete', *draft_args, '--provide', f'reader_review={review}',
+                 '--provide', f'reading_path={path_table}')
             call('start', '--step', 'visual')
             self.assertFalse(playbook['requirements']['figures'])
             call('complete', '--step', 'visual', '--provide', 'figures_applied=0')
@@ -69,6 +81,10 @@ class ReaderContractTest(unittest.TestCase):
             self.assertEqual(status['status'], 'completed')
             self.assertEqual(status['artifacts']['reader_context'], str(context))
             self.assertEqual(status['artifacts']['reader_review'], str(review))
+            self.assertEqual(status['artifacts']['reading_path'], str(path_table))
+            self.assertNotIn('decisions', status['artifacts'])
+            settle = next(step for step in status['steps'] if step['id'] == 'settle')
+            self.assertEqual(settle['status'], 'skipped')
 
 
 if __name__ == '__main__':
