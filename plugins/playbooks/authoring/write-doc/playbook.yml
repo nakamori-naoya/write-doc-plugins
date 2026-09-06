@@ -14,6 +14,7 @@ instructions:
 
 # 欠けていたら止める。黙って劣化した結果を出さない。
 requires:
+  - {plugin: grill, marketplace: grill}
   - {plugin: content-types, marketplace: write-doc}
   - {plugin: writing-rules, marketplace: write-doc}
   - {plugin: visual-guidance, marketplace: write-doc}
@@ -22,7 +23,7 @@ requires:
 
 # 下段どうしをつなぐ契約。playbook が持つ。
 contract:
-  roles: [要点, キーワード, 一言でいうと, 要約項目]
+  roles: [要点, キーワード]
   figure_roles: [図の主張, 図の型, 図の内容]
   figure_requirement: figures_required
   save_modes: [create, replace-existing-target]
@@ -36,21 +37,36 @@ requirements:
 
 # stepsは上から実行する。skill/script/playbookは呼ぶ処理、needsは開始条件、
 # providesは完了時に登録する成果物。completionは完了判定、on_failureは失敗時の遷移。
+# when: 条件が真のときだけ実行する。偽なら state.py の skip で飛ばす。
+# conditional_needs: 同じ条件のときだけ増える開始条件。
 steps:
   - id: type
     skill: pick-content-type
-    purpose: 読み手の前提と読後の到達点を記録し、型と骨格を取る
-    provides: [type, template, reader_context]
-    file_artifacts: [reader_context]
+    purpose: 読み手の前提と読後の到達点を記録し、型と骨格を取る。依頼と資料から決まらない問いを open_questions に残す
+    provides: [type, template, reader_context, open_questions]
+    file_artifacts: [reader_context, open_questions]
+    completion: artifact-set
+    on_failure: stop
+
+  - id: settle
+    skill: grill
+    when: open_questions.count > 0
+    purpose: 読み手・目的・到達点・求める判断のうち依頼から決まらないものだけを、推奨付きで1問ずつ確かめ、決定と未決を残す
+    needs: [reader_context, open_questions]
+    provides: [decisions]
+    file_artifacts: [decisions]
     completion: artifact-set
     on_failure: stop
 
   - id: draft
     skill: write-with-rules
-    purpose: 読み手の理解の順序を設計して本文を書き、本文だけで到達点を満たせるか検証する
+    purpose: 経路表で概念の導入順と長さを決めて本文を書き、本文だけで到達点を満たせるか検証する
     needs: [type, template, reader_context]
-    provides: [body, roles_applied, reader_review]
-    file_artifacts: [reader_review]
+    conditional_needs:
+      - when: open_questions.count > 0
+        needs: [decisions]
+    provides: [body, roles_applied, reading_path, reader_review]
+    file_artifacts: [reading_path, reader_review]
     completion: artifact-set
     on_failure: stop
 
@@ -74,7 +90,7 @@ steps:
   - id: review
     skill: review-doc
     purpose: 保存した完成文書を基準に照らして評価し、必要な修正後に読み直す
-    needs: [path, type, reader_context, reader_review]
+    needs: [path, type, reader_context, reading_path, reader_review]
     provides: [document_review]
     file_artifacts: [document_review]
     completion: artifact-set

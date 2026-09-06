@@ -4,6 +4,7 @@
 
 | 下段 | 何を決めるか |
 |---|---|
+| `grill`（grill@grill） | **何が決まっていないか** — 読み手・目的・求める判断が依頼から決まらないときだけ、1問ずつ合意を取る |
 | `content-types` | **何を書くか** — 型と、その骨格 |
 | `writing-rules` | **どう書くか** — 構成・段落・強調・文体・出典 |
 | `visual-guidance` | **何をどう図にするか** — 読み手の問いと図の型 |
@@ -12,7 +13,7 @@
 
 各担当の間で、 読み手の前提と到達点、本文の確認記録、意味上の役を引き継ぐ。その契約はこのプラグインが持つ（[読者への引き継ぎ](references/reader-contract.md)、[役](references/roles.md)）。
 
-必要なidentityは`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`、`review-doc@write-doc`。versionは固定せず、解決先のmanifest identityと各工程が指すskillを検査する。
+必要なidentityは`grill@grill`、`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`、`review-doc@write-doc`。versionは固定せず、解決先のmanifest identityと各工程が指すskillを検査する。
 
 ## 使う
 
@@ -26,6 +27,10 @@
 [error] 下段プラグインが見つからない: writing-rules
         write-doc は組み立て役なので、欠けたまま書くと質が担保されない。
 ```
+
+## 曖昧さを書く前に潰す
+
+`settle`工程は条件付き（`when: open_questions.count > 0`）で`grill`を呼ぶ。type工程が依頼と資料から決まらない問いを`open_questions`へ残したときだけ動き、決定と未決を`decisions`として執筆へ渡す。問いが無ければ`state.py skip`で飛ばす。grillは他の依存と同じく`requires`で完全修飾して宣言し、無ければ止まる。
 
 ## 設定
 
@@ -53,7 +58,7 @@ requirements: {figures: true}
 
 ## 読み手の理解を確認する
 
-型選択で`reader_context`を残し、執筆へ渡す。執筆では本文だけから目的の説明・判断・行動ができるかを試し、根拠付きの`reader_review`を保存前に渡す。保存後の最後にreview-docが完成文書を読み直し、必要な修正と再確認を終えてdocument_reviewを返す。状態管理は記録の受け渡しを検査し、意味の評価はスキルが行う。
+型選択で`reader_context`を残し、執筆へ渡す。執筆では経路表`reading_path`で概念の導入順と長さを決め、本文だけから目的の説明・判断・行動ができるかを試し、根拠付きの`reader_review`を保存前に渡す。保存後の最後にreview-docが完成文書を読み直し、必要な修正と再確認を終えてdocument_reviewを返す。状態管理は記録の受け渡しを検査し、意味の評価はスキルが行う。
 
 既存のsteps全体を上書きしている設定には、新しい既定工程は自動で入らない。更新時は同梱playbook.ymlとの差分を確認し、これらの引き継ぎを取り込む。開始済みrunの設定は変更せず、新しいrunで使う。
 

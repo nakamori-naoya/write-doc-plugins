@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "plugin": "write-doc",
+  "version": "3.0.0",
+  "created_at": "2026-09-06T06:36:04.911114+00:00",
+  "notes": "理解の経路（段階的開示）を規律の中心に追加。強調の役を要点・キーワードの2つへ縮小し、summary/review/badgeを廃止。見出しが主張を運ぶ構成、密度、Mermaid優先、引用の日本語訳。grill@grillを依存に宣言し、open_questionsがあるときだけ動くsettle工程とstate.py skipを追加。",
+  "breaking": "強調の役の契約が4→2に変わり、一言でいうと・要約項目は写像されない。playbookのrequiresにgrill@grillが必須になり、typeはopen_questions、draftはreading_pathを提供する。",
+  "migration": "grill@grillをインストールする。steps全体を上書きしている設定は同梱playbook.ymlの settle 工程と open_questions / reading_path / decisions を取り込む。",
+  "checks": {
+    "codex": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed"
+    },
+    "claude": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed",
+      "semantic-evaluation": "not-executed"
+    },
+    "post-version-validation": "bash scripts/validate.sh 24 passed, 0 failed"
+  },
+  "files": [
+    ".agents/plugins/marketplace.json",
+    "plugins/.codex-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "plugins/.claude-plugin/plugin.json"
+  ]
+}

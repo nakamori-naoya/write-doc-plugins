@@ -8,7 +8,7 @@
 
 > 型: Product Strategy ／ 読み手: <資源配分と行動を決める人> ／ 入力: <Product North Starと現在地> ／ 観測時点: <YYYY-MM-DD>
 
-**一言でいうと**: <どの最重要課題に対し、何へ集中してNorth Starへ近づくか>
+**言い切り**: <どの最重要課題に対し、何へ集中してNorth Starへ近づくか>
 
 ## 診断
 

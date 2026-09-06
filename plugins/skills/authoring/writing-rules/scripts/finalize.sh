@@ -9,7 +9,7 @@ jq -e '.version==1 and (.rules|type=="object" and all(.[]; type=="string")) and
   (.instructions.writing.directive|type=="string" and length>0)' >/dev/null <<<"$merged" \
   || { echo "[error] version、rules、writing directiveのいずれかが不正" >&2; exit 2; }
 
-RULE_NAMES="structure section emphasis style citation annotated-code"
+RULE_NAMES="path structure section emphasis style citation annotated-code"
 rules_json='{}'; report=''
 for r in $RULE_NAMES; do
   want=$(jq -r --arg r "$r" '.rules[$r] // ""' <<<"$merged")

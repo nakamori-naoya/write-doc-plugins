@@ -38,7 +38,7 @@ printf '%s\n' "$CFG_FILE"
 <!-- END shared:skill-entry/config-load -->
 
 `${.instructions.writing.directive}` に従い、`${.rules.*.path}` と `${.extra[].path}` を読む。
-同梱規律は[structure](references/structure.md)、[section](references/section.md)、[emphasis](references/emphasis.md)、[style](references/style.md)、[citation](references/citation.md)、[annotated-code](references/annotated-code.md)である。解決されたpathだけを読む。
+同梱規律は[path](references/path.md)、[structure](references/structure.md)、[section](references/section.md)、[emphasis](references/emphasis.md)、[style](references/style.md)、[citation](references/citation.md)、[annotated-code](references/annotated-code.md)である。解決されたpathだけを読む。
 
 **exit 2 で止まったら先へ進まない。** 指したファイルが無いのに既定へ倒れると、差し替えたつもりで効いていない状態になる。
 
@@ -48,11 +48,11 @@ printf '%s\n' "$CFG_FILE"
 
 特に指定がなければ日本語で読む日本人向けに書く。英語・略語・難しい日本語は、読み手の知識に応じて平易に言い換えるか意味を説明する。詳しい判断基準は、解決された文章スタイルの規律を使う。
 
-[適用手順](references/apply.md)を必ず読み、読み手の前提と到達点から理解の順序・本文の範囲を設計して執筆する。write-docから渡された`reader_context`を使い、単独使用なら依頼と資料から同じ情報を整理する。強調の役は4つから必要なものを使い、出典の3点セットは設定でも解除できない。
+[適用手順](references/apply.md)を必ず読み、読み手の前提と到達点から経路表を作り、本文の順序・範囲・長さをそこから決めて執筆する。write-docから渡された`reader_context`を使い、単独使用なら依頼と資料から同じ情報を整理する。強調の役は2つ（要点・キーワード）から必要なものを使い、出典の3点セットは設定でも解除できない。
 
 ## 3. 出す前に
 
-[final-check.md](references/final-check.md)を読み、本文だけから読後の説明・判断・行動ができるかを確認する。write-docで使う場合は、問い・答え・本文の根拠・修正・残る未確認を`reader_review`として残して次工程へ渡す。
+[final-check.md](references/final-check.md)を読み、本文だけから読後の説明・判断・行動ができるかを確認する。write-docで使う場合は、経路表を`reading_path`、問い・答え・本文の根拠・修正・残る未確認を`reader_review`として残して次工程へ渡す。
 
 設定の形式と差し替え例は[README](README.md)を参照する。指定したファイルが無ければresolverが停止する。
 
