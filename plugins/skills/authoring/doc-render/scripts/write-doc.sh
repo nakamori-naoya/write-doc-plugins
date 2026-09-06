@@ -220,6 +220,11 @@ tmp=$(mktemp "${real_out}/.write-doc.XXXXXXXX") || fail "一時ファイルを�
 if ! cat "$body" > "$tmp" 2>/dev/null; then
   rm -f "$tmp"; fail "書き込みに失敗した: ${target}"
 fi
+# mktemp は 0600 で作る。排他作成のための都合であって、資料の permission ではない。
+# 一時ファイルの mode がそのまま保存物へ移ると、共有 repository に置いた資料を
+# 書いた本人しか読めなくなる。link / mv の前に、資料として普通の読み取り可へ直す。
+# --replace は mv で置き換えるので、こちらの経路も同じ mode になる。
+chmod u+rw,go+r "$tmp" 2>/dev/null || { rm -f "$tmp"; fail "permissionを直せない: ${target}"; }
 
 decision=""
 if [ "$replace" = "1" ]; then

@@ -143,6 +143,27 @@ class OutputRouting(unittest.TestCase):
         self.assertEqual(Path(output["path"]), explicit / "explicit.md")
         self.assertEqual(output["destinationSource"], "explicit")
 
+    def test_saved_document_is_readable_not_left_at_temporary_mode(self):
+        """排他作成に使う一時ファイルの 0600 が、保存した資料へ残らない。"""
+        written = self.write("concept", "permission.md")
+        self.assertEqual(written.returncode, 0, written.stdout + written.stderr)
+        saved = Path(json.loads(written.stdout)["path"])
+        self.assertEqual(saved.stat().st_mode & 0o777, 0o644, oct(saved.stat().st_mode))
+
+        # --replace は別経路（mv）で置き換える。こちらも同じ mode で残ること。
+        saved.chmod(0o600)
+        replaced = self.call(
+            "bash", self.plugin / "scripts/write-doc.sh",
+            "--config", self.resolved_config,
+            "--template", "concept",
+            "--target", saved,
+            "--body-file", self.body,
+            "--replace",
+        )
+        self.assertEqual(replaced.returncode, 0, replaced.stdout + replaced.stderr)
+        self.assertEqual(json.loads(replaced.stdout)["decision"], "replaced")
+        self.assertEqual(saved.stat().st_mode & 0o777, 0o644, oct(saved.stat().st_mode))
+
     def test_existing_target_update_ignores_current_route(self):
         existing = self.repo / "existing.md"
         existing.write_text("old\n")

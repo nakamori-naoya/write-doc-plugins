@@ -29,6 +29,8 @@ steps:
 
 利用者は `~/.config/harness-plugins/dependencies.yml`（利用者ごと）、`<repo>/.harness-plugins/dependencies.yml`（repository ごと）、`<repo>/.harness-plugins/scopes/<入口 playbook>/dependencies.yml`（入口ごと）で、契約 ID `write-doc/write-doc` に別の実体を束縛できる。**消費側は `requires` を書き換えない。**
 
+**束縛と `implements` は対になっている。** 利用者が書く `dependencies.yml` の `bindings` は、契約 ID `write-doc/write-doc` に対して差し替え先を `{plugin, marketplace}` で指すだけであり、path も version も書けない。差し替え先の側は自分の `plugin.json` の `metadata.harness.implements[]` に `{id: write-doc/write-doc, version: 1, kind: playbook, playbook: <入口 playbook 名>, types: [<扱える文書型>]}` を宣言する。resolver はこの 2 つを突き合わせ、宣言の無い plugin への束縛を `[error:binding-not-implemented]` で止める。消費側が `input.document_type` で要求した型が `types` に無ければ `[error:binding-capability-unsupported]` で止まる。top-level が `version: 1` と `bindings` だけであること、3 層の置き場所、優先順位は README「実行契約と保守」にある。
+
 ---
 
 ## 1. 入口
