@@ -49,7 +49,7 @@ steps:
     on_failure: stop
 
   - id: settle
-    skill: grill
+    playbook: grill
     when: open_questions.count > 0
     purpose: 読み手・目的・到達点・求める判断のうち依頼から決まらないものだけを、推奨付きで1問ずつ確かめ、決定と未決を残す
     needs: [reader_context, open_questions]

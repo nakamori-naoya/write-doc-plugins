@@ -99,9 +99,54 @@ marketplaceの取得と、インストール済みパッケージの更新は分
 
 ## インストール済みである必要があるplugin
 
-`write-doc@write-doc`に外部pluginへの依存はない。BDDやproductなど呼び出し側の題材にも依存しない。
+`write-doc@write-doc`が外部へ持つ依存は`grill@grill`の1つだけである。読み手・目的・求める判断が依頼から決まらないときだけ、その公開playbookを呼ぶ。BDDやproductなど呼び出し側の題材には依存しない。
 
-内部playbookは同じpackage内の機能を内部契約で解決する。別repositoryから利用するときの公開契約は`write-doc@write-doc`だけであり、内部機能名をインストールまたは依存先として公開しない。
+内部の機能は同じpackage内で内部契約として解決する。別repositoryから利用するときの公開契約は`write-doc@write-doc`だけであり、内部機能名をインストール対象または依存先として公開しない。
+
+## 公開契約
+
+公開契約の正本は[CONTRACT.md](plugins/playbooks/authoring/write-doc/CONTRACT.md)である。契約 ID は`write-doc/write-doc`、版は1。
+
+**そこに書かれていることだけが契約である。** 入口（4点）、`--input`の入力schema、`output_to`へ書く出力schema、提供側が守る保証。それ以外——工程の並びと名前、内部skill名、内部plugin名、テンプレートと骨格、保存scriptの引数とexit code、`references/`の手引き、内部pluginの設定キー——は非契約であり、いつ変わってもよい。
+
+呼び出し元のplaybookは次の2か所だけでこれを要求する。
+
+```yaml
+requires:
+  - {plugin: write-doc, marketplace: write-doc}
+
+steps:
+  - id: document
+    playbook: write-doc
+    input:
+      document_type: domain-rule   # 静的に決まる型だけ書く
+    provides: [document_path]
+```
+
+**外部から`skill:`や`script:`で内部を掴むことはできない。** resolverが`external-dependency-skill` / `external-dependency-script`で停止する。
+
+**実行は2段で、解決は1回だけである。** 呼び出し元が`scripts/prepare.sh <repo> --input=<abs> --scope=<dir> --bindings=<lock>`で解決済みYAMLのpathを得て、そのpathを添えて入口SKILL.mdへ実行を渡す。write-docは受け取ったpathをそのまま使い、解決をやり直さない。やり直すと呼び出し元が載せた入力・scope・束縛が消える。詳細は[CONTRACT.md §1](plugins/playbooks/authoring/write-doc/CONTRACT.md)。
+
+## 依存先の差し替え
+
+論理名（`write-doc`、`grill`）と実体pluginは分かれている。利用者は契約IDに対する実体を、次の3層のいずれかで束縛できる。**playbook側の`requires`は書き換えない。**
+
+1. scope: `<repo>/.harness-plugins/scopes/<入口playbook>/dependencies.yml`
+2. repository: `<repo>/.harness-plugins/dependencies.yml`
+3. personal: `~/.config/harness-plugins/dependencies.yml`
+
+```yaml
+version: 1
+dependencies:
+  # このrepositoryの資料作成だけ、別の実装へ差し替える
+  "write-doc/write-doc": {plugin: acme-write-doc, marketplace: acme-docs}
+  # write-docが内部で使う対話も差し替えられる
+  "grill/grill": {plugin: acme-grill, marketplace: acme-dialogue}
+```
+
+差し替え先は`metadata.harness.implements`で、実装する契約IDと、`write-doc/write-doc`なら扱える文書型slugを自己宣言していなければならない。**宣言の無いpluginへは束縛できない。** 呼び出し元が要求した文書型を実装していなければ、解決の時点で止まる。
+
+入れ子の実行（呼び出し元 → write-doc → grill）では、入口が選んだ束縛をそのまま子へ渡すので、同じ実行の中で実体が食い違うことはない。
 
 ## 設定の上書きと優先順位
 
@@ -120,6 +165,8 @@ playbookの静的設定は、scope、repository、personal、同梱 `playbook.ym
 skillでは、同梱設定の `prompt_parameters` に宣言されたpathだけ、依頼で明示された値を `--override=<path>=<value>` として最終上書きできる。宣言されていないpathを任意に上書きすることはできない。
 
 たとえば入口は `<repo>/.harness-plugins/write-doc.config.yml`、その入口から呼ぶ `writing-rules` だけの設定は `<repo>/.harness-plugins/scopes/write-doc/writing-rules.config.yml` に置く。
+
+資料の保存先は、作業repositoryの`<repo>/.harness-plugins/doc-render.config.yml`で文書型ごとに分けられる。各`dir`は`type: relative|absolute`と`path`を持つため基準が暗黙にならず、同じ1ファイルからrepository内にも外にも出せる。一致しない型は`output.default`へ保存する。
 
 ## 検証
 

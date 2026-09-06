@@ -2,9 +2,11 @@
 
 **資料を1本書いて保存する上段プラグイン。** 自分では型も規律も図の選択基準も媒体も持たず、執筆・図・保存・最終確認を組み合わせる。
 
+**外部から見える面は[CONTRACT.md](CONTRACT.md)（契約 ID `write-doc/write-doc`、版 1）だけである。** 下の表は内部の作りであり、契約ではない。
+
 | 下段 | 何を決めるか |
 |---|---|
-| `grill`（grill@grill） | **何が決まっていないか** — 読み手・目的・求める判断が依頼から決まらないときだけ、1問ずつ合意を取る |
+| `grill`（外部・公開playbook） | **何が決まっていないか** — 読み手・目的・求める判断が依頼から決まらないときだけ、1問ずつ合意を取る |
 | `content-types` | **何を書くか** — 型と、その骨格 |
 | `writing-rules` | **どう書くか** — 構成・段落・強調・文体・出典 |
 | `visual-guidance` | **何をどう図にするか** — 読み手の問いと図の型 |
@@ -13,7 +15,7 @@
 
 各担当の間で、 読み手の前提と到達点、本文の確認記録、意味上の役を引き継ぐ。その契約はこのプラグインが持つ（[読者への引き継ぎ](references/reader-contract.md)、[役](references/roles.md)）。
 
-必要なidentityは`grill@grill`、`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`、`review-doc@write-doc`。versionは固定せず、解決先のmanifest identityと各工程が指すskillを検査する。
+必要なidentityは`grill@grill`（外部）と、`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`、`review-doc@write-doc`（内部）。versionは固定せず、解決先のmanifest identityと各工程が指すものを検査する。外部の実体は利用者が`dependencies.yml`で契約ID`grill/grill`へ束縛して差し替えられる。
 
 ## 使う
 
@@ -30,7 +32,11 @@
 
 ## 曖昧さを書く前に潰す
 
-`settle`工程は条件付き（`when: open_questions.count > 0`）で`grill`を呼ぶ。type工程が依頼と資料から決まらない問いを`open_questions`へ残したときだけ動き、決定と未決を`decisions`として執筆へ渡す。問いが無ければ`state.py skip`で飛ばす。grillは他の依存と同じく`requires`で完全修飾して宣言し、無ければ止まる。
+`settle`工程は条件付き（`when: open_questions.count > 0`）で、外部の公開playbook `grill`を`playbook: grill`として呼ぶ。type工程が依頼と資料から決まらない問いを`open_questions`へ残したときだけ動き、返ってきた決定を`decisions`として執筆へ渡す。問いが無ければ`state.py skip`で飛ばす。
+
+**相手の中の作りは知らない。** 使うのは相手のCONTRACT.mdが公開した入口だけで、入力YAML（題材・文脈・問いと推奨・出力先）を一時領域に置いて渡し、返された出力YAMLから決定と未決を受け取る。相手が欠けていれば止まる。
+
+**解決は呼ぶ側が1回だけ行う。** こちらが相手の`prepare.sh`へ入力・scope・束縛を載せて解決し、得た解決済みYAMLのpathを相手の入口SKILL.mdへ渡す。相手にやり直させない。この段取り自身も、呼び出し元から解決済みYAMLのpathを受け取ったときは`prepare`を実行せず、それをそのまま使う（[CONTRACT.md](CONTRACT.md) §1）。
 
 ## 設定
 
@@ -55,6 +61,8 @@ requirements: {figures: true}
 | `.harness-plugins/write-doc.config.yml` | 資料全体の要件・工程の上書き |
 
 呼び出し元playbookが`output_format`を固定した場合は、その値をdoc-render設定の`output.format`より優先する。これは、BDD資料のように媒体自体が上段の成果契約である場合に限る。指定が無い通常の呼び出しはdoc-render設定へ従う。
+
+作業repositoryごと・文書型ごとに保存先を変える場合は、そのrepositoryの`.harness-plugins/doc-render.config.yml`で`output.routes`を指定する。type工程が選んだslugを完全一致で照合し、一致しない型は`output.default`へ保存する。各`dir`は`type: relative|absolute`と`path`を持つので解釈基準が明示され、repository外も同じ設定へ記載できる。設定例とversion 1からの移行方法はdoc-renderのREADMEを参照する。
 
 ## 読み手の理解を確認する
 
