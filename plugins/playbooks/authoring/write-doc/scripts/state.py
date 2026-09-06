@@ -24,6 +24,30 @@ def now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
+def lock_entries(path: str | None, contracts: set) -> dict | None:
+    """束縛lockのうち**自分のrequiresに対応する契約だけ**をidentityへ含める。
+
+    lockは同じrunの入れ子で共有し、子が初めて解決した外部依存を追記する。
+    lock全体をidentityへ入れると、子の正常な追記で親のhashが変わり、
+    親の次の状態操作が「開始時から変わった」と拒否される。"""
+    if not path:
+        return None
+    location = pathlib.Path(path)
+    if location.is_symlink() or any(part.is_symlink() for part in location.parents):
+        die("束縛lockのpathにsymlinkは使えない: " + path)
+    try:
+        data = json.loads(location.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        die(f"束縛lockを読めない: {path} ({exc})")
+    entries = data.get("entries")
+    if not isinstance(entries, dict):
+        die("束縛lockのentriesが壊れている: " + path)
+    return {
+        contract: {key: entry.get(key) for key in ("marketplace", "plugin", "content_hash")}
+        for contract, entry in sorted(entries.items()) if contract in contracts
+    }
+
+
 def load_config(path: str) -> tuple[dict, str]:
     try:
         raw = subprocess.run(
@@ -39,7 +63,15 @@ def load_config(path: str) -> tuple[dict, str]:
         if result.returncode:
             die("依存実体の再検査に失敗: " + result.stderr.strip())
     playbook = config.get("playbook", config)
-    identity = {"playbook": playbook, "deps": config.get("deps", {}), "repo_root": config.get("repo_root")}
+    identity = {
+        "playbook": playbook,
+        "deps": config.get("deps", {}),
+        "repo_root": config.get("repo_root"),
+        "bindings": lock_entries(
+            config.get("resolution", {}).get("bindings_lock"),
+            {dep.get("contract") for dep in (config.get("deps") or {}).values() if dep.get("contract")},
+        ),
+    }
     canonical = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return playbook, hashlib.sha256(canonical.encode()).hexdigest()
 

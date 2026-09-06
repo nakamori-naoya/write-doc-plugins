@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "plugin": "write-doc",
+  "version": "4.0.0",
+  "created_at": "2026-09-06T14:29:22.728250+00:00",
+  "notes": "文書型ごとの出力routeを追加し、各保存先をrelativeまたはabsoluteとして明示できるようにする。relativeは作業repository基準、absoluteは~/または/で始まるpathを受け付ける。 外部から見える面を公開playbook write-doc 1本に閉じ、契約IDwrite-doc/write-doc v1をCONTRACT.mdで正本化する。入力はprepare.sh --input=<絶対path>のYAML 1本、出力はoutput_toへ書くYAML 1本に固定する。",
+  "breaking": "doc-render設定をversion 2へ更新し、output.dirの単一文字列をoutput.defaultとoutput.routesの型付きdirへ変更する。 外部からの公開面を公開playbook write-doc 1本にした(契約IDwrite-doc/write-doc v1、CONTRACT.mdが正本)。内部skill(write-with-rules / remove-intermediate-artifacts / content-types / writing-rules / doc-render / review-doc等)を消費側からskill:やscript:で指すことはできず、解決の時点で落ちる。入力はprepare.sh --input=<絶対path>に渡すYAML 1本に固定し、未知キーはexit 2にした。検査は入口で完結し工程は1つも動かない。保存先の規則を変え、name(新規)とupdate_target(差し替え)を排他の必須、output_directoryを任意にした。output_directoryを渡すならnameが要り、output_directory単独はexit 2になる。output_directoryとnameの対を必須としていた旧来の呼び出し方は、今後はnameだけで通る。出力はoutput_toへ書くYAML(status / path / document_type / output_format、失敗時reason)だけで1呼び出し1本にした。referencesにwrite-doc自身の配布物内pathを渡すとexit 2になる。実行設定の後始末はwrite-docが自分で行い、消費側のrun-config.py cleanup代行は契約から消えた。metadata.harnessにmarketplaceとimplements(文書型27種を宣言)を追加し、宣言の無いpluginへは束縛できないようにした。外部依存の入口参照を${.deps.<論理名>.entry}に限定し、束縛lockのschemaにbindingsが増えたため旧schemaのlockは非互換である。",
+  "migration": "output.dir: docsをoutput.default: {dir: {type: relative, path: docs}}へ移す。型別保存先はoutput.routesへ追加し、repository外はdir: {type: absolute, path: ~/...}と書く。 消費側はsteps[].playbook: write-docで呼び、CONTRACT.mdの入力schemaに従うYAML 1本をprepare.sh --input=<絶対path>へ渡す。内部skillを指す記述は文書・設定・scriptから消す。保存先はoutput_directoryとnameの対をやめ、新規はnameだけ、差し替えはupdate_targetだけを渡す。output_directoryは必要なときだけnameと併せて添える。結果はoutput_toのYAMLから読む。referencesにwrite-doc自身の配布物内pathを渡さない。消費側でrun-config.py cleanupを代行しない。依存参照は${.deps.<論理名>.entry}へ書き換え、実行中のrunが持つ旧schemaのlockは--bindings=<lock>へ渡さず入口が作り直す。",
+  "checks": {
+    "codex": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "4.0.0 installed in personal and work profiles",
+      "evidence": "HARNESS_PLUGIN_RUNTIME=codex を含む bash scripts/validate.sh: 配布構造・公開manifest・解決・負の試験・消費側契約lintを検査"
+    },
+    "claude": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not executed: configured marketplace reads GitHub and the 4.0.0 source is not pushed",
+      "evidence": "HARNESS_PLUGIN_RUNTIME=claude を含む bash scripts/validate.sh: 配布構造・公開manifest・解決・負の試験・消費側契約lintを検査"
+    },
+    "real-distribution": "fixtureだけで緑にせず、兄弟checkoutの実配布物 plugins/ を installed-cache へ写して解決させた",
+    "consumer-contract-lint": "scripts/lint-consumer-contract.py: codex / claude 両runtimeで 0 finding",
+    "binding": "契約IDと版で束縛し、bindings snapshot を持つ lock を入口が作り直すところまで通した",
+    "post-version-validation": "bash scripts/validate.sh: 41 passed, 0 failed"
+  },
+  "files": [
+    ".agents/plugins/marketplace.json",
+    "plugins/.codex-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "plugins/.claude-plugin/plugin.json"
+  ]
+}
