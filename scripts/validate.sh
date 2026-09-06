@@ -193,8 +193,12 @@ bash "$ROOT/scripts/test-marketplace-validation.sh" && pass "marketplace配布�
 pb="$ROOT/plugins/playbooks/authoring/write-doc"
 cmp -s "$ROOT/shared/playbook/resolve.sh" "$pb/scripts/resolve.sh" && pass "playbook resolver同期" || fail "playbook resolver同期"
 cmp -s "$ROOT/shared/playbook/resolve-dependency.py" "$pb/scripts/resolve-dependency.py" && pass "dependency resolver同期" || fail "dependency resolver同期"
-if yq -o=json -I=0 '.' "$pb/playbook.yml" | jq -e '.version==2 and (.requires|length>0) and all(.requires[]; .marketplace=="write-doc" and ((keys|sort)==["marketplace","plugin"]))' >/dev/null; then
-  pass "完全修飾した同一marketplace依存"
+# 依存は marketplace / plugin で完全修飾する。同梱plugin以外に許すのは grill@grill だけ。
+if yq -o=json -I=0 '.' "$pb/playbook.yml" | jq -e '.version==2 and (.requires|length>0)
+    and all(.requires[]; ((keys|sort)==["marketplace","plugin"]) and (.marketplace=="write-doc" or (.marketplace=="grill" and .plugin=="grill")))
+    and any(.requires[]; .plugin=="grill")
+    and any(.steps[]; .skill=="grill" and (.when|type=="string") and (.provides==["decisions"]))' >/dev/null; then
+  pass "完全修飾した依存（同梱pluginとgrill@grill）と条件付きsettle工程"
 else
   fail "playbook依存契約"
 fi
@@ -205,12 +209,25 @@ else
   fail "write-docとcleanupの責務境界"
 fi
 
+# grill は別marketplaceなので、この repository からは解決できない。BDD系と同じく
+# 配布物の複製に test cache を置き、installed-cache として解決させる。
 mkdir -p "$TMP_ROOT/repo"
+RESOLUTION_COPY="$TMP_ROOT/resolution-copy"
+mkdir -p "$RESOLUTION_COPY"
+cp -R "$ROOT/plugins" "$ROOT/.claude-plugin" "$ROOT/.agents" "$RESOLUTION_COPY/"
+copy_pb="$RESOLUTION_COPY/plugins/playbooks/authoring/write-doc"
+grill_fixture="$copy_pb/.harness-plugin-test-cache/grill/grill/0.3.1"
+mkdir -p "$grill_fixture/.codex-plugin" "$grill_fixture/.claude-plugin" "$grill_fixture/skills/grill"
+printf '{"name":"grill","version":"0.3.1","skills":"./skills"}\n' > "$grill_fixture/.codex-plugin/plugin.json"
+printf '{"name":"grill","version":"0.3.1","skills":"./skills"}\n' > "$grill_fixture/.claude-plugin/plugin.json"
+printf -- '---\nname: grill\ndescription: fixture\n---\n' > "$grill_fixture/skills/grill/SKILL.md"
 for runtime in codex claude; do
   out="$TMP_ROOT/$runtime.yml"
-  if HARNESS_PLUGIN_RUNTIME="$runtime" bash "$pb/scripts/resolve.sh" "$TMP_ROOT/repo" > "$out" 2> "$out.err" \
-    && yq -o=json -I=0 '.' "$out" | jq -e --arg runtime "$runtime" 'all(.deps[]; .runtime==$runtime and .source_kind=="repository")' >/dev/null; then
-    pass "$runtime repository resolution"
+  if HARNESS_PLUGIN_RUNTIME="$runtime" HARNESS_PLUGIN_CACHE_ROOT="$copy_pb/.harness-plugin-test-cache" bash "$copy_pb/scripts/resolve.sh" "$TMP_ROOT/repo" > "$out" 2> "$out.err" \
+    && yq -o=json -I=0 '.' "$out" | jq -e --arg runtime "$runtime" 'all(.deps[]; .runtime==$runtime)
+        and all(.deps | to_entries[] | select(.key!="grill"); .value.source_kind=="repository")
+        and .deps.grill.source_kind=="installed-cache" and (.deps.grill.skills|has("grill"))' >/dev/null; then
+    pass "$runtime repository resolution（grillはinstalled-cache）"
   else
     fail "$runtime repository resolution"
   fi

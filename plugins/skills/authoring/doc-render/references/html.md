@@ -9,12 +9,10 @@
 | 受け取る役 | HTML |
 |---|---|
 | 本文 | `<article>` |
-| 冒頭要約 | `<section class="summary">` |
-| 末尾総括 | `<section class="review"><ul class="structure">…</ul></section>` |
+| 見出し | `<h2>` / `<h3>`。受け取った文言のまま。役割名へ置き換えない |
 | 要点 | `<mark>` |
 | キーワード | `<mark class="kw">` |
-| 一言でいうと | `<p class="hitokoto">` |
-| 要約項目 | `<span class="badge imp">` または `<span class="badge pt">` |
+| 引用の日本語訳 | `<blockquote>` 内の `<p class="translation">` |
 | 出典の帰属 | `<span class="attribution">` |
 | 横長の入れ物 | `<div class="scroll-x">` |
 

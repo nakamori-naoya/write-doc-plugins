@@ -12,7 +12,7 @@ python3 "$STATE" complete --config "$CFG_FILE" --run-id "$RUN_ID" --step type \
   --provide reader_context=/path/to/reader-context.md
 ```
 
-各工程の直前に`start`、成果物がすべて揃った後だけ`complete`を呼ぶ。失敗時は`fail --reason <理由>`を呼び、その後の工程へ進まない。`complete`は`provides`と同じ名前の`--provide key=value`が過不足なく揃わなければ拒否する。
+各工程の直前に`start`、成果物がすべて揃った後だけ`complete`を呼ぶ。`when`を持つ工程は、条件が偽なら`skip --step <id> --reason <条件の評価>`で飛ばす。条件の無い工程は飛ばせず、飛ばした工程の成果物は登録されない。失敗時は`fail --reason <理由>`を呼び、その後の工程へ進まない。`complete`は`provides`と同じ名前の`--provide key=value`が過不足なく揃わなければ拒否する。
 
 中断後は同じ`PLAYBOOK_RUN_ID`で`init`し直すと再開する。`status`で現在地を読む。開始後にplaybook設定が変わっていれば再開できない。状態JSONへ成果物本文は入れず、識別子、path、ハッシュなどの参照だけを値にする。
 
