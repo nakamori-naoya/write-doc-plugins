@@ -12,18 +12,16 @@
 - 既存ファイルを意図せず上書きせず、HTMLまたはMarkdownへ保存したい
 - 資料完成後に、中間生成物だけを安全に片付けたい
 
-## どの機能を使うか
+## 公開入口を選ぶ
 
-| やりたいこと | 選ぶ機能 |
+次の入口から依頼します。内部のスキルや処理は、入口が必要に応じて呼び出します。
+
+| やりたいこと | 公開入口 |
 |---|---|
-| 型の選択から保存まで一続きで資料を完成させる | `write-doc` |
-| 読み手と目的から文書の型だけを決める | `content-types` |
-| 本文、PR説明、コメントの文章だけを整える | `writing-rules` |
-| 図にする箇所と図の型だけを決める | `visual-guidance` |
-| 完成済み本文をMarkdownまたはHTMLへ保存する | `doc-render` |
-| 最終資料を残して未追跡の中間生成物だけを削除する | `write-doc-cleanup` |
+| 型の選択から保存後の品質確認まで資料を完成させる | `write-doc` |
 
 BDD、Product Planning、収集内容など、資料の題材を発見するpluginではない。題材側のpluginが作った素材を受け取り、読み手へ伝わる一つの資料へ仕上げる。
+
 
 ## 利用例
 
@@ -36,53 +34,69 @@ BDD、Product Planning、収集内容など、資料の題材を発見するplug
 ```
 
 ```text
-このPR本文を文章規律に従って直して。ファイル保存はしなくてよい。
+この設計判断を初めて読む人向けの説明資料として作成し、内容を確認して保存して。
 ```
 
 ## インストール
 
+インストールするのは`write-doc@write-doc`です。外部プラグインの追加は不要です。
+
+内部のスキルは同梱されています。個別にインストールせず、公開入口から利用してください。
+
 ### Codex
 
-Codexのpluginコマンドには`--scope`がない。通常の手順はuser単位でmarketplaceとpluginを登録する。
+利用するCodexと同じ設定環境で実行してください。
 
 ```bash
 codex plugin marketplace add nakamori-naoya/write-doc-plugins
 codex plugin add write-doc@write-doc
+codex plugin list
 ```
 
-このrepositoryだけに分離したい場合は、repository専用の`CODEX_HOME`を作り、インストール時と利用時に同じ値を指定する。
-
-```bash
-mkdir -p .codex-home
-export CODEX_HOME="$PWD/.codex-home"
-
-codex plugin marketplace add nakamori-naoya/write-doc-plugins
-codex plugin add write-doc@write-doc
-codex
-```
-
-`CODEX_HOME`には認証、設定、ログ、session、plugin metadataも保存されるため、このdirectoryはGit管理しない。
+一覧で導入先を確認し、新しい会話で利用してください。
 
 ### Claude Code
 
-Claude Codeは次のscopeを選べる。
-
-| scope | 対象 |
-|---|---|
-| `user` | user全体。省略時の既定値 |
-| `project` | このrepositoryで有効にする設定をGitでチーム共有する |
-| `local` | このrepositoryで有効にするが、Git共有せず自分だけで使う |
-
-repository設定としてインストールする場合は`project`を指定する。`CLAUDE_PLUGIN_SCOPE`を`user`または`local`へ変えれば、同じ手順でscopeを切り替えられる。
+次は自分の全プロジェクトで使う例です。このプロジェクトのチームで共有する場合は`project`、このプロジェクトで自分だけが使う場合は`local`に変更し、利用先のディレクトリで実行してください。
 
 ```bash
-CLAUDE_PLUGIN_SCOPE=project
-
+CLAUDE_PLUGIN_SCOPE=user
 claude plugin marketplace add nakamori-naoya/write-doc-plugins --scope "$CLAUDE_PLUGIN_SCOPE"
 claude plugin install write-doc@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
+claude plugin list
 ```
 
-利用者がインストールするのは`write-doc@write-doc`だけである。型選択、文章規律、図の選択、保存、後片付けは同じplaybook packageへ内包し、個別のインストール対象にはしない。
+一覧で導入を確認し、Claude Codeを再起動してください。すでに導入しているパッケージは、次の更新手順を使ってください。
+
+## 更新する
+
+GitHubから登録したmarketplaceを更新し、その公開パッケージを更新します。新規インストールと同じCodexの設定環境、Claude Codeの適用範囲を使ってください。
+
+### Codex
+
+```bash
+codex plugin marketplace upgrade write-doc
+codex plugin add write-doc@write-doc
+codex plugin list
+```
+
+更新後は新しい会話で確認してください。ローカルのパスからmarketplaceを登録した場合は、Git版の更新コマンドではなく、その登録先のソースを更新してから追加し直します。
+
+### Claude Code
+
+```bash
+# インストール時に合わせてuser / project / localを選ぶ
+CLAUDE_PLUGIN_SCOPE=user
+claude plugin marketplace update write-doc
+claude plugin update write-doc@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
+claude plugin list
+```
+
+更新後はClaude Codeを再起動してください。
+
+marketplaceの取得と、インストール済みパッケージの更新は分けて確認します。同じバージョンとして公開された変更は、更新コマンドだけでは反映されない場合があります。「最新」と表示された場合は公開バージョンを確認し、キャッシュ内のファイルを直接編集しないでください。
+
+コマンドは2026-09-06時点のCLIヘルプと、[Codexのmarketplace管理](https://developers.openai.com/plugins/build/plugins)、[Claude Codeの更新仕様](https://code.claude.com/docs/en/plugins-reference#plugin-update)を確認しています。
 
 ## インストール済みである必要があるplugin
 
