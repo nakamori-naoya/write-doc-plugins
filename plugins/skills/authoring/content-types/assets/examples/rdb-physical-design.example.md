@@ -1,6 +1,6 @@
 # RDB物理設計 — 貸会議室の予約
 
-> これは [`rdb-physical-design.md`](../templates/rdb-physical-design.md) の記載例である。
+> これは`rdb-physical-design`型の記載例である。**構成の正本ではなく、粒度と具体性の見本として読む。**
 > 対象製品、件数、計測結果は架空だが、判断と検証の粒度は実案件で再利用できる形にしている。
 >
 > 型: RDB物理設計 ／ 読み手: DB設計者、実装者、運用者 ／ 入力: [RDB論理設計例](rdb-logical-data-modeling.example.md)

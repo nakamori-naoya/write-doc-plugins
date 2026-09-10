@@ -1,6 +1,6 @@
 # RoomFlowをはじめる
 
-> これは [`getting-started.md`](../templates/getting-started.md) の記載例である。題材の会議室予約サービスRoomFlow、clone先、tokenの発行commandはすべて架空であり、**このまま実行しても動かない**。手順の粒度と成功判定の書き方を読むための例として使う。
+> これは`getting-started`型の記載例である。**構成の正本ではなく、粒度と具体性の見本として読む。**題材の会議室予約サービスRoomFlow、clone先、tokenの発行commandはすべて架空であり、**このまま実行しても動かない**。手順の粒度と成功判定の書き方を読むための例として使う。
 
 このガイドで、ローカルのRoomFlowを起動し、会議室M-301を90分だけ仮押さえした状態を一度作る。
 

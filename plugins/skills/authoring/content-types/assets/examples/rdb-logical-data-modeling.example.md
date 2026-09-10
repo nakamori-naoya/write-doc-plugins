@@ -1,6 +1,6 @@
 # RDB論理設計 — 貸会議室の予約
 
-> これは [`rdb-logical-data-modeling.md`](../templates/rdb-logical-data-modeling.md) の記載例である。
+> これは`rdb-logical-data-modeling`型の記載例である。**構成の正本ではなく、粒度と具体性の見本として読む。**
 > RoomFlowは、組織内の共用会議室を予約する架空のサービスである。
 > 型: RDB論理設計 ／ 読み手: 予約業務責任者、RDBデータ設計者 ／ 入力: [貸会議室予約の業務知識・コアドメイン](domain-rule.example.md)
 
