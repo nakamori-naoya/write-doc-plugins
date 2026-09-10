@@ -663,6 +663,7 @@ python_failed=0
 while IFS= read -r script; do PYTHONPYCACHEPREFIX="$TMP_ROOT/pycache" python3 -m py_compile "$script" || python_failed=1; done < <(find "$ROOT" -type f -name '*.py' | sort)
 [ "$python_failed" -eq 0 ] && pass "Python構文" || fail "Python構文"
 
+python3 "$ROOT/scripts/test-content-type-fidelity.py" && pass "テンプレートと記載例の対応" || fail "テンプレートと記載例の対応"
 python3 "$ROOT/scripts/test-reader-contract.py" && pass "読者の前提と本文確認の工程間引き継ぎ" || fail "読者の前提と本文確認の工程間引き継ぎ"
 python3 "$ROOT/scripts/test-output-routing.py" && pass "repository・文書型ごとの出力先ルーティング" || fail "repository・文書型ごとの出力先ルーティング"
 
