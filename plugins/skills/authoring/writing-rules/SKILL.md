@@ -1,6 +1,6 @@
 ---
 name: write-with-rules
-description: 文章を規律に従って書く／直す。構成・段落・主張の立て方・どこを強調するか・文体・出典の3点セット・コード注釈の規律を適用する。資料に限らず、PR の説明・チケット・レビューコメント・メールにも使う。「規律に従って書いて」「この文章を直して」と言われたときに使う。
+description: 文章を規律に従って書く／直す。構成・段落・主張の立て方・どこを強調するか・文体・出典の3点セット・観測値の扱い・コード注釈の規律を適用する。資料に限らず、PR の説明・チケット・レビューコメント・メールにも使う。「規律に従って書いて」「この文章を直して」と言われたときに使う。
 ---
 
 # write-with-rules（規律に従って書く）
@@ -38,7 +38,7 @@ printf '%s\n' "$CFG_FILE"
 <!-- END shared:skill-entry/config-load -->
 
 `${.instructions.writing.directive}` に従い、`${.rules.*.path}` と `${.extra[].path}` を読む。
-同梱規律は[path](references/path.md)、[structure](references/structure.md)、[section](references/section.md)、[emphasis](references/emphasis.md)、[style](references/style.md)、[citation](references/citation.md)、[annotated-code](references/annotated-code.md)である。解決されたpathだけを読む。
+同梱規律は[path](references/path.md)、[structure](references/structure.md)、[section](references/section.md)、[emphasis](references/emphasis.md)、[style](references/style.md)、[citation](references/citation.md)、[evidence](references/evidence.md)、[annotated-code](references/annotated-code.md)である。解決されたpathだけを読む。
 
 **exit 2 で止まったら先へ進まない。** 指したファイルが無いのに既定へ倒れると、差し替えたつもりで効いていない状態になる。
 
