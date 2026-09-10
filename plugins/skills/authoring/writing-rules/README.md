@@ -20,6 +20,7 @@
 | `emphasis` | **どの役をどこへ当てるか** | 語・節 |
 | `style` | 語り口・文の粒度・用語 | 文 |
 | `citation` | 出典の3点セットと日本語訳（**緩められない**） | 出典 |
+| `evidence` | 実測・推定の条件、比較できる範囲、値と空欄の意味 | 観測値・比較表 |
 | `annotated-code` | コードへ注釈を振るときの規律 | コード |
 
 **コード注釈は用途で2つに分かれる。** 差分注釈（この変更で何が変わったか）と実行順注釈（この処理はどう動くか）。**共通するのは「掲載を2層に分ける」「読ませる層は畳まない」「注釈をコードの途中へ差し込む」の3つで、凡例とチェックリストは用途ごとに別。** 実行順注釈ではさらに、主要制御フローの**幹を先に完走**させ、別パッケージの詳細は下部の**枝**へ分けて往復リンクする。
@@ -46,7 +47,7 @@ rules:
 extra: "docs/guides/terms.md, docs/guides/brand.md"   # 自由に足す
 instructions:
   writing:
-    directive: rulesの各ファイルと適用手順を読み、読み手の前提と到達点からpathで経路表を作り、structure、section、style、emphasisを適用し、citationとannotated-codeを該当時に適用する
+    directive: rulesの各ファイルと適用手順を読み、読み手の前提と到達点からpathで経路表を作り、structure、section、style、emphasisを適用し、citation、evidence、annotated-codeを該当時に適用する
 ```
 
 設定は自己完結させる。repository設定があればpersonalや同梱既定は読まれない。
