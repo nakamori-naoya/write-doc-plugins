@@ -6,8 +6,13 @@ RoomFlowは、複数拠点の貸会議室を顧客へ時間単位で販売する
 
 ## インストール
 
-1. Docker 26以降をインストールする。
-2. `docker compose up -d`を実行する。
+対応環境はmacOSまたはLinux、Docker 26以降、空いているTCP 8080番ポートである。認証を使うAPIを試す場合は、ローカル開発用tokenを`ROOMFLOW_ACCESS_TOKEN`へ設定する。
+
+1. `git clone https://example.invalid/roomflow.git`を実行する。
+2. `cd roomflow`を実行する。
+3. `docker compose up -d`を実行する。
+
+`docker compose ps`で`api`と`db`が`running`になれば起動している。
 
 ## 使い方（最小の例）
 
@@ -20,6 +25,16 @@ HTTP 200と`{"available":true}`が返れば利用できる。仮押さえ予約�
 ## トラブルシューティング
 
 8080番ポートを使えない場合は、[トラブルシューティング](troubleshooting.example.md)を確認する。
+
+`ROOMFLOW_ACCESS_TOKEN`が未設定のまま予約作成APIを呼ぶとHTTP 401が返る。空き確認APIだけならtokenなしで試せる。
+
+## 開発で最初に見る場所
+
+| 知りたいこと | 入口 |
+|---|---|
+| 予約状態の意味 | [コンセプト](concept.example.md) |
+| 予約APIの値 | [APIリファレンス](api-reference.example.md) |
+| 予約通知の変更作業 | [オンボーディング](onboarding.example.md) |
 
 ## 更新履歴
 
