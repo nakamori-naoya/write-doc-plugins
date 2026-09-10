@@ -9,14 +9,18 @@ jq -e '.version==1 and (.rules|type=="object" and all(.[]; type=="string")) and
   (.instructions.writing.directive|type=="string" and length>0)' >/dev/null <<<"$merged" \
   || { echo "[error] version、rules、writing directiveのいずれかが不正" >&2; exit 2; }
 
-RULE_NAMES="path structure section emphasis style citation evidence annotated-code"
+RULE_NAMES="path structure section emphasis style terminology citation evidence annotated-code"
 rules_json='{}'; report=''
 for r in $RULE_NAMES; do
   want=$(jq -r --arg r "$r" '.rules[$r] // ""' <<<"$merged")
-  if [ "$r" = "citation" ] && [ -n "$want" ]; then
-    echo "[error] rules.citation は出典3点セットを弱められないため上書き禁止。追加規律はextraへ置くこと" >&2
-    exit 2
-  fi
+  case "$r" in
+    citation|terminology)
+      if [ -n "$want" ]; then
+        echo "[error] rules.${r} は絶対規則のため上書き禁止。追加規律はextraへ置くこと" >&2
+        exit 2
+      fi
+      ;;
+  esac
   resolved=$(resolve_path "$want")
   if [ -n "$resolved" ] && [ -f "$resolved" ]; then
     src=repo
