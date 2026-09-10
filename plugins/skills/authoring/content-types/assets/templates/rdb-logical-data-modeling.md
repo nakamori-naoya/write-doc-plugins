@@ -55,20 +55,24 @@
 
 ## 論理データモデル図
 
-<!-- 書く: MermaidのerDiagramで全論理テーブル、全論理列、PK・FK・UK、型、NOT NULL、値域、多重度。書かない: classDiagram、対象DBMS固有の型やindex。 -->
+<!-- 書く: MermaidのerDiagramで全論理テーブル、全論理列、PK・FK・UK、論理型、NOT NULL、値域、多重度。書かない: classDiagram、対象DBMS固有の型やindex。 -->
 
 <!-- 図は必ずMermaidのerDiagramで書く。図内は
-     型 英語カラム名 PK・FK等 "日本語名 / NULL制約 / 値域または説明"、の順で書く。
+     論理型 英語カラム名 PK・FK等 "日本語名 / NULL制約 / 値域または説明"、の順で書く。
+     論理型は対象DBMSを決めずに書けるものだけを使い、identifier・string・instant・integer・decimal・boolean
+     から選ぶ。uuid、text、timestamptz、bigintのようなDBMS固有の型名を、図にも定義にも書かない。
+     どのDBMSの型へ写すかは物理設計で決める。
      図のテーブルと列は後述する定義と一致させる。 -->
 
 ```mermaid
 erDiagram
     logical_table_a {
-        uuid id PK "番号 / NOT NULL"
-        text status "状態 / NOT NULL / <取り得る値>"
+        identifier id PK "番号 / NOT NULL"
+        string status "状態 / NOT NULL / <取り得る値>"
+        instant created_at "作成日時 / NOT NULL"
     }
     logical_table_b {
-        uuid logical_table_a_id PK, FK "A番号 / NOT NULL"
+        identifier logical_table_a_id PK, FK "A番号 / NOT NULL"
     }
     logical_table_a ||--o| logical_table_b : "業務上の関係"
 ```
@@ -172,7 +176,9 @@ erDiagram
      - 拒否時はThen直下に`NOTE: Rule:`、外部規則なら`Source:`（相対Markdownリンク）、`Reason:`を置く。クロージャ宣言や暗黙の共通前提は書かない。
      - 物理カラム名、物理型、SQL、API表現は書かない。 -->
 
-### Scenario BDD-001: <データ変化を確かめるシナリオ名>
+### [BDD-001] <データ変化を確かめるシナリオ名>
+
+<!-- 見出しは `### [BDD-<連番>] <データ変化>` で固定する。`Scenario` などの語を見出しへ入れない。 -->
 
 <!-- 書く: 一つの業務的関心に必要な全前提、イベント、結果、全テーブルの変化。書かない: 別BDDの結果を前提にする表現。 -->
 

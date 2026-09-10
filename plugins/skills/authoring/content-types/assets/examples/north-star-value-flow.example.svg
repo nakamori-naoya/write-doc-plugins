@@ -3,7 +3,7 @@
   <desc id="desc">正規に入場権を持つ人を対象に、紙の不便や不正によって損なわれた価値を、プロダクトの役割を通じて安心、公平、自由、予測可能性へ変え、権利を安心して引き継ぎ行使できる状態を目指す流れ。</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M0 0 L10 5 L0 10 z" fill="var(--arrow)"/>
+      <path class="arrow-head" d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
     </marker>
   </defs>
   <style>
@@ -45,6 +45,7 @@
       }
     }
     text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: var(--text); }
+    .arrow-head { fill: var(--arrow); }
     .heading { font-size: 30px; font-weight: 600; }
     .node-title { font-size: 21px; font-weight: 600; }
     .body { font-size: 18px; }

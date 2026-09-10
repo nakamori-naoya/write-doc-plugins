@@ -1,6 +1,6 @@
 # コードコメントの記載例
 
-> これは [`code-comment.md`](../templates/code-comment.md) の記載例である。コードと業務前提は架空であり、予約作成を変更する開発者が、維持すべき境界をその場で読めるコメントを示す。
+> これは [`code-comment.md`](../templates/code-comment.md) の記載例である。コードと業務前提は架空であり、予約作成を変更する開発者が、維持すべき境界をその場で読めるコメントを示す。掲載箇所は`src/reservations/create_tentative_hold.ts`で、[コード地図](code-map.example.md)の`src/reservations/`にある。
 
 ```typescript
 // なぜ: 空き確認だけでは、同時要求が同じ会議室の重なる時間を占有し得るためDB制約へ委ねる。
