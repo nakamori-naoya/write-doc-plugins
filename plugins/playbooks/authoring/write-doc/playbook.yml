@@ -38,21 +38,22 @@ requirements:
 # stepsは上から実行する。skill/script/playbookは呼ぶ処理、needsは開始条件、
 # providesは完了時に登録する成果物。completionは完了判定、on_failureは失敗時の遷移。
 # when: 条件が真のときだけ実行する。偽なら state.py の skip で飛ばす。
+# on_failure に工程idを書いた場合は、その工程からやり直す。
 # conditional_needs: 同じ条件のときだけ増える開始条件。
 steps:
-  - id: type
+  - id: reader
     skill: pick-content-type
-    purpose: 読み手の前提と読後の到達点を記録し、型と骨格を取る。依頼と資料から決まらない問いを open_questions に残す
-    provides: [type, template, reader_context, open_questions]
-    file_artifacts: [reader_context, open_questions]
+    purpose: 同梱ペルソナから読み手を1人選び、読後の到達点を本文だけで答えられる問いへ落とし、そこから型と骨格を取る。到達点に必要な事実で素材に無いものを open_questions に残す
+    provides: [persona, reader_context, goal_questions, type, template, open_questions]
+    file_artifacts: [reader_context, goal_questions, open_questions]
     completion: artifact-set
     on_failure: stop
 
   - id: settle
     playbook: grill
     when: open_questions.count > 0
-    purpose: 読み手・目的・到達点・求める判断のうち依頼から決まらないものだけを、推奨付きで1問ずつ確かめ、決定と未決を残す
-    needs: [reader_context, open_questions]
+    purpose: 到達点から逆算して足りない事実を、推奨付きで1問ずつ確かめ、決定と未決を残す
+    needs: [persona, reader_context, goal_questions, open_questions]
     provides: [decisions]
     file_artifacts: [decisions]
     completion: artifact-set
@@ -60,8 +61,8 @@ steps:
 
   - id: draft
     skill: write-with-rules
-    purpose: 経路表で概念の導入順と長さを決めて本文を書き、本文だけで到達点を満たせるか検証する
-    needs: [type, template, reader_context]
+    purpose: 到達点に必要な概念だけで経路表を作り、その順で本文を書く。テンプレートは節の候補として参照するだけで、埋める枠として扱わない
+    needs: [persona, reader_context, goal_questions, type, template]
     conditional_needs:
       - when: open_questions.count > 0
         needs: [decisions]
@@ -78,20 +79,20 @@ steps:
     completion: artifact-set
     on_failure: stop
 
+  - id: judge
+    skill: review-doc
+    purpose: 執筆の文脈を持たない読み手役へ本文とペルソナと問いだけを渡し、一読で到達点へ届くかを判定する。不合格なら draft へ戻す
+    needs: [body, persona, goal_questions, figures_applied]
+    provides: [judgement]
+    file_artifacts: [judgement]
+    completion: artifact-set
+    on_failure: draft
+
   - id: save
     plugin: doc-render
     script: scripts/write-doc.sh
-    purpose: 役を媒体の表現へ写し、上書きを防いで保存する
-    needs: [body, roles_applied, figures_applied, reader_review]
+    purpose: 役を媒体の表現へ写し、上書きを防いで保存する。判定を通った本文だけを保存する
+    needs: [body, roles_applied, figures_applied, judgement]
     provides: [path]
-    completion: artifact-set
-    on_failure: stop
-
-  - id: review
-    skill: review-doc
-    purpose: 保存した完成文書を基準に照らして評価し、必要な修正後に読み直す
-    needs: [path, type, reader_context, reading_path, reader_review]
-    provides: [document_review]
-    file_artifacts: [document_review]
     completion: artifact-set
     on_failure: stop

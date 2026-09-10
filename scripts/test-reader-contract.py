@@ -30,21 +30,30 @@ class ReaderContractTest(unittest.TestCase):
                 return result
 
             template = ROOT / 'plugins/skills/authoring/content-types/assets/templates/concept.md'
+            persona = ROOT / 'plugins/skills/authoring/content-types/assets/personas/backend-1.md'
             context = base / 'reader-context.md'
+            goals = base / 'goal-questions.md'
             questions = base / 'open-questions.md'
             review = base / 'reader-review.md'
             path_table = base / 'reading-path.md'
             body = base / 'document.md'
+            judgement = base / 'judgement.md'
             call('init', '--repo', str(base))
-            call('start', '--step', 'type')
-            type_args = ['--step', 'type', '--provide', 'type=concept',
-                         '--provide', f'template={template}']
-            call('complete', *type_args, expected=2)
-            call('complete', *type_args, '--provide', f'reader_context={context}', expected=2)
+            call('start', '--step', 'reader')
+            reader_args = ['--step', 'reader', '--provide', 'type=concept',
+                           '--provide', f'template={template}',
+                           '--provide', f'persona={persona}']
+            call('complete', *reader_args, expected=2)
+            call('complete', *reader_args, '--provide', f'reader_context={context}', expected=2)
             context.write_text('Reader knows room reservations; distinguish a hold from confirmation.\n')
+            # 到達点の問いが無いまま先へ進めない。判定の基準がここで決まるため。
             questions.write_text('count: 0\n')
-            call('complete', *type_args, '--provide', f'reader_context={context}',
-                 '--provide', f'open_questions={questions}')
+            call('complete', *reader_args, '--provide', f'reader_context={context}',
+                 '--provide', f'open_questions={questions}', expected=2)
+            goals.write_text('- question: What ends a hold?\n')
+            call('complete', *reader_args, '--provide', f'reader_context={context}',
+                 '--provide', f'open_questions={questions}',
+                 '--provide', f'goal_questions={goals}')
             # settle は when 付きなので、問いが無ければ skip で飛ばす。条件の無い工程は飛ばせない。
             call('skip', '--step', 'draft', expected=2)
             call('skip', '--step', 'settle', '--reason', 'open_questions.count == 0')
@@ -64,23 +73,23 @@ class ReaderContractTest(unittest.TestCase):
             call('start', '--step', 'visual')
             self.assertFalse(playbook['requirements']['figures'])
             call('complete', '--step', 'visual', '--provide', 'figures_applied=0')
+            # 判定を通す前に保存できない。判定は保存より前に置いてある。
+            call('start', '--step', 'save', expected=2)
+            call('start', '--step', 'judge')
+            call('complete', '--step', 'judge', expected=2)
+            call('fail', '--step', 'judge', '--reason', 'fixture: reader got stuck on an undefined term')
+            call('retry')
+            call('start', '--step', 'judge')
+            judgement.write_text('State contract fixture only; no semantic quality claim.\n')
+            call('complete', '--step', 'judge', '--provide', f'judgement={judgement}')
             call('start', '--step', 'save')
             call('complete', '--step', 'save', '--provide', f'path={body}')
             status = json.loads(call('status').stdout)
-            self.assertNotEqual(status['status'], 'completed')
-            call('start', '--step', 'review')
-            final_review = base / 'final-review.md'
-            call('complete', '--step', 'review', expected=2)
-            call('complete', '--step', 'review', '--provide', f'document_review={final_review}', expected=2)
-            call('fail', '--step', 'review', '--reason', 'fixture: explanation needs revision')
-            call('retry')
-            call('start', '--step', 'review')
-            final_review.write_text('State contract fixture only; no semantic quality claim.\n')
-            call('complete', '--step', 'review', '--provide', f'document_review={final_review}')
-            status = json.loads(call('status').stdout)
             self.assertEqual(status['status'], 'completed')
             self.assertEqual(status['artifacts']['reader_context'], str(context))
-            self.assertEqual(status['artifacts']['reader_review'], str(review))
+            self.assertEqual(status['artifacts']['goal_questions'], str(goals))
+            self.assertEqual(status['artifacts']['persona'], str(persona))
+            self.assertEqual(status['artifacts']['judgement'], str(judgement))
             self.assertEqual(status['artifacts']['reading_path'], str(path_table))
             self.assertNotIn('decisions', status['artifacts'])
             settle = next(step for step in status['steps'] if step['id'] == 'settle')
