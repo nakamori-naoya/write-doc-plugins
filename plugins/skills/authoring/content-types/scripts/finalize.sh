@@ -15,17 +15,27 @@ if [ ! -f "$PLUGIN_ROOT/assets/templates/${dtype}.md" ]; then
   echo "        同梱の型: $(ls "$PLUGIN_ROOT/assets/templates" | sed 's/\.md$//' | tr '\n' ' ')" >&2
   exit 2
 fi
+# 読み手を決めずに書き始めないよう、ペルソナが揃っていることを解決時に確かめる。
+for pf in pm-1 pm-3 backend-1 backend-5 product-user; do
+  if [ ! -f "$PLUGIN_ROOT/assets/personas/${pf}.md" ]; then
+    echo "[error] ペルソナが欠けている: ${pf}.md" >&2
+    exit 2
+  fi
+done
+
 out=$(jq -cn --arg pr "$PLUGIN_ROOT" --arg root "$root" --arg dt "$dtype" --argjson instructions "$(jq -c '.instructions' <<<"$merged")" \
   '{contract:1, catalog:($pr+"/references/catalog.md"), detail_dir:($pr+"/references/detail"),
     instructions:$instructions,
+    personas:{guide:($pr+"/references/personas.md"), plugin_dir:($pr+"/assets/personas")},
     templates:{plugin_dir:($pr+"/assets/templates")},
     examples:{plugin_dir:($pr+"/assets/examples")},
     template_examples:($pr+"/assets/template-examples.yml"),
     default_type:$dt, repo_root:$root, plugin_root:$pr}')
 if [ "$explain" = "1" ]; then
-  echo "# カタログ: ${PLUGIN_ROOT}/references/catalog.md（型 $(ls "$PLUGIN_ROOT/assets/templates" | wc -l | tr -d ' ') 種）" >&2
+  echo "# カタログ: ${PLUGIN_ROOT}/references/catalog.md（型 $(grep -cE '^  [a-z0-9-]+:$' "$PLUGIN_ROOT/assets/template-examples.yml") 種）" >&2
   echo "# テンプレート: plugin=${PLUGIN_ROOT}/assets/templates（独自テンプレート非対応）" >&2
   echo "# 記載例: plugin=${PLUGIN_ROOT}/assets/examples（全型）" >&2
+  echo "# ペルソナ: ${PLUGIN_ROOT}/assets/personas（5人・追加不可）" >&2
   echo "# 対応表: ${PLUGIN_ROOT}/assets/template-examples.yml" >&2
   echo "# 既定の型: ${dtype}" >&2
 fi
