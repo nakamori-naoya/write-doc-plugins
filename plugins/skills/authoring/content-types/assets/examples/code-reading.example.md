@@ -1,6 +1,6 @@
 # 仮押さえ予約の作成を実行順に読む
 
-> これは [`code-reading.md`](../templates/code-reading.md) の記載例である。コードは架空であり、実行順注釈の粒度を見るために使う。
+> これは [`code-reading.md`](../templates/code-reading.md) の記載例である。コード・パス・行番号・参照点は架空であり、原典の恒久リンクはない。掲載部分で分かる動作と、追っていない先を分ける例として使う。
 
 > 型: コードリーディング ／ 読み手: 予約作成処理を自分で追う人 ／ 対象: 架空の`roomflow`リポジトリ
 
@@ -11,9 +11,13 @@
 
 この処理はHTTP入力を業務入力へ変換し、予約可否を判断して仮押さえ予約を記録する。
 
+注釈は実行時の役割を表す。［入力］は受け取る値、［確定］は決まる値、［分岐］は条件と行き先、［副作用］は外部への書込み、［次へ］は呼び先を示す。
+
 ## ① 何を追うか
 
 HTTP handlerから予約記録までの幹を追う。これは差分の説明ではない。変更の可否は[実装解説](pr-walkthrough.example.md)で扱う。
+
+認証済みの予約者`U-42`が、会議室`M-301`の9月18日10:00〜11:30を申し込む例を通して読む。以下の簡略コードで確認できるのは入力拒否・事前の空き確認・保存であり、同時要求への最終的な競合処理は掲載していない。
 
 ## ② 幹の一覧
 
@@ -27,13 +31,13 @@ HTTP handlerから予約記録までの幹を追う。これは差分の説明�
 ### <a id="stage-1"></a>段階1 — 入力を検査する
 
 - **入力**: HTTP bodyの`room_id`、`starts_at`、`ends_at`
-- **確定する値**: 30分枠として妥当な`CreateReservation`入力
-- **分岐条件**: 時刻が30分単位でなければ400を返す
+- **確定する値**: 会議室と開始・終了を`slot`にまとめた業務入力
+- **分岐条件**: 必須項目が無い、終了が開始以前、時刻が30分単位でない場合は400を返す。それ以外は段階2へ進む
 - **副作用**: なし
 - **次の呼び出し**: `ReservationService.create`
 
 ```typescript
-// ［入力］HTTPの表現を、業務処理が受け取る3項目へ限定する。
+// ［入力］3項目を検査し、成功なら { slot: { roomId, startsAt, endsAt } } にする。
 const input = parseCreateReservation(request.body);
 // ［分岐］不正なら400で終了し、正しければ業務判断へ進む。
 if (!input.ok) return badRequest(input.error);
@@ -41,22 +45,28 @@ if (!input.ok) return badRequest(input.error);
 return service.create(actor.id, input.value);
 ```
 
-→ 次: 予約を作る
+`parseCreateReservation`の内部と認証処理は省略している。上の例では`slot`がM-301、10:00、11:30を持ち、`actor.id`の`U-42`と一緒に渡る。
+
+→ 次: [予約を作る](#stage-2)
 
 ### <a id="stage-2"></a>段階2 — 予約を作る
 
 - **入力**: 予約者IDと検査済みの枠
 - **確定する値**: 15分後に期限切れになる仮押さえ予約
-- **分岐条件**: 枠が埋まっていれば`SLOT_UNAVAILABLE`
-- **副作用**: 予約を1件記録する
-- **次の呼び出し**: なし
+- **分岐条件**: 枠が埋まっていれば`SLOT_UNAVAILABLE`。空いていれば保存する
+- **副作用**: 保存成功時に予約を1件記録する。事前確認で拒否した場合は書き込まない
+- **次の呼び出し**: `repository.insertTentative`。戻り値をそのまま呼び出し元へ返す
 
 ```typescript
 // ［分岐］空きでなければ記録せず終了する。空きなら次へ進む。
 if (!(await availability.isOpen(input.slot))) return slotUnavailable();
-// ［次へ］記録方法の詳細は枝で読む。
+// ［副作用・次へ］保存済みの仮押さえ予約を返す。詳細は直下の枝リンクへ。
 return repository.insertTentative(actorId, input.slot);
 ```
+
+→ [枝: `insertTentative`](#branch-insert-tentative)
+
+`availability.isOpen`の照会内部は省略している。保存が成功すれば、呼び出し元へ予約ID・状態`tentative`・確定期限が返る。保存の例外はこのコードでは捕捉せず、呼び出し元へ伝わる。
 
 ## ④ 枝を読む
 
@@ -64,30 +74,34 @@ return repository.insertTentative(actorId, input.slot);
 
 ← [幹の段階2 — 予約を作るへ戻る](#stage-2)
 
-- **幹との契約**: 顧客と利用枠を受け取り、保存済みの仮押さえ予約を返す
+- **幹との契約**: 予約者IDと利用枠を受け取り、保存済みの仮押さえ予約を返す
 - **幹に効く点**: 期限をサーバ時刻から15分後に確定する
 - **ここで打ち切る先**: DB driver内部
 
 ```typescript
 // ［確定］期限は利用者入力ではなく、記録時刻から決まる。
 const expiresAt = clock.now().plus({ minutes: 15 });
-// ［副作用］仮押さえ予約と期限を1トランザクションで記録する。
+// ［副作用］同じ予約レコードに状態と期限を保存する。DB driver内部は追わない。
 return db.reservations.insert({ actorId, slot, status: "tentative", expiresAt });
 ```
+
+記録時刻が9月1日09:00なら`expiresAt`は同日09:15になる。9月18日10:00という利用開始時刻は期限計算へ渡していない。この違いは`clock.now()`を使う行から確認できる。
 
 ## ⑤ 分岐と終端
 
 | 条件 | どこで | 返るもの |
 |---|---|---|
-| 入力が30分単位でない | `create_reservation.ts:14` | HTTP 400 |
+| 必須項目・時刻の検査に失敗 | `create_reservation.ts:14` | HTTP 400。保存なし |
 | 枠が空いていない | `reservation_service.ts:22` | `SLOT_UNAVAILABLE` |
-| 利用枠が空いている | `reservation_repository.ts:18` | 仮押さえ予約 |
+| 利用枠が空いており保存成功 | `reservation_repository.ts:18` | ID・状態・期限を持つ仮押さえ予約 |
+| 空き照会または保存が例外を投げる | 各呼び出し行 | 例外が呼び出し元へ伝わる。HTTPへの変換は未掲載 |
 
 ## ⑥ 未確認・追っていないもの
 
 - 認証tokenから予約者IDを得る処理 — **未確認**（今回の入口より前で完了するため）
 - DB driverの再試行条件 — **未確認**（driver内部は追わない範囲のため）
+- 保存時の競合拒否とHTTP応答への変換 — **未確認**。この抜粋から同時要求を安全に処理できるとは判断できない。確認には保存実装と上位のエラーハンドラーが必要である
 
 ## ⑦ 付録
 
-`CreateReservation`は`roomId`、`startsAt`、`endsAt`の3項目を持つ。実行順を持たない型定義なので、ここでは詳細を省く。
+`CreateReservation`は`slot`を持ち、その中に`roomId`、`startsAt`、`endsAt`が入る。HTTPの`room_id`などからこの形へ変換するのが段階1である。日付を扱う型の内部定義は省略している。

@@ -1,13 +1,16 @@
 # コードコメントの記載例
 
-> これは [`code-comment.md`](../templates/code-comment.md) の記載例である。型が資料本文ではなくコード断片なので、会議室予約の競合制御に適したコメントを示す。
+> これは [`code-comment.md`](../templates/code-comment.md) の記載例である。コードと業務前提は架空であり、予約作成を変更する開発者が、維持すべき境界をその場で読めるコメントを示す。
 
 ```typescript
 // なぜ: 空き確認だけでは、同時要求が同じ会議室の重なる時間を占有し得るためDB制約へ委ねる。
-// 前提: room_booking_claimsには会議室と半開時間範囲のGiST排他制約がある。
-// 注意: SQLSTATE 23P01だけをSLOT_UNAVAILABLEへ変換し、transaction全体をrollbackする。
-// 解消条件: 一つの会議室を同時に複数顧客へ販売する業務へ変わったとき。
+// 前提: 予約と占有を同じtransactionで保存し、失敗時は両方をrollbackする。
+// 注意: repositoryは制約名を保持してエラーを返す。23P01だけで競合と決めない。
+//       room_booking_claims_room_time_exclの違反だけをSLOT_UNAVAILABLEへ変換する。
+// 見直す条件: 同じ会議室を同時に複数顧客へ販売する場合は、占有の制約から再設計する。
 await reservationRepository.createTentativeHold(input);
 ```
 
-このコメントは処理を読み上げず、コードだけでは復元できない理由、前提、危険、見直し条件を残している。
+`23P01`はこの例で扱うDBの排他制約違反を示すコードである。別の制約の違反まで「利用枠が埋まった」と返すと、異なる障害を隠す。コメントはこの危険と、予約だけが残る部分保存を避ける前提を呼び出し行の隣に残している。
+
+見直す条件が成立しても、コメントだけを削除してよいわけではない。制約とエラー変換を一緒に検討する。具体的な差分注釈は[実装解説の例](pr-walkthrough.example.md)で示す。
