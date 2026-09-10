@@ -11,16 +11,17 @@ RoomFlowは予約要求を受け取り、業務ルールを満たす場合だけ
 
 ## ① 何をするシステムか
 
-予約担当者から顧客と利用枠を受け取り、予約可能性を判断して仮押さえ予約または拒否理由を返す。
+予約者から利用枠を受け取り、予約可能性を判断して仮押さえ予約または拒否理由を返す。
 
 ## ② 地図
 
 | 置き場 | 責務 | 最初に開くなら |
 |---|---|---|
 | `src/http/` | requestを業務入力へ変換する | `create_reservation.ts` |
-| `src/reservations/` | 予約可否と状態遷移を判断し、保存先に求める契約を定義する | `reservation_service.ts`、`reservation_repository.ts`（interface） |
+| `src/reservations/` | 予約可否と状態遷移を判断し、保存先に求める契約を定義する | `reservation_service.ts`、`create_tentative_hold.ts`、`reservation_repository.ts`（interface） |
 | `src/persistence/` | 業務側の保存契約をRDBで実装する | `reservation_repository.ts`（実装） |
-| `tests/reservations/` | 業務シナリオを検証する | `create_reservation.test.ts` |
+| `src/notifications/` | 予約の結果を知らせる。予約の成否は決めない | `confirmation.ts` |
+| `tests/` | 業務シナリオを検証する | `tests/reservations/create_reservation.test.ts`、`tests/notifications/confirmation.test.ts` |
 
 同名の`reservation_repository.ts`でも、業務側には「何を保存できるか」、永続化側には「どう保存するか」がある。生成されたAPI型とDB driver内部は、この地図の変更入口に含めない。
 
@@ -54,3 +55,4 @@ HTTP bodyの項目を変えるなら`createReservationHandler`、予約を受け
 
 - 処理順を追う: [予約作成を実行順に読む](code-reading.example.md)
 - 競合エラーの変更を読む: [仮押さえ予約の競合を業務エラーへ変換する](pr-walkthrough.example.md)
+- 通知を変更する入口から入る: [RoomFlowを理解して予約通知の変更に入る](onboarding.example.md)
