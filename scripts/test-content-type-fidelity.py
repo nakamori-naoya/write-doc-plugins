@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CT = ROOT / "plugins/skills/authoring/content-types"
+CATALOG = CT / "references/catalog.md"
 ASSETS = CT / "assets"
 PAIRS = ASSETS / "template-examples.yml"
 
@@ -75,9 +76,50 @@ def check_pairs(pairs: dict[str, dict[str, str]]) -> None:
                 fail(f"{slug}: {kind} のファイル名が slug と対応しない: {rel}")
 
 
+# カタログの「固定見出しを持つ型」表に載っている型だけが、構成を固定される。
+# それ以外の型では、記載例の節の集合はその題材での一例にすぎない。
+CATALOG_TYPE_TO_SLUG = {
+    "業務知識・コアドメイン": "domain-rule",
+    "ユーザー目的達成BDD": "user-journey-bdd",
+    "RDB論理設計": "rdb-logical-data-modeling",
+    "RDB物理設計": "rdb-physical-design",
+    "Product North Star": "north-star",
+    "Product Strategy": "strategy",
+    "実装解説（PR）": "pr-walkthrough",
+    "コード地図（マクロ）": "code-map",
+    "コードリーディング": "code-reading",
+}
+
+
+def fixed_structure_slugs() -> set[str]:
+    """カタログの「固定見出しを持つ型」表を読み、対象slugを返す。"""
+    text = CATALOG.read_text()
+    start = text.find("### 固定見出しを持つ型")
+    if start < 0:
+        fail("catalog.md に「固定見出しを持つ型」の節が無い")
+        return set()
+    section = text[start:text.find("###", start + 10)]
+    slugs = set()
+    for line in section.splitlines():
+        if not line.startswith("| ") or line.startswith("| 型 ") or set(line) <= set("|- "):
+            continue
+        name = line.split("|")[1].strip()
+        slug = CATALOG_TYPE_TO_SLUG.get(name)
+        if slug is None:
+            fail(f"catalog.md の固定見出し表に未知の型がある: {name!r}")
+        else:
+            slugs.add(slug)
+    return slugs
+
+
 def check_heading_alignment(pairs: dict[str, dict[str, str]]) -> None:
-    """テンプレートの固定見出しが、対応する記載例に全て現れること。"""
-    for slug, files in sorted(pairs.items()):
+    """固定見出しを持つ型だけ、テンプレートの見出しが記載例にも現れること。"""
+    fixed = fixed_structure_slugs()
+    for slug in sorted(fixed):
+        files = pairs.get(slug)
+        if not files:
+            fail(f"固定見出し表の型が対応表に無い: {slug}")
+            continue
         tpl = CT / files["template"]
         ex = CT / files["example"]
         if not (tpl.is_file() and ex.is_file()):
@@ -85,7 +127,39 @@ def check_heading_alignment(pairs: dict[str, dict[str, str]]) -> None:
         ex_headings = set(fixed_headings(ex.read_text()))
         for h in fixed_headings(tpl.read_text()):
             if h not in ex_headings:
-                fail(f"{slug}: テンプレートの見出しが記載例に無い: {h!r}")
+                fail(f"{slug}: 固定見出しが記載例に無い: {h!r}")
+
+
+def check_examples_are_not_frames(pairs: dict[str, dict[str, str]]) -> None:
+    """記載例が「テンプレートの写し」と自己定義していないこと。"""
+    for slug, files in sorted(pairs.items()):
+        ex = CT / files["example"]
+        if not ex.is_file():
+            continue
+        text = ex.read_text()
+        if "../templates/" in text:
+            fail(f"{slug}: 記載例がテンプレートへリンクしている。構成の正本と誤読される")
+        if "構成の正本ではなく" not in text:
+            fail(f"{slug}: 記載例に「構成の正本ではなく、粒度と具体性の見本」の宣言が無い")
+        if PLACEHOLDER.search(text.replace("&nbsp;", "")) and slug not in ("landing-page",):
+            pass  # プレースホルダーの混入検査は型ごとの記法差が大きいため、ここでは行わない
+
+
+def check_personas() -> None:
+    """ペルソナが5人揃い、3段階を持つこと。追加も削除もされていないこと。"""
+    expected = {"pm-1", "pm-3", "backend-1", "backend-5", "product-user"}
+    persona_dir = CT / "assets/personas"
+    found = {p.stem for p in persona_dir.glob("*.md")} if persona_dir.is_dir() else set()
+    if found != expected:
+        fail(f"ペルソナは5人で固定である。過不足: 余分={sorted(found - expected)} 欠落={sorted(expected - found)}")
+    for name in sorted(found & expected):
+        text = (persona_dir / f"{name}.md").read_text()
+        for level in ("## 実務で使える", "## 言われれば分かる", "## 知らない"):
+            if level not in text:
+                fail(f"ペルソナ {name}: 知識の段階 {level!r} が無い")
+    guide = CT / "references/personas.md"
+    if not guide.is_file():
+        fail("references/personas.md が無い")
 
 
 def check_section_comments(pairs: dict[str, dict[str, str]]) -> None:
@@ -189,6 +263,8 @@ def main() -> int:
     check_missing_tools(pairs)
     check_bdd_rules(pairs)
     check_logical_types(pairs)
+    check_examples_are_not_frames(pairs)
+    check_personas()
     for msg in failures:
         print(f"  - {msg}", file=sys.stderr)
     return 1 if failures else 0
