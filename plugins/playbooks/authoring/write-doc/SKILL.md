@@ -96,11 +96,17 @@ INPUT=$(python3 "${PLUGIN_ROOT}/scripts/contract-io.py" read --config "$CFG_FILE
 
 指定が無いときだけ、型を決める工程に選ばせる。**選んだ型と理由を、書き始める前に1行で宣言する。**
 
-型が指定済みでも、type工程は読み手の前提と読後の到達点を`reader_context`として残す。あわせて、依頼と資料から決まらず、仮定を置くと文書の目的が変わる問いを`open_questions`に残す（無ければ `count: 0`）。
+型が指定済みでも、reader工程は3つを順に決める。**順序を入れ替えない。**
+
+1. 同梱5人から**読み手を1人選ぶ**（`persona`）
+2. その案件に固有の既知・未知を`reader_context`へ埋める
+3. 読後の到達点を、**本文だけで答えられる問い2〜4個**へ落とす（`goal_questions`）
+
+**`goal_questions`が、以降すべての判断基準になる。** あわせて、到達点の判断に必要な事実で素材に無いものを`open_questions`に残す（無ければ `count: 0`）。**型の節を埋められないことは不明点にしない。**
 
 ## 4. 曖昧さは、書く前に外の段取りへ渡して潰す
 
-**曖昧さが残るなら、書く前に潰す。** `settle`工程は`when: open_questions.count > 0`の条件付きで、外部の段取り`grill`を`playbook:`の工程として呼ぶ。問いが無ければ`state.py skip --step settle`で飛ばす。依頼が読み手・目的・型を明示している事項や、調べれば分かることを問い直さない。判断の詳細は[読者への引き継ぎ契約](references/reader-contract.md)をここで読む。
+**中身が欠けたまま書き始めない。** 穴があると、その穴を枝葉で埋めることになる。`settle`工程は`when: open_questions.count > 0`の条件付きで、外部の段取り`grill`を`playbook:`の工程として呼ぶ。問いが無ければ`state.py skip --step settle`で飛ばす。依頼が明示している事項や、調べれば分かることを問い直さない。判断の詳細は[読者への引き継ぎ契約](references/reader-contract.md)をここで読む。
 
 **この段取りは、相手の中の作りを知らない。** 使ってよいのは、相手が公開契約で示した入口だけである。手順は次の3つで固定する。
 
@@ -111,8 +117,8 @@ contract: grill/grill
 version: 1
 topic: <何について詰めるか。資料の題材>
 context:
-  purpose: <この資料で読み手に何を判断・行動できるようにするか>
-  audience: <reader_contextの読み手>
+  purpose: <goal_questionsに落とした到達点>
+  audience: <選んだペルソナと、reader_contextの固有事情>
   boundary: <今回の資料で扱わない範囲>
 questions:
   - id: <open_questionsのid>
@@ -132,7 +138,9 @@ DEP_CFG=$(bash "${.deps.grill.root}/scripts/prepare.sh" "$(pwd)" \
 
 **相手の中を覗かない。** 内部の工程名・skill名・script・設定キー・記録形式は契約に無い。相手を指す形は `${.deps.grill.root}`（直下の `scripts/prepare.sh` / `playbook.yml` / `scripts/resolve.sh` の3つだけ）と `${.deps.grill.entry}`（入口SKILL.mdの絶対path）の**2つだけ**である。skill 名で入口を指す形（`.skills.<名前>`）は使わない。相手が exit 2 で止まったら、こちらも止める。
 
-draft工程は、`reader_context`と（settleを通ったなら）`decisions`を前提に、writing-rulesの適用手順に従い、まず概念の導入順を決める経路表を`reading_path`として残し、その順で本文を書く。最終確認で本文の根拠を伴う`reader_review`を返す。読者が到達点を満たせない箇所、経路表より前で語を使っている箇所を修正してから工程を完了する。図や媒体への変換で説明の順序・用語・例との対応が変わったときは、この確認を更新してから保存する。
+draft工程は、`persona`・`reader_context`・`goal_questions`と（settleを通ったなら）`decisions`を前提に、writing-rulesの適用手順に従い、まず概念の導入順を決める経路表を`reading_path`として残し、その順で本文を書く。**テンプレートは節の候補として参照するだけで、埋める枠として扱わない。** 経路表に無い節を本文へ置かない。
+
+最終確認で本文の根拠を伴う`reader_review`を返す。**これは自己申告であり、合否ではない。** 合否はjudge工程が決める。
 
 ## 5. 役を媒体へ写す
 
@@ -148,19 +156,28 @@ draft工程は、`reader_context`と（settleを通ったなら）`decisions`を
 返った `figures_applied` を確定した要件と照合する。**枚数を満たすための飾り図を作らせない。** 上限も課さない。図の方が速く正確に伝わる関係は、すべて図にする。
 判断の詳細は[図の要件](references/figures.md)。
 
-## 7. 保存で止まったら、既存を読む
+## 7. 保存の前に、独立した読み手で判定する
+
+**書いた本人が読めば通じる。** だから合否は、執筆の文脈を持たない読み手が決める。judge工程で`review-doc`を呼び、**本文・`persona`・`goal_questions`の問いだけ**を渡す。
+
+**渡してはいけないもの**を挙げる。依頼文、素材、`reader_context`、`reading_path`、`reader_review`、`decisions`、そして問いの期待する答え。渡すと読み手が本文に無い情報で穴を埋め、判定が成立しない。
+
+合格は次の2つを**同時に**満たしたときだけである。
+
+- 全部の問いに、本文だけを根拠に答えられ、答えが期待と一致する（照合はこの工程で行う）
+- 詰まった箇所（語が分からない、前提が飛んでいる、順序が逆）の報告が0件
+
+**点数で判定しない。** 不合格なら`judgement`へ問いごとの答えと詰まりの一覧を残し、`draft`へ戻す。**表現だけを直して通そうとしない。** 詰まりは経路の設計から出ていることが多いので、経路表の概念の順序と足場から直す。
+
+3回戻しても合格しないときは止め、`reader`工程へ差し戻す。読み手の選択か到達点の設定が合っていない可能性が高い。
+
+**判定を通った本文だけを保存する。** 不合格の文書をディスクへ残さない。
+
+## 8. 保存で止まったら、既存を読む
 
 保存の工程が `exit 3`（同名が既にある）を返したら、**既存を読んでから差し替えを判断する**。読まずに `--replace` を付け足すのは、上書き防止を外すのと同じである。
 
 呼び出し元から`update_target`（既存資料の絶対path）を受け取った場合は、保存工程へ`--target <その絶対path> --replace`を渡す。`output.default`、`output.routes`、`output_directory`、`--name`から保存先を作り直さない。`update_target`が無い新規作成では、`--template <type>`と`--name <name>`（受け取った`output_directory`があれば`--output-dir`も）を使い、既存を読まずに差し替えない。
-
-## 8. 完成文書を確認する
-
-最後のreview工程で`review-doc`を呼び、保存済みのpath、読み手の前提、文書型、経路表、執筆時の確認記録、writing-rulesの解決済み設定を渡す。完成文書を基準に照らして評価する責務はreview-docが持つ。
-
-要修正ならreview工程を実行中のまま、指摘を執筆・図の担当へ返し、修正した本文を保存担当で同じpathへ更新する。既存の対象を読んでから`--target <path> --replace`を使う。完成済み工程の状態を巻き戻したり、別のファイルを作って確認対象をずらしたりしない。修正後はreview-docで保存結果を再確認し、本文・図が変わった場合は執筆時の確認記録も更新する。
-
-目的を妨げる不足が解消され、最終版を確認した`document_review`が揃った場合だけreviewを完了する。重要な未確認や修復できない問題が残ればfailで止め、保存済みであることと確認未完了を分けて報告する。
 
 ## 9. 結果を呼び出し元へ返す
 
