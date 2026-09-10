@@ -12,11 +12,14 @@
 - 対象DBMS: PostgreSQL
 - 対象バージョン: 16.4
 - 論理モデル: `rdb-logical-data-modeling.example.md`（2026-09-01）
-- 論理構造の指紋: sha256:a22f20db7250301ad021c3b35adf3174c4d6247985fb84cabf14ffd888e744c7
-- 確認環境: PostgreSQL 16.4、1 primary、東京リージョン、2026-09-02
-- 想定規模: 予約500万件、基底イベント2,000万件、ピーク150予約/秒、イベント7年保持
+- 入力にした論理設計: [RDB論理設計の記載例](rdb-logical-data-modeling.example.md)（版: 2026年9月1日確定）
+- 確認環境: PostgreSQL 16.4、1 primary（8 vCPU / 32 GiB / gp3 500 GiB）、東京リージョン、2026-09-02
+- 計測条件: `pgbench`で同時実行10、各Readを1,000回試行し、`EXPLAIN (ANALYZE, BUFFERS)`の実行時間を集計する。p95は1,000回の95パーセンタイル、キャッシュは事前に対象indexを温めた定常状態とする
+- 想定規模: 予約500万件、有効予約160万件、基底イベント1,300万件、ピーク150予約/秒、イベント7年保持
 
-論理設計のER図、列定義、CUDのBDD、Before / Afterは再掲しない。以下の計測値は記載例の粒度を示す架空値であり、実案件では同じ条件を対象環境で測り直す。
+論理設計のER図、列定義、CUDのBDD、Before / Afterは再掲しない。
+
+**以下の数値はすべて説明用の仮想結果である。** 実測ではなく、設計目標として置いた値でもない。この記載例が示すのは「何を、どの条件で測り、どこまで書けば実案件で再利用できるか」という粒度だけである。実案件では上の計測条件を対象環境で実行し、実測値へ置き換える。イベントの7年保持は法務確認前の暫定値であり、未決として「未決」の節に残している。
 
 ## 物理制約
 
@@ -53,7 +56,7 @@
 - 目的: 同じ会議室の重なる占有を拒否し、指定会議室・指定期間の重なり検索を支える
 - 列の順番: 会議室を等価条件で限定してから、その会議室内の時間範囲を重なり演算子で調べる。時間範囲を先にして全会議室を候補に広げない
 - 対象Read・更新: 同時仮押さえ、Read-001
-- 根拠: 500万件相当でBitmap Index Scan、対象180件、p95 18msという検証条件を置く
+- 根拠: 有効予約160万件相当の占有でBitmap Index Scan、対象180件、p95 18msという仮想結果を置く
 - 更新費用: 仮押さえの追加と、取消・期限切れの削除で更新する。ピーク150件/秒でp95 24msを上限とする
 
 ### index: `tentative_hold_deadlines_expires_at_reservation_id_idx`
@@ -122,7 +125,7 @@ BEGIN;
 SET LOCAL lock_timeout = '2s';
 
 INSERT INTO reservations (
-    reservation_id, location_code, room_code, customer_code, starts_at, ends_at,
+    reservation_id, room_code, customer_code, starts_at, ends_at,
     status, current_version, created_at, updated_at
 ) VALUES ($1, $2, $3, $4, $5, $6, 'tentative', 1, $7, $7);
 
@@ -138,7 +141,7 @@ INSERT INTO reservation_base_events
 VALUES ($9, $1, 'tentative_created', 1, $4, $7);
 
 INSERT INTO reservation_tentative_created_events
-    (id, base_event_id, location_code, room_code, customer_code, starts_at, ends_at, expires_at)
+    (id, base_event_id, room_code, customer_code, starts_at, ends_at, expires_at)
 VALUES ($10, $9, $2, $3, $4, $5, $6, $8);
 COMMIT;
 ```
@@ -161,34 +164,74 @@ COMMIT;
 #### 具体的な解決手順
 
 1. 予約行を`FOR UPDATE`で取得し、同じ予約の状態変更を直列化する。
-2. ロック取得後に`status`と`current_version`を再検査する。
-3. 一方だけが予約をversion 2へ進め、期限を削除し、必要なら占有も削除する。
-4. 基底イベントと、確定または期限切れの詳細イベントを同じtransactionで追加する。
+2. ロック取得後に`status`と`current_version`を再検査し、**同じ行ロックの下で`expires_at`も読む。**
+3. 判定時刻`$2`と`expires_at`を比べ、次に進む状態を決める。`$2 < expires_at`なら確定、`$2 >= expires_at`なら期限切れである。**業務ルールでは期限ちょうどは確定できないので、境界は期限切れ側に倒す。**
+4. 決めた状態へ予約をversion 2へ進め、期限を削除し、期限切れなら占有も削除する。
+5. `UPDATE`の更新件数が0なら、他方が先に進めているので**そのtransactionをrollbackし、現在状態を読み直して返す。**
+6. 基底イベントと、確定または期限切れの詳細イベントを同じtransactionで追加する。
+
+確定要求として届いた処理も、期限を過ぎていれば期限切れとして確定する。**確定処理が遅れて届いても、掲載SQLだけで誤って確定予約にならない。**
 
 ```sql
 BEGIN;
-SELECT status, current_version
-FROM reservations
-WHERE reservation_id = $1
-FOR UPDATE;
 
-UPDATE reservations
-SET status = $2, current_version = 2, updated_at = $3
-WHERE reservation_id = $1
-  AND status = 'tentative'
-  AND current_version = 1;
+-- 手順2: 状態・version・期限を同じロックの下で読む
+SELECT r.status, r.current_version, d.expires_at
+FROM reservations AS r
+LEFT JOIN tentative_hold_deadlines AS d USING (reservation_id)
+WHERE r.reservation_id = $1
+FOR UPDATE OF r;
+
+-- 手順3・4: $2 は判定時刻。期限ちょうど以降は 'expired' に倒す
+WITH decided AS (
+    SELECT CASE WHEN $2 < d.expires_at THEN 'confirmed' ELSE 'expired' END AS next_status
+    FROM tentative_hold_deadlines AS d
+    WHERE d.reservation_id = $1
+)
+UPDATE reservations AS r
+SET status = (SELECT next_status FROM decided),
+    current_version = r.current_version + 1,
+    updated_at = $2
+WHERE r.reservation_id = $1
+  AND r.status = 'tentative'
+  AND r.current_version = $3
+RETURNING r.status, r.current_version;
+-- 更新件数が0なら手順5へ。ROLLBACK して現在状態を読み直す
 
 DELETE FROM tentative_hold_deadlines WHERE reservation_id = $1;
+
+-- 期限切れのときだけ占有も解放する。確定なら占有は残す
 DELETE FROM room_booking_claims
-WHERE reservation_id = $1 AND $2 = 'expired';
+WHERE reservation_id = $1
+  AND (SELECT status FROM reservations WHERE reservation_id = $1) = 'expired';
 
 INSERT INTO reservation_base_events
     (id, reservation_id, event_type, version, actor_code, occurred_at)
-VALUES ($4, $1, $2, 2, $5, $3);
+SELECT $4, $1, r.status, r.current_version, $5, $2
+FROM reservations AS r
+WHERE r.reservation_id = $1;
 
--- $2に対応する confirmed または expired の詳細イベントを一行追加する。
+-- 詳細イベントは、いま積んだ基底イベントの種別に対応する1テーブルへ1行だけ入れる
+INSERT INTO reservation_confirmed_events (id, base_event_id)
+SELECT $6, $4
+WHERE (SELECT status FROM reservations WHERE reservation_id = $1) = 'confirmed';
+
+INSERT INTO reservation_expired_events (id, base_event_id)
+SELECT $6, $4
+WHERE (SELECT status FROM reservations WHERE reservation_id = $1) = 'expired';
+
 COMMIT;
 ```
+
+**対象バージョンでの確認**: 二つのsessionで同じ仮押さえ予約を進め、次の3通りを確かめる。
+
+| session Aの操作と判定時刻 | session Bの操作と判定時刻 | 期待する結果 |
+|---|---|---|
+| 確定・期限の1分前 | 期限切れ処理・期限ちょうど | Aがversion 2の確定予約を作り、Bは更新件数0でrollbackし、現在の確定予約を返す |
+| 期限切れ処理・期限ちょうど | 確定・期限の10秒後 | Aがversion 2の期限切れ予約を作り、Bは更新件数0でrollbackする。**Bが確定予約を作らないことがこの表の要点である** |
+| どちらも確定・期限の1分前 | — | 先にロックを取った一方だけがversion 2を作り、他方は更新件数0で終わる |
+
+3行目の期限切れ処理が数分遅れて動いた場合も、判定時刻が期限以降であれば`next_status`は`expired`になる。**遅延した確定要求が期限後に確定予約を作ることはない。**
 
 - 競合の検知: ロック後の状態不一致、条件付きUPDATEの更新件数0、またはversion一意制約違反
 - 業務結果への変換: 後発へ現在の確定済みまたは期限切れを返す
@@ -199,7 +242,7 @@ COMMIT;
 
 - 同時に進む操作: 既存占有を削除する取消と、同じ時間へ新しい占有を追加する仮押さえ
 - 許してはいけない結果: 取消がrollbackしたのに新しい占有も成立する
-- 発生し得る現象: ダーティライト
+- 発生し得る現象: 未commitの取消に依存した占有の成立（PostgreSQLはどの分離レベルでもダーティライトを起こさないため、ここで防ぐのは「取消がrollbackしたのに新しい占有だけが残る」ことである）
 - 選択する分離レベル: READ COMMITTED
 - 併用する仕組み: 予約行ロックと、未commitの競合行を待つGiST排他制約
 - 対象バージョンでの確認: 取消を未commitのまま新しい占有を書き、取消のcommit時だけ新規占有が成立することを確認する
@@ -212,6 +255,32 @@ COMMIT;
 3. 新しい仮押さえ側は占有を書き、排他制約が取消transactionの終了を待って成否を決める。
 4. 取消がrollbackしたら旧占有が残り、新しい仮押さえは成立しない。
 
+取消側と仮押さえ側のSQLを、実行順とともに示す。
+
+```sql
+-- session A（取消）
+BEGIN;
+SELECT status, current_version FROM reservations
+WHERE reservation_id = $1 FOR UPDATE;
+
+DELETE FROM room_booking_claims WHERE reservation_id = $1;
+DELETE FROM tentative_hold_deadlines WHERE reservation_id = $1;
+
+UPDATE reservations
+SET status = 'cancelled', current_version = current_version + 1, updated_at = $2
+WHERE reservation_id = $1 AND status IN ('tentative', 'confirmed');
+-- ここでcommitもrollbackもしないまま session B が動く
+
+-- session B（同じ利用枠への新しい仮押さえ）
+BEGIN;
+INSERT INTO room_booking_claims (reservation_id, room_code, starts_at, ends_at, created_at)
+VALUES ($3, $4, $5, $6, $7);
+-- 排他制約が session A の終了を待ってブロックする
+
+-- session A が COMMIT した場合  : session B の INSERT が成立する
+-- session A が ROLLBACK した場合: 旧占有が戻るため session B は 23P01 で失敗する
+```
+
 - 競合の検知: 排他制約待機、SQLSTATE `23P01`、lock timeout
 - 業務結果への変換: 取消commit後にだけ新規仮押さえを成立させる。旧占有が残れば利用枠を確保できなかった結果にする
 - 再試行: lock timeoutだけ最大1回。排他制約違反は再試行しない
@@ -219,7 +288,7 @@ COMMIT;
 
 ## パーティションと配置
 
-初期リリースでは8テーブルすべてを非partitionとする。基底イベント2,000万件で、予約番号による履歴取得と日次バックアップが目標内に収まるという検証条件を置く。
+初期リリースでは8テーブルすべてを非partitionとする。基底イベント1,300万件で、予約番号による履歴取得と日次バックアップが目標内に収まるという仮想結果を置く。
 
 基底イベントが5,000万件を超えるか、保持期限を過ぎたイベントの月次削除が30分を超えた時点で、`occurred_at`による月次partitionを再検討する。詳細イベントは基底イベントと同じ保持単位で扱い、孤立させない。
 
@@ -227,7 +296,7 @@ COMMIT;
 
 | 観点 | 前提・観測値 | 設計判断 | 確認方法・閾値 |
 |---|---|---|---|
-| データ量 | 予約500万件、基底イベント2,000万件 | 初期は非partition、イベント7年保持 | 月次件数と総容量を記録し、5,000万件で再評価 |
+| データ量 | 予約500万件、有効予約160万件、基底イベント1,300万件 | 初期は非partition、イベント7年保持 | 月次件数と総容量を記録し、基底イベント3,000万件で再評価 |
 | 主要な書込み | 平常30件/秒、ピーク150件/秒 | 排他制約を含む仮押さえを一transactionに閉じる | p95 100ms、排他制約待機p99 500ms |
 | 主要なRead | 一会議室31日分、予約者の20件、予約履歴100件 | 4つの根拠付きindexを使う | 各ReadのSLOと実行計画を継続確認 |
 | 統計 | 会議室と時間帯に偏りがある | 毎日`ANALYZE`、変更率20%で自動解析 | 推定行数と実行行数が10倍乖離したら調査 |
@@ -275,7 +344,7 @@ COMMIT;
 - 並び順と上限: `starts_at, reservation_id`の昇順、最大500件
 - 返す情報: 予約番号、利用開始、利用終了
 - 鮮度と一貫性: primaryから読む。ただし検索結果は成立保証ではなく、書込み時の排他制約が最終判断する
-- 想定件数: 占有500万件、対象は平均180件、繁忙会議室で最大500件
+- 想定件数: 占有160万件（有効予約と一対一）、対象は平均180件、繁忙会議室で最大500件
 - SLO: p95 50ms、p99 100ms、statement timeout 300ms
 - 支えるindex: `room_booking_claims_room_time_excl`
 
@@ -288,7 +357,7 @@ ORDER BY starts_at, reservation_id
 LIMIT 500;
 ```
 
-**対象バージョンでの確認**: 500万件相当でGiSTのBitmap Index Scan、推定186行、実行180行、p95 18msを確認する。
+**対象バージョンでの確認**: 占有160万件相当でGiSTのBitmap Index Scan、推定186行、実行180行、p95 18msという仮想結果を置く。
 
 ### Read-002: 予約者が今後の自分の予約を読む
 
@@ -296,14 +365,14 @@ LIMIT 500;
 - 入力・検索条件: `customer_code`の等価条件、現在日時以降の`starts_at`、予約中の二状態
 - 結合: なし
 - 並び順と上限: `starts_at, reservation_id`の昇順、20件
-- 返す情報: 予約番号、拠点、会議室、利用開始、利用終了、予約状態
+- 返す情報: 予約番号、会議室、利用開始、利用終了、予約状態
 - 鮮度と一貫性: 直前の取消や確定を反映するためprimaryからstatement単位で読む
 - 想定件数: 予約500万件、有効予約160万件、予約者あたり平均3件、最大120件
 - SLO: p95 30ms、p99 80ms、statement timeout 200ms
 - 支えるindex: `reservations_customer_upcoming_idx`
 
 ```sql
-SELECT reservation_id, location_code, room_code, starts_at, ends_at, status
+SELECT reservation_id, room_code, starts_at, ends_at, status
 FROM reservations
 WHERE customer_code = $1
   AND starts_at >= $2
@@ -312,17 +381,17 @@ ORDER BY starts_at, reservation_id
 LIMIT 20;
 ```
 
-**対象バージョンでの確認**: 500万件相当でIndex Only Scan、推定4行、実行3行、heap fetch 0、p95 12msを確認する。
+**対象バージョンでの確認**: 予約500万件相当でIndex Only Scan、推定4行、実行3行、heap fetch 0、p95 12msという仮想結果を置く。
 
 ### Read-003: 予約の現在状態と業務イベントを同じ時点で読む
 
 - 利用者と目的: 予約業務責任者が、一つの予約へ何が起きたか説明する
 - 入力・検索条件: 一つの`reservation_id`
 - 結合: 基底イベントから、`event_type`に対応する4つの詳細イベントへ`base_event_id`で外部結合する
-- 並び順と上限: `version`の昇順、最大100件
+- 並び順と上限: `version`の昇順、最大10件
 - 返す情報: 予約の現在状態・現在version、各イベントのversion・種類・行為者・発生日時・種類固有の事実
 - 鮮度と一貫性: primary上のREAD ONLY REPEATABLE READ transactionで同じsnapshotを使う
-- 想定件数: 予約500万件、基底イベント2,000万件、一予約あたり平均4件、最大100件
+- 想定件数: 予約500万件、基底イベント1,300万件、一予約あたり平均2.6件、最大3件。論理設計の状態遷移では、仮押さえ成立・確定・取消／期限切れの3イベントが上限になる。上限10件は将来イベント種別が増えた場合の余裕であり、現在のモデルで10件に達することはない
 - SLO: transaction全体でp95 20ms、p99 50ms、statement timeout 200ms
 - 支えるindex: `reservations_pkey`、`reservation_base_events_reservation_id_version_key`、各詳細イベントの`base_event_id`一意index
 
@@ -334,7 +403,7 @@ FROM reservations
 WHERE reservation_id = $1;
 
 SELECT e.version, e.event_type, e.actor_code, e.occurred_at,
-       t.location_code, t.room_code, t.starts_at, t.ends_at, t.expires_at,
+       t.room_code, t.starts_at, t.ends_at, t.expires_at,
        (c.base_event_id IS NOT NULL) AS confirmed,
        (x.base_event_id IS NOT NULL) AS cancelled,
        (d.base_event_id IS NOT NULL) AS expired
@@ -350,4 +419,4 @@ LIMIT 100;
 COMMIT;
 ```
 
-**対象バージョンでの確認**: 2,000万基底イベント相当で予約ごとのIndex Scanと詳細の一意indexによる結合を使い、4イベント取得p95 9ms、100イベントでも50ms以内を確認する。
+**対象バージョンでの確認**: 基底イベント1,300万件相当で予約ごとのIndex Scanと詳細の一意indexによる結合を使い、3イベント取得p95 9msという仮想結果を置く。

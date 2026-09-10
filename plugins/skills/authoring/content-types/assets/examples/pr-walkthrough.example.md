@@ -10,7 +10,18 @@
 
 既存のDB制約が仮押さえの重複を拒否したとき、予約作成の呼び出し元へ`SLOT_UNAVAILABLE`を返すようにした。以前は同じ競合も例外として上位へ伝わっていた。DB制約と、失敗時に予約・占有の両方を取り消す処理は既存という前提で、今回の変更は一つの関数のエラー変換に限定する。
 
-たとえばM-301の10:00〜11:30を二人が同時に申し込んだ場合、DBが拒否した側を競合結果へ変える。未知のDB障害は従来どおり例外として伝える。HTTPのステータス変換はこの関数の外で行う。
+たとえばM-301の2026年9月18日 10:00から11:30までを二人が同時に申し込んだ場合、DBが拒否した側を競合結果へ変える。未知のDB障害は従来どおり例外として伝える。HTTPのステータス変換はこの関数の外で行う。
+
+## 差分注釈の凡例
+
+掲載したコードの各行がどの区分かを、この表で読む。実行順注釈とは別物なので、この文書に実行順の区分は置かない。
+
+| 表記 | 意味 |
+|---|---|
+| ［新規］ | 旧実装に無かった行 |
+| ［ロジック変更なし］ | 呼ぶメソッド・条件・引数とも旧実装と同一 |
+| ［コメントのみ変更］ | コードは同一で、コメントの文言・配置だけが変わった |
+| ［削除］ | 旧実装にあって、今は無い |
 
 ## 目次
 
@@ -35,19 +46,11 @@
 return repository.createTentativeHold(input);
 ```
 
-**なぜ変えたか**: この例の変更理由は、同時仮押さえの競合を呼び出し元が通常の業務結果として扱えるようにすることである。`return`に`await`を追加したのは、保存処理の非同期の失敗をこの`catch`で受け取るためである。成功時に呼ぶメソッドと引数は変えない。
+**なぜ変えたか**: この例の変更理由は、同時仮押さえの競合を呼び出し元が通常の業務結果として扱えるようにすることである。`return`に`await`を追加したのは、保存処理の非同期の失敗をこの`catch`で受け取るためである。成功時に呼ぶメソッドと引数は変えない。この変換が守る業務上の決まりは、[業務知識・コアドメイン](domain-rule.example.md)の「常に守られること」1である。
 
 ## ③ 実装の全文
 
-この例の対象ファイルは以下の14行が全文である。行番号と［…］の注釈は読解用に付けている。import先の型と既存の保存実装は、この変更の対象外である。
-
-### 注釈の凡例
-
-| 表記 | 意味 |
-|---|---|
-| ［新規］ | 旧実装に無かった行 |
-| ［ロジック変更なし］ | 旧実装と同一の部分 |
-| ［変更］ | 旧実装の処理を置き換えた行 |
+この例の対象ファイルは以下の11行が全文である。行番号はファイルの行番号であり、注釈行は含めていない。実在するリポジトリを扱うときは、この行番号を原典の恒久リンクにする。import先の型と既存の保存実装は、この変更の対象外である。
 
 ### `src/reservations/create_tentative_hold.ts`
 
@@ -55,22 +58,29 @@ return repository.createTentativeHold(input);
 
 ```typescript
 01 import { ExclusionViolation, slotUnavailable } from "./errors";
-02
-03 import type { HoldInput, Repository } from "./reservation_repository";
-04 // ［ロジック変更なし］公開する関数名と入力型は維持する。
-05 export async function createTentativeHold(input: HoldInput, repository: Repository) {
-06   try {
-07     // ［変更］呼出しと引数は維持し、awaitで非同期の失敗をcatchへ渡す。
-08     return await repository.createTentativeHold(input);
-09   } catch (error) {
-10     // ［新規］対象の制約違反だけを変換し、それ以外は従来どおり伝える。
-11     if (error instanceof ExclusionViolation && error.constraint === "room_booking_claims_room_time_excl") return slotUnavailable();
-12     throw error;
-13   }
-14 }
+02 import type { HoldInput, Repository } from "./reservation_repository";
+03
+04 export async function createTentativeHold(input: HoldInput, repository: Repository) {
+05   try {
+06     return await repository.createTentativeHold(input);
+07   } catch (error) {
+08     if (error instanceof ExclusionViolation && error.constraint === "room_booking_claims_room_time_excl") return slotUnavailable();
+09     throw error;
+10   }
+11 }
 ```
 
-1行のimportと6〜13行のエラー捕捉を追加した。3行の型importと公開する入力型は既存である。エラー型は業務側の契約に置き、永続化実装がDBの失敗をその型へ写す。制約名を限定する条件が、利用枠の競合と別の障害を分ける境界になる。
+| 行 | 区分 | なぜそうなのか |
+|---|---|---|
+| 01 | ［新規］ | 変換に使う`ExclusionViolation`と`slotUnavailable`をこの変更で使い始めたため |
+| 02 | ［ロジック変更なし］ | 入力型と保存契約の型importは旧実装と同一 |
+| 04 | ［ロジック変更なし］ | 公開する関数名・引数・戻り型を維持したため、呼び出し元は変えなくてよい |
+| 05, 07, 10 | ［新規］ | 旧実装に`try`/`catch`が無かった。捕捉の枠だけを足している |
+| 06 | ［新規］ | 旧実装の`return repository.createTentativeHold(input);`を置き換えた。呼ぶメソッドと引数は同じで、`await`を足して非同期の失敗を`catch`へ渡す |
+| — | ［削除］ | 旧実装の`return repository.createTentativeHold(input);`（`await`なし）は無くなった |
+| 08, 09 | ［新規］ | 対象の制約違反だけを競合結果へ変え、それ以外は従来どおり再送出する |
+
+エラー型は業務側の契約に置き、永続化実装がDBの失敗をその型へ写す。08行で制約名を限定する条件が、利用枠の競合と別の障害を分ける境界になる。
 
 ## ④ テスト設計
 

@@ -1,23 +1,22 @@
 # RoomFlow
 
-> これは [`readme.md`](../templates/readme.md) の記載例である。架空のリポジトリを初めて開いた人へ入口を渡す。
+> これは [`readme.md`](../templates/readme.md) の記載例である。リポジトリ、clone先、識別子、計測値はすべて架空であり、**このまま実行しても動かない**。初めて開いた人へ入口を渡す書き方の例として使う。
 
-RoomFlowは、複数拠点の貸会議室を顧客へ時間単位で販売するサンプルサービスである。空き利用枠の検索、仮押さえ予約、確定予約、取消、順番待ちを提供する。題材、識別子、計測値は架空である。
+RoomFlowは、貸会議室を顧客へ時間単位で販売するサンプルサービスである。空き利用枠の検索、仮押さえ予約、確定予約、取消、順番待ちを提供する。このREADMEでは起動と空き確認までを案内し、予約作成は[スタートガイド](getting-started.example.md)、項目ごとの値は[APIリファレンス](api-reference.example.md)へ委ねる。
 
 ## インストール
 
 対応環境はmacOSまたはLinux、Docker 26以降、空いているTCP 8080番ポートである。認証を使うAPIを試す場合は、ローカル開発用tokenを`ROOMFLOW_ACCESS_TOKEN`へ設定する。
 
-1. `git clone https://example.invalid/roomflow.git`を実行する。
+1. `git clone <RoomFlowのリポジトリURL>`を実行する。
 2. `cd roomflow`を実行する。
 3. `docker compose up -d`を実行する。
-
-`docker compose ps`で`api`と`db`が`running`になれば起動している。
+4. `docker compose ps`を実行し、`api`と`db`が`running`になっていることを確かめる。
 
 ## 使い方（最小の例）
 
 ```bash
-curl 'http://localhost:8080/v1/locations/marunouchi/rooms/M-301/availability?from=2026-09-18T10:00:00%2B09:00&to=2026-09-18T11:30:00%2B09:00'
+curl 'http://localhost:8080/v1/rooms/M-301/availability?from=2026-09-18T10:00:00%2B09:00&to=2026-09-18T11:30:00%2B09:00'
 ```
 
 HTTP 200と`{"available":true}`が返れば利用できる。仮押さえ予約の作成は[スタートガイド](getting-started.example.md)で確認する。

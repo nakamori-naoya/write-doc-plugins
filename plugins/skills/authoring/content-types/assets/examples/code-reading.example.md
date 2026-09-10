@@ -1,6 +1,6 @@
 # 仮押さえ予約の作成を実行順に読む
 
-> これは [`code-reading.md`](../templates/code-reading.md) の記載例である。コード・パス・行番号・参照点は架空であり、原典の恒久リンクはない。掲載部分で分かる動作と、追っていない先を分ける例として使う。
+> これは [`code-reading.md`](../templates/code-reading.md) の記載例である。コード・パス・行番号・参照点は架空であり、原典の恒久リンクは張れない。掲載部分で分かる動作と、追っていない先を分ける例として使う。
 
 > 型: コードリーディング ／ 読み手: 予約作成処理を自分で追う人 ／ 対象: 架空の`roomflow`リポジトリ
 
@@ -11,13 +11,25 @@
 
 この処理はHTTP入力を業務入力へ変換し、予約可否を判断して仮押さえ予約を記録する。
 
-注釈は実行時の役割を表す。［入力］は受け取る値、［確定］は決まる値、［分岐］は条件と行き先、［副作用］は外部への書込み、［次へ］は呼び先を示す。
+## 注釈の凡例
+
+注釈は実行時の役割を表す。差分の凡例とは別物なので、この文書に差分の区分は置かない。
+
+| 表記 | 何に付けるか |
+|---|---|
+| ［入力］ | この段階が受け取った値と、その出どころ |
+| ［確定］ | この行を抜けた時点で決まった値 |
+| ［分岐］ | 条件と、どちらへ行くか。両方の行き先を書く |
+| ［副作用］ | DB・キャッシュ・ログなど、外へ出るもの |
+| ［次へ］ | 次にどこを呼ぶか |
+
+掲載を省いた範囲には`// …（省略: <原典の行範囲>）`を置く。実在するリポジトリを扱うときは、この行範囲を原典の恒久リンクにする。
 
 ## ① 何を追うか
 
 HTTP handlerから予約記録までの幹を追う。これは差分の説明ではない。変更の可否は[実装解説](pr-walkthrough.example.md)で扱う。
 
-認証済みの予約者`U-42`が、会議室`M-301`の9月18日10:00〜11:30を申し込む例を通して読む。以下の簡略コードで確認できるのは入力拒否・事前の空き確認・保存であり、同時要求への最終的な競合処理は掲載していない。
+認証済みの予約者`C-4102`が、会議室`M-301`の2026年9月18日 10:00から11:30までを申し込む例を通して読む。以下の簡略コードで確認できるのは入力拒否・事前の空き確認・保存であり、同時要求への最終的な競合処理は掲載していない。
 
 ## ② 幹の一覧
 
@@ -30,14 +42,15 @@ HTTP handlerから予約記録までの幹を追う。これは差分の説明�
 
 ### <a id="stage-1"></a>段階1 — 入力を検査する
 
-- **入力**: HTTP bodyの`room_id`、`starts_at`、`ends_at`
+- **入力**: HTTP bodyの`room_code`、`starts_at`、`ends_at`
 - **確定する値**: 会議室と開始・終了を`slot`にまとめた業務入力
-- **分岐条件**: 必須項目が無い、終了が開始以前、時刻が30分単位でない場合は400を返す。それ以外は段階2へ進む
+- **分岐条件**: 必須項目が無い、または終了が開始以前の場合は400を返す。それ以外は段階2へ進む
 - **副作用**: なし
 - **次の呼び出し**: `ReservationService.create`
 
 ```typescript
-// ［入力］3項目を検査し、成功なら { slot: { roomId, startsAt, endsAt } } にする。
+// …（省略: create_reservation.ts:1-11 — importと認証tokenの検証）
+// ［入力］3項目を検査し、成功なら { slot: { roomCode, startsAt, endsAt } } にする。
 const input = parseCreateReservation(request.body);
 // ［分岐］不正なら400で終了し、正しければ業務判断へ進む。
 if (!input.ok) return badRequest(input.error);
@@ -45,7 +58,7 @@ if (!input.ok) return badRequest(input.error);
 return service.create(actor.id, input.value);
 ```
 
-`parseCreateReservation`の内部と認証処理は省略している。上の例では`slot`がM-301、10:00、11:30を持ち、`actor.id`の`U-42`と一緒に渡る。
+`parseCreateReservation`の内部と認証処理は省略している。上の例では`slot`がM-301、10:00、11:30を持ち、`actor.id`の`C-4102`と一緒に渡る。
 
 → 次: [予約を作る](#stage-2)
 
@@ -55,22 +68,22 @@ return service.create(actor.id, input.value);
 - **確定する値**: 15分後に期限切れになる仮押さえ予約
 - **分岐条件**: 枠が埋まっていれば`SLOT_UNAVAILABLE`。空いていれば保存する
 - **副作用**: 保存成功時に予約を1件記録する。事前確認で拒否した場合は書き込まない
-- **次の呼び出し**: `repository.insertTentative`。戻り値をそのまま呼び出し元へ返す
+- **次の呼び出し**: `reservationRepository.createTentativeHold`。戻り値をそのまま呼び出し元へ返す
 
 ```typescript
 // ［分岐］空きでなければ記録せず終了する。空きなら次へ進む。
 if (!(await availability.isOpen(input.slot))) return slotUnavailable();
 // ［副作用・次へ］保存済みの仮押さえ予約を返す。詳細は直下の枝リンクへ。
-return repository.insertTentative(actorId, input.slot);
+return reservationRepository.createTentativeHold(actorId, input.slot);
 ```
 
-→ [枝: `insertTentative`](#branch-insert-tentative)
+→ [枝: `createTentativeHold`](#branch-create-tentative-hold)
 
 `availability.isOpen`の照会内部は省略している。保存が成功すれば、呼び出し元へ予約ID・状態`tentative`・確定期限が返る。保存の例外はこのコードでは捕捉せず、呼び出し元へ伝わる。
 
 ## ④ 枝を読む
 
-### <a id="branch-insert-tentative"></a>枝 — `insertTentative`
+### <a id="branch-create-tentative-hold"></a>枝 — `createTentativeHold`（`src/persistence/reservation_repository.ts`）
 
 ← [幹の段階2 — 予約を作るへ戻る](#stage-2)
 
@@ -104,4 +117,4 @@ return db.reservations.insert({ actorId, slot, status: "tentative", expiresAt })
 
 ## ⑦ 付録
 
-`CreateReservation`は`slot`を持ち、その中に`roomId`、`startsAt`、`endsAt`が入る。HTTPの`room_id`などからこの形へ変換するのが段階1である。日付を扱う型の内部定義は省略している。
+`CreateReservation`は`slot`を持ち、その中に`roomCode`、`startsAt`、`endsAt`が入る。HTTPの`room_code`などからこの形へ変換するのが段階1である。日付を扱う型の内部定義は省略している。

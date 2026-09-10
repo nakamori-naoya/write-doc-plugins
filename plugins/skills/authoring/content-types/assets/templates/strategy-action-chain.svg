@@ -1,28 +1,81 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560" role="img" aria-labelledby="title desc">
   <title id="title">弱い環から価値と学習へつながる行動の鎖</title>
   <desc id="desc">弱い環へ最初に働きかけ、その成果が次の行動を可能にし、価値提供から得た学習を前段へ戻す流れのテンプレート図。</desc>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f8fa;
+      --text: #172033;
+      --muted: #53627a;
+      --arrow: #53627a;
+      --weak: #8b321f;
+      --weak-strong: #b6452f;
+      --weak-soft: #fff0ed;
+      --act: #2f579c;
+      --act-strong: #4169b2;
+      --act-soft: #edf2ff;
+      --value: #155d39;
+      --value-strong: #247a4b;
+      --value-soft: #e8f5ee;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101827;
+        --text: #edf2f7;
+        --muted: #bdc8d8;
+        --arrow: #bdc8d8;
+        --weak: #fca5a5;
+        --weak-strong: #fca5a5;
+        --weak-soft: #40201c;
+        --act: #93b4f5;
+        --act-strong: #93b4f5;
+        --act-soft: #1b2b4d;
+        --value: #34d399;
+        --value-strong: #34d399;
+        --value-soft: #123a2a;
+      }
+    }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: var(--text); }
+    .heading { font-size: 30px; font-weight: 700; }
+    .node-title { font-size: 25px; font-weight: 700; }
+    .body { font-size: 20px; }
+    .caption { font-size: 21px; font-weight: 700; fill: var(--value); }
+    .note { font-size: 20px; fill: var(--muted); }
+    .arrow-head { fill: var(--arrow); }
+    .return-head { fill: var(--value-strong); }
+  </style>
   <defs>
-    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12Z" fill="#53627a"/></marker>
-    <marker id="return-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6L0 12Z" fill="#247a4b"/></marker>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path class="arrow-head" d="M0 0L12 6L0 12Z" fill="#53627a"/>
+    </marker>
+    <marker id="return-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path class="return-head" d="M0 0L12 6L0 12Z" fill="#247a4b"/>
+    </marker>
   </defs>
-  <rect width="1400" height="560" rx="28" fill="#f7f8fa"/>
-  <text x="700" y="62" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="30" font-weight="700" fill="#172033">行動の鎖は、前の成果が次を可能にする</text>
-  <rect x="55" y="155" width="270" height="170" rx="20" fill="#fff0ed" stroke="#b6452f" stroke-width="3"/>
-  <text x="190" y="205" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="25" font-weight="700" fill="#8b321f">弱い環</text>
-  <text x="190" y="255" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#172033">〈全体を止める課題〉</text>
-  <rect x="395" y="155" width="270" height="170" rx="20" fill="#edf2ff" stroke="#4169b2" stroke-width="3"/>
-  <text x="530" y="205" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="25" font-weight="700" fill="#2f579c">最初の行動</text>
-  <text x="530" y="255" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#172033">〈最初に変えること〉</text>
-  <rect x="735" y="155" width="270" height="170" rx="20" fill="#edf2ff" stroke="#4169b2" stroke-width="3"/>
-  <text x="870" y="205" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="25" font-weight="700" fill="#2f579c">次の行動</text>
-  <text x="870" y="255" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#172033">〈成果を使って広げる〉</text>
-  <rect x="1075" y="155" width="270" height="170" rx="20" fill="#e8f5ee" stroke="#247a4b" stroke-width="3"/>
-  <text x="1210" y="205" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="25" font-weight="700" fill="#155d39">価値と学習</text>
-  <text x="1210" y="255" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#172033">〈届けて事実を得る〉</text>
-  <path d="M325 240H382" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/>
-  <path d="M665 240H722" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/>
-  <path d="M1005 240H1062" stroke="#53627a" stroke-width="4" marker-end="url(#arrow)"/>
-  <path d="M1210 325V415Q1210 455 1170 455H570Q530 455 530 415V340" fill="none" stroke="#247a4b" stroke-width="4" stroke-dasharray="10 8" marker-end="url(#return-arrow)"/>
-  <text x="870" y="490" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="21" font-weight="700" fill="#155d39">得た事実を診断と前の行動へ戻す</text>
-  <text x="700" y="110" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif" font-size="20" fill="#53627a">まず到達する状態：〈到達すれば次の障害が見える状態〉</text>
+
+  <rect width="1400" height="560" rx="28" fill="var(--bg)"/>
+  <text x="700" y="62" text-anchor="middle" class="heading">行動の鎖は、前の成果が次を可能にする</text>
+  <text x="700" y="110" text-anchor="middle" class="note">まず到達する状態：〈到達すれば次の障害が見える状態〉</text>
+
+  <rect x="55" y="155" width="270" height="170" rx="20" fill="var(--weak-soft)" stroke="var(--weak-strong)" stroke-width="3"/>
+  <text x="190" y="205" text-anchor="middle" class="node-title" fill="var(--weak)">弱い環</text>
+  <text x="190" y="255" text-anchor="middle" class="body">〈全体を止める課題〉</text>
+
+  <rect x="395" y="155" width="270" height="170" rx="20" fill="var(--act-soft)" stroke="var(--act-strong)" stroke-width="3"/>
+  <text x="530" y="205" text-anchor="middle" class="node-title" fill="var(--act)">最初の行動</text>
+  <text x="530" y="255" text-anchor="middle" class="body">〈最初に変えること〉</text>
+
+  <rect x="735" y="155" width="270" height="170" rx="20" fill="var(--act-soft)" stroke="var(--act-strong)" stroke-width="3"/>
+  <text x="870" y="205" text-anchor="middle" class="node-title" fill="var(--act)">次の行動</text>
+  <text x="870" y="255" text-anchor="middle" class="body">〈成果を使って広げる〉</text>
+
+  <rect x="1075" y="155" width="270" height="170" rx="20" fill="var(--value-soft)" stroke="var(--value-strong)" stroke-width="3"/>
+  <text x="1210" y="205" text-anchor="middle" class="node-title" fill="var(--value)">価値と学習</text>
+  <text x="1210" y="255" text-anchor="middle" class="body">〈届けて事実を得る〉</text>
+
+  <path d="M325 240H382" stroke="var(--arrow)" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M665 240H722" stroke="var(--arrow)" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1005 240H1062" stroke="var(--arrow)" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1210 325V415Q1210 455 1170 455H570Q530 455 530 415V340" fill="none" stroke="var(--value-strong)" stroke-width="4" stroke-dasharray="10 8" marker-end="url(#return-arrow)"/>
+  <text x="870" y="490" text-anchor="middle" class="caption">得た事実を診断と前の行動へ戻す</text>
 </svg>
