@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "plugin": "write-doc",
+  "version": "5.0.0",
+  "created_at": "2026-09-10T17:21:30.024899+00:00",
+  "notes": "読み手ペルソナと到達点を先に固定し、保存の前に執筆の文脈を持たない読み手が合否を決める。工程を reader → settle → draft → visual → judge → save へ組み替えた。readerは同梱5人のペルソナから読み手を1人選び（persona）、案件固有の既知・未知をreader_contextへ埋め、読後の到達点を本文だけで答えられる問い2〜4個（goal_questions）へ落とす。ペルソナは語を3段階（実務で使える／言われれば分かる／知らない）で持ち、5人以外は作れない。settleは到達点から逆算して足りない事実だけを詰める（型の節を埋められないことは不明点にしない）。judgeはsaveの前に置き、新しい文脈の読み手役へ本文・ペルソナ・問いだけを渡して、全問に本文だけで答えられ、かつ詰まりの報告が0件のときだけ合格とする。不合格はdraftへ戻し、3回でreaderへ差し戻す。記載例28本からテンプレートへのリンクを外し、構成の正本ではなく粒度と具体性の見本と位置づけた。見出し一致の検査はcatalogの固定見出し表に載る型だけへ限定し、code-mapを表へ足した。固定するのは見出しと順序だけで、節の中の項目数（Strategyの行動3欄など）は固定しない。",
+  "breaking": "playbookの工程idが変わる（type → reader、review → judge）。判定工程がsaveの前へ移り、成果物名がdocument_review → judgementへ変わる。reader工程はpersonaとgoal_questionsをprovidesへ追加する。公開契約G5の意味が「保存前に自己確認する」から「保存前に、執筆の文脈を持たない読み手が合否を決める」へ変わる。契約ID、契約版、公開入口、入力schema、出力schemaは変えないので、消費側のrequires・input・providesはそのまま使える。工程を差し替えていた利用者だけ、steps定義の更新が要る。on_failureに自分より前の工程idを書けるようになった（従来はstopのみ）。",
+  "migration": "消費側の変更は不要。playbook: write-doc で呼んでいる場合、document_type・material・output_toの契約は変わらない。<repo>/.harness-plugins/write-doc.config.yml で steps を差し替えている場合だけ、工程idと成果物名を新しいものへ合わせる。読み手を一人決めること、到達点を問いへ落とすこと、執筆の文脈を持たない読み手が合否を決めることの3つを残す。",
+  "checks": {
+    "codex": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed",
+      "evidence": "HARNESS_PLUGIN_RUNTIME=codex /bin/bash scripts/validate.sh: exit 0（42 passed, 0 failed）"
+    },
+    "claude": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed",
+      "evidence": "HARNESS_PLUGIN_RUNTIME=claude /bin/bash scripts/validate.sh: exit 0（42 passed, 0 failed）"
+    },
+    "real-distribution": "兄弟checkout ../grill-plugins と ../product-planning-plugins に対して解決させた",
+    "consumer-contract-lint": "scripts/lint-consumer-contract.py: codex / claude 両runtimeで 1 finding（provider-unresolved: grill/grill）。この findingは本リリースの変更前（b54c1b4）でも同一に再現するため、既存の環境依存であり本変更に起因しない",
+    "runtime-sync": "scripts/sync-runtime.py --check --source ../product-planning-plugins/shared/runtime-source: version 2.5.0、changed 空",
+    "regression": "scripts/test-hardening.py: 34 tests OK。scripts/test-reader-contract.py を新工程順（reader→settle→draft→visual→judge→save）へ更新し、判定を通す前にsaveを開始できないことを検査に追加",
+    "content-type-fidelity": "scripts/test-content-type-fidelity.py: exit 0。固定見出しの検査対象をcatalogの表から読む形へ変更し、記載例がテンプレートへリンクしないこと、ペルソナ5人が3段階を持つことを追加",
+    "doctor": "python3 scripts/doctor.py --repo <このrepository>: 13 checks すべて ok、NG 0",
+    "post-version-validation": "版を付けた後に HARNESS_PLUGIN_RUNTIME=claude / codex の /bin/bash scripts/validate.sh を再実行して確認する"
+  },
+  "files": [
+    ".agents/plugins/marketplace.json",
+    "plugins/.codex-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "plugins/.claude-plugin/plugin.json"
+  ]
+}
