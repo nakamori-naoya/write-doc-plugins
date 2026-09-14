@@ -2,10 +2,10 @@
 """資料の末尾に載る静的情報を、媒体の表現へ写す。
 
 **中身が何を意味するかは知らない。** 期間・参加者・ラベルという JSON を受け取り、
-HTML なら script タグと表、Markdown なら HTML コメントと表へ写すだけ。
+Markdown の表と、機械が読み戻すためのコメント内 JSON へ写すだけ。
 どんな情報を載せるかを決めるのは、この JSON を作る側である。
 
-  render-meta.py --meta <json|path> --format html|markdown
+  render-meta.py --meta <json|path> [--format markdown]
 """
 
 import argparse
@@ -30,43 +30,6 @@ def load_json(raw):
             return json.load(f)
     except OSError as e:
         fail("読めない: {}".format(e))
-
-
-def render_html(m):
-    p = m.get("period") or {}
-    rows = [
-        ("期間", "{} 〜 {}（{}）".format(p.get("from", ""), p.get("to", ""), p.get("label", ""))),
-        ("作成", m.get("generated_at", "")),
-        ("種別", "{} / {}".format(m.get("producer", ""), m.get("type", ""))),
-    ]
-    parts = m.get("participants") or []
-    rows.append(("参加者", "、".join(parts) if parts
-                 else (m.get("participants_note") or "記録なし")))
-    mats = m.get("materials") or []
-    rows.append(("素材", "{}件".format(len(mats)) if mats else "なし"))
-
-    def esc(s):
-        return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
-
-    tr = "\n".join("    <tr><th>{}</th><td>{}</td></tr>".format(esc(k), esc(v)) for k, v in rows)
-    chips = " ".join('<span class="label">{}</span>'.format(esc(x)) for x in m.get("labels") or [])
-    return """<section class="doc-meta">
-  <h2>この資料について</h2>
-  <table class="doc-meta-table">
-{tr}
-    <tr><th>ラベル</th><td class="labels">{chips}</td></tr>
-  </table>
-  <!-- {begin} -->
-  <script type="application/json" class="doc-meta-json">
-{js}
-  </script>
-  <!-- {end} -->
-</section>""".format(tr=tr, chips=chips, begin=BEGIN, end=END,
-                     js=json.dumps(m, ensure_ascii=False, indent=2)
-                     # </script> がそのまま出ると script ブロックが途中で閉じ、
-                     # 残りがページ本文として表示される。JSON としては同値。
-                     .replace("</", "<\\/"))
-
 
 
 def md_cell(s):
@@ -106,10 +69,10 @@ def render_markdown(m):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--meta", required=True)
-    p.add_argument("--format", choices=["html", "markdown"], default="html")
+    p.add_argument("--format", choices=["markdown"], default="markdown")
     a = p.parse_args()
     m = load_json(a.meta)
-    print(render_html(m) if a.format == "html" else render_markdown(m))
+    print(render_markdown(m))
 
 
 if __name__ == "__main__":

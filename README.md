@@ -1,50 +1,50 @@
 # Write Doc
 
-資料の型、文章規律、図の設計、HTML/Markdownへの保存を組み合わせ、資料を1本作るClaude Code/Codex両対応marketplaceである。
+資料の型、文章規律、図の設計、Markdownへの保存を組み合わせ、資料を1本作るClaude Code/Codex両対応marketplaceである。
 
 ## こんなときに使う
 
-**読み手と目的に合う型を選び、読みやすい本文と必要な図を作り、MarkdownまたはHTMLへ安全に保存したいときに使う。** 題材固有の知識は持たず、README、設計資料、ADR、Runbookなどの書き方と出力を担当する。
+**読み手と目的に合う型を選び、読みやすい本文と必要な図を作り、Markdownへ安全に保存したいときに使う。** 題材固有の知識は持たず、README、ADR、ハウツーガイドなど同梱15型の書き方と出力を担当する。
 
 - 資料を作りたいが、README、ハウツー、ADRなどの型を決められない
 - 主張、段落、強調、文体を一貫させたい
 - 文章より図が適した関係だけを選んで可視化したい
-- 既存ファイルを意図せず上書きせず、HTMLまたはMarkdownへ保存したい
+- 既存ファイルを意図せず上書きせず、Markdownへ保存したい
 - 資料完成後に、中間生成物だけを安全に片付けたい
 
 ## 公開入口を選ぶ
 
-次の入口から依頼します。内部のスキルや処理は、入口が必要に応じて呼び出します。
+次の入口から依頼する。内部のスキルや処理は、入口が呼び出す。
 
 | やりたいこと | 公開入口 |
 |---|---|
-| 型の選択から保存後の品質確認まで資料を完成させる | `write-doc` |
+| 読み手と型の選択から本文の執筆・図・保存まで資料を1本完成させる | `write-doc` |
 
 BDD、Product Planning、収集内容など、資料の題材を発見するpluginではない。題材側のpluginが作った素材を受け取り、読み手へ伝わる一つの資料へ仕上げる。
 
 ## 利用例
 
 ```text
-初めてrepositoryへ来た利用者向けのREADMEをMarkdownで作って。
+初めてrepositoryへ来た利用者向けのREADMEを作って。
 ```
 
 ```text
-この設計判断をADRとして整理し、主要な依存関係だけを図にしてHTMLで保存して。
+この設計判断をADRとして整理し、主要な依存関係だけを図にして保存して。
 ```
 
 ```text
-この設計判断を初めて読む人向けの説明資料として作成し、内容を確認して保存して。
+この設計判断を初めて読む人向けの説明資料として作成して保存して。
 ```
 
 ## インストール
 
-インストールするのは`write-doc@write-doc`です。外部プラグインの追加は不要です。
+インストールするのは`write-doc@write-doc`だけである。外部プラグインの追加は要らない。
 
-内部のスキルは同梱されています。個別にインストールせず、公開入口から利用してください。
+内部のスキルは同梱されている。個別にインストールせず、公開入口から使う。
 
 ### Codex
 
-利用するCodexと同じ設定環境で実行してください。
+利用するCodexと同じ設定環境で実行する。
 
 ```bash
 codex plugin marketplace add nakamori-naoya/write-doc-plugins
@@ -52,11 +52,11 @@ codex plugin add write-doc@write-doc
 codex plugin list
 ```
 
-一覧で導入先を確認し、新しい会話で利用してください。
+一覧で導入先を確認し、新しい会話で使う。
 
 ### Claude Code
 
-次は自分の全プロジェクトで使う例です。このプロジェクトのチームで共有する場合は`project`、このプロジェクトで自分だけが使う場合は`local`に変更し、利用先のディレクトリで実行してください。
+次は自分の全プロジェクトで使う例である。このプロジェクトのチームで共有する場合は`project`、このプロジェクトで自分だけが使う場合は`local`に変更し、利用先のディレクトリで実行する。
 
 ```bash
 CLAUDE_PLUGIN_SCOPE=user
@@ -65,11 +65,11 @@ claude plugin install write-doc@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
 claude plugin list
 ```
 
-一覧で導入を確認し、Claude Codeを再起動してください。すでに導入しているパッケージは、次の更新手順を使ってください。
+一覧で導入を確認し、Claude Codeを再起動する。すでに導入しているパッケージは、次の更新手順を使う。
 
 ## 更新する
 
-GitHubから登録したmarketplaceを更新し、その公開パッケージを更新します。新規インストールと同じCodexの設定環境、Claude Codeの適用範囲を使ってください。
+GitHubから登録したmarketplaceを更新し、その公開パッケージを更新する。新規インストールと同じCodexの設定環境、Claude Codeの適用範囲を使う。
 
 ### Codex
 
@@ -79,7 +79,7 @@ codex plugin add write-doc@write-doc
 codex plugin list
 ```
 
-更新後は新しい会話で確認してください。ローカルのパスからmarketplaceを登録した場合は、Git版の更新コマンドではなく、その登録先のソースを更新してから追加し直します。
+更新後は新しい会話で確認する。ローカルのパスからmarketplaceを登録した場合は、Git版の更新コマンドではなく、その登録先のソースを更新してから追加し直す。
 
 ### Claude Code
 
@@ -91,11 +91,11 @@ claude plugin update write-doc@write-doc --scope "$CLAUDE_PLUGIN_SCOPE"
 claude plugin list
 ```
 
-更新後はClaude Codeを再起動してください。
+更新後はClaude Codeを再起動する。
 
-marketplaceの取得と、インストール済みパッケージの更新は分けて確認します。同じバージョンとして公開された変更は、更新コマンドだけでは反映されない場合があります。「最新」と表示された場合は公開バージョンを確認し、キャッシュ内のファイルを直接編集しないでください。
+marketplaceの取得と、インストール済みパッケージの更新は分けて確認する。同じバージョンとして公開された変更は、更新コマンドだけでは反映されない。「最新」と表示された場合は公開バージョンを確認し、キャッシュ内のファイルを直接編集しない。
 
-コマンドは2026-09-06時点のCLIヘルプと、[Codexのmarketplace管理](https://developers.openai.com/plugins/build/plugins)、[Claude Codeの更新仕様](https://code.claude.com/docs/en/plugins-reference#plugin-update)を確認しています。
+コマンドは[Codexのmarketplace管理](https://developers.openai.com/plugins/build/plugins)と[Claude Codeの更新仕様](https://code.claude.com/docs/en/plugins-reference#plugin-update)に基づく。
 
 ## インストール済みである必要があるplugin
 
@@ -129,13 +129,7 @@ steps:
 
 ## 依存先の差し替え
 
-論理名（`write-doc`、`grill`）と実体pluginは分かれている。利用者は契約IDに対する実体を、次の3層のいずれかで束縛できる。**playbook側の`requires`は書き換えない。**
-
-1. scope: `<repo>/.harness-plugins/scopes/<入口playbook>/dependencies.yml`
-2. repository: `<repo>/.harness-plugins/dependencies.yml`
-3. personal: `~/.config/harness-plugins/dependencies.yml`
-
-top-levelは`version: 1`と`bindings`だけである（[書式の詳細](#依存先を束縛するdependenciesyml)）。
+論理名（`write-doc`、`grill`）と実体pluginは分かれている。利用者は契約ID（`marketplace/plugin`）に対する実体を `dependencies.yml` で束縛する。**playbook側の`requires`は書き換えない。**
 
 ```yaml
 version: 1
@@ -146,9 +140,14 @@ bindings:
   "grill/grill": {plugin: acme-grill, marketplace: acme-dialogue}
 ```
 
-差し替え先は`metadata.harness.implements`で、実装する契約IDと、`write-doc/write-doc`なら扱える文書型slugを自己宣言していなければならない。**宣言の無いpluginへは束縛できない。** 呼び出し元が要求した文書型を実装していなければ、解決の時点で止まる。
-
-入れ子の実行（呼び出し元 → write-doc → grill）では、入口が選んだ束縛をそのまま子へ渡すので、同じ実行の中で実体が食い違うことはない。
+- top-levelは `version: 1` と `bindings` の2つだけである。それ以外のキーがあると `[error:binding-file-invalid] reason=top-level-keys` で停止する。
+- 値に書けるのは `plugin` と `marketplace` だけで、pathやversionは書けない。
+- 置き場所は3層で、下ほど優先する。層はマージせず、見つかった最優先の1ファイルだけを使う。
+  1. personal: `$XDG_CONFIG_HOME/harness-plugins/dependencies.yml`（未設定時は `~/.config/harness-plugins/dependencies.yml`）
+  2. repository: `<repo>/.harness-plugins/dependencies.yml`
+  3. scope: `<repo>/.harness-plugins/scopes/<入口playbook>/dependencies.yml`
+- 差し替え先は、manifestの `metadata.harness.implements` にその契約IDと、`write-doc/write-doc` なら扱える文書型slugを自己宣言していなければならない。宣言が無ければ `[error:binding-not-implemented]` で停止する。呼び出し元が要求した文書型を実装していなければ、解決の時点で止まる。
+- 入口が選んだ束縛はrun専用のlockへ固定して子へ渡す。入れ子の実行（呼び出し元 → write-doc → grill）で実体が食い違うことはなく、実行中に `dependencies.yml` を書き換えても、そのrunの解決は変わらない。
 
 ## 設定の上書きと優先順位
 
@@ -170,60 +169,6 @@ skillでは、同梱設定の `prompt_parameters` に宣言されたpathだけ�
 
 資料の保存先は、作業repositoryの`<repo>/.harness-plugins/doc-render.config.yml`で文書型ごとに分けられる。各`dir`は`type: relative|absolute`と`path`を持つため基準が暗黙にならず、同じ1ファイルからrepository内にも外にも出せる。一致しない型は`output.default`へ保存する。
 
-## 検証
+## 検証と保守
 
-```bash
-bash scripts/validate.sh
-```
-
-## 実行契約と保守
-
-設定はprepareが返すrun専用の絶対pathで引き継ぐ。別shellで同じpathを明示し、完了・失敗停止の最後に同梱run-configのcleanupを呼ぶ。中断後は保存したpathを使い、既にcleanup済みなら設定を再解決する。
-
-依存宣言のversionは固定しない。対応する実行契約は`contractVersion: 1`で、未宣言の旧fixtureは契約1として扱う。未知の契約版は拒否する。installed cacheでは安定版の最大SemVerを選び、prereleaseは`HARNESS_PLUGIN_ALLOW_PRERELEASE=1`を明示した場合だけ候補にする。解決したversion、内容hash、契約版を記録し、工程直前とwrite-doc再開時に内容変更を拒否する。
-
-[doctor](scripts/doctor.py)は`python3 scripts/doctor.py --repo <対象project>`でCLI構文、両runtime公開入口、依存、設定の解決元を読み取り専用で診断する。`--distribution-only`は依存・project設定を検査しない限定診断であり、full診断の代用にはしない。
-
-doctorのfull診断は、依存を**実配布物**に対して解く。依存先は`HARNESS_PLUGIN_REAL_ROOTS`（契約ID→package rootのJSON）か、兄弟checkout `../<marketplace>-plugins/plugins`（親directoryは`HARNESS_PLUGIN_SIBLING_ROOT`で差し替える）から探し、どちらでも見つからなければfixtureへ倒さず理由付きでNGにする。同梱既定に実値を置かない`prompt_parameters`（`required: true`で`default`が無いもの）を持つskillは、上書きが無ければ必ず落ちるので実行せず、`skipped: requires-override`と必要なパラメータ名を出す。これは配布物の不具合ではないのでNGにしない。
-
-依存参照の検査はresolverとlintが同じ関数で行う。外部依存を指せるのは`${.deps.<論理名>.root}`直下3点と`${.deps.<論理名>.entry}`だけで、それ以外は`external-dependency-path`で落ちる。内部依存（同一package）の`${.deps.<内部名>.skills.<名前>}`は、解決結果に実在するskill名だけを許し、綴り違いや名前の無い形は`internal-skill-unknown`で落ちる。`--explain`の依存行は`[外部] <論理名> → <marketplace>/<plugin> <version> [runtime/source_kind]: <root>`の形で、束縛で実体が変わったときだけ行末に`← <層>`が付く。
-
-CIは同ownerの依存repositoryを兄弟directoryへcheckoutしてからvalidate.shを走らせる。**兄弟のrefは既定でmainである。** PR headと同名のbranchを採るのは、(1)実行が`pull_request`であり、(2)PR headが同一repository（forkではない）で、(3)同ownerの兄弟repoにその名前のbranchが実在する、の3つが揃うときだけで、選んだrefと理由はログへ出る。forkのPR作者はownerの兄弟repoにbranchを作れないため、PRから兄弟checkoutの内容を差し替える経路は無い。code scanningの`actions/untrusted-checkout/medium`はこの根拠により`won't fix`として扱う。
-
-共通実装の開発時正本はProduct Planning repositoryの`shared/runtime-source`にある。更新時はそのsource checkoutを取得し、[生成CLI](scripts/sync-runtime.py)へ`--source <取得した正本directory>`を渡す。`--check`は生成差分と[生成履歴](shared/runtime-manifest.json)のversion・内容hash・対象集合を検査する。正本checkoutなしのCIでも同梱物のhashと対象集合を検査できる。実行時に別repositoryや生成CLIは不要である。変更は正本へ加え、同じ生成コマンドを各source repositoryへ適用する。
-
-[release CLI](scripts/release.py)は`--plugin --version --notes --breaking --migration --checks`で更新計画を返す。`--checks`にはcodex/claudeの実検証結果、または未検証と理由を明示する。`--apply`で両manifestとcatalogの整合を確認して一括更新し、releases配下へ変更内容・移行・検証結果のJSON記録を残す。依存宣言は変更しない。
-
-[意味評価fixture](evals/scenarios.json)を[評価runner](scripts/evaluate-skills.py)へ渡し、異なる生成modelとjudge modelを指定する。モデル名、実model利用、適用設定、入力、出力、SKILL hash、判定の引用と理由を保存する。これはツール無効の次応答を対象とした代表caseの意味評価であり、実ツールを使った全工程E2Eや全行動の保証ではない。保存・CLI・再開の検証は[振る舞い回帰試験](scripts/test-hardening.py)と既存validateが担う。実モデル未実行のfixtureを合格扱いにしない。
-
-### 依存先を束縛する`dependencies.yml`
-
-契約ID（`marketplace/plugin`）に対する実体を`{plugin, marketplace}`で束縛する。**top-levelは`version: 1`と`bindings`の2つだけである。** それ以外のキーがあると`[error:binding-file-invalid] reason=top-level-keys`で停止する。
-
-```yaml
-version: 1
-bindings:
-  "grill/grill": {plugin: ask-one, marketplace: my-marketplace}
-```
-
-置き場所は3層で、下ほど優先する。**層はマージせず、見つかった最優先の1ファイルだけを使う。**
-
-1. personal: `$XDG_CONFIG_HOME/harness-plugins/dependencies.yml`（未設定時は`~/.config/harness-plugins/dependencies.yml`）
-2. repository: `<repo>/.harness-plugins/dependencies.yml`
-3. scope: `<repo>/.harness-plugins/scopes/<入口playbook>/dependencies.yml`
-
-値に書けるのは`plugin`と`marketplace`だけで、**pathやversionは書けない。** 差し替え先はmarketplace経由（installed cache、同一repository、開発時の`HARNESS_PLUGIN_DEV_ROOTS`）で解決でき、manifestの`metadata.harness.implements`にその契約IDを宣言しているpluginでなければならない。宣言が無ければ`[error:binding-not-implemented]`で停止する。playbook側の`requires`は書き換えない。
-
-入口が選んだ束縛はrun専用のlockへ固定して子へ渡す。同じ実行の中で実体が食い違うことはなく、実行中に`dependencies.yml`を書き換えても、そのrunの解決は変わらない。
-
-### explainの読み方
-
-`scripts/prepare.sh`は`--explain`を引数に取らない。**explainは常にstderrへ出る。** stdoutは解決済みYAMLの絶対path1行だけなので、解決の内訳（選んだ設定層、依存の実体、束縛の出どころ、静的に解けた工程入力）はstderrで読む。`--explain`のような未知optionを渡すとusageを表示してexit 2で止まる。
-
-### 破壊的変更の移行
-
-重複した薄いSKILL入口を廃止した。利用者は公開manifestに列挙された入口を使い、旧入口pathを保存した独自ランチャーは新しい宣言へ切り替える。設定のEXIT trapは廃止し、返されたrun pathを明示して完了・停止時にcleanupする。旧式の一時pathやshell変数だけを再利用しない。write-doc状態schemaは2で、旧状態の自動移行は行わず、新run-idで開始する。失敗状態は`needs_retry`として返し、修復後の明示`retry`で失敗工程だけを再実行する。
-
-### 開発CLIの入力境界
-
-`doctor`、`release`、`sync-runtime`、意味評価runnerは、操作者が明示したローカルsource、出力先、adapter argvを扱う開発CLIである。外部から受け取った文書やモデル出力をCLI引数へ自動変換しない。doctorのfull modeは選んだrepositoryのresolverを実行するため、信頼するsource checkoutを対象にする。doctorは配布treeのsymlinkを読取・実行前に拒否し、sync-runtimeは生成先と正本treeのsymlinkをcopy前に拒否する。評価の会話・fixture・モデル出力はadapterへstdinデータとして渡し、実行argvに混ぜない。
+検証コマンド、実行契約の保守、開発CLIの扱いは [docs/maintenance.md](docs/maintenance.md) にある。

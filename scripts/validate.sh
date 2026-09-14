@@ -326,7 +326,7 @@ if seen[0] != seen[1]:
     print('  claude と codex の metadata.harness が一致しない'); raise SystemExit(1)
 PY
 then
-  pass "契約の自己宣言（marketplace / implements）とカタログ28型の一致"
+  pass "契約の自己宣言（marketplace / implements）とカタログの型との一致"
 else
   fail "契約の自己宣言またはカタログとの一致"
 fi
@@ -496,6 +496,8 @@ else
 保存先が両方|.update_target="$io/docs/existing.md"|field=update_target
 保存先が無い|del(.output_directory,.name)|field=name
 output_directoryだけ|del(.name)|field=name
+nameが日本語|.name="予約.md"|field=name
+nameに拡張子が無い|.name="order-cancellation"|field=name
 materialが空|.material=[]|field=material
 materialが単一path|.material="$io/material/material.yml"|field=material
 未知のキー|.extra="x"|reason=unknown-keys
@@ -595,6 +597,7 @@ specialist_examples=(
   "$content_types/assets/examples/north-star.example.md"
   "$content_types/assets/examples/strategy.example.md"
   "$content_types/assets/examples/domain-rule.example.md"
+  "$content_types/assets/examples/domain-model.example.md"
   "$content_types/assets/examples/rdb-logical-data-modeling.example.md"
   "$content_types/assets/examples/rdb-physical-design.example.md"
   "$content_types/assets/examples/user-journey-bdd.example.md"
@@ -637,9 +640,10 @@ else
 fi
 
 doc_render="$ROOT/plugins/skills/authoring/doc-render"
-if rg -F '`writing-rules` が付与済みの役だけ' "$doc_render/references/emphasis.md" >/dev/null \
+if rg -F '`writing-rules` が付与済みの役だけ' "$doc_render/references/markdown.md" >/dev/null \
   && rg -F '`writing-rules` が確定した出典リンク' "$doc_render/references/citation.md" >/dev/null \
-  && rg -F '`visual-guidance` から受け取る' "$doc_render/references/figures.md" >/dev/null \
+  && rg -F '`visual-guidance` から受け取る' "$doc_render/references/markdown.md" >/dev/null \
+  && [ ! -e "$doc_render/references/emphasis.md" ] && [ ! -e "$doc_render/references/figures.md" ] \
   && rg -F '受け取った意味上の役を媒体表現へ写す' "$doc_render/config/defaults.yml" >/dev/null \
   && ! rg -n 'R[0-9]+|引用の量|表で足りるなら|何に付けるか' "$doc_render/references" >/dev/null; then
   pass "doc-renderは確定済みの役から媒体表現への写像だけを持つ"

@@ -19,7 +19,7 @@ class OutputRouting(unittest.TestCase):
         self.repo.mkdir()
         self.home = self.base / "home"
         self.home.mkdir()
-        self.external = self.home / "other-repository/guides/onboarding"
+        self.external = self.home / "other-repository/guides/how-to"
         self.env = dict(os.environ, HOME=str(self.home))
         config = self.repo / ".harness-plugins/doc-render.config.yml"
         config.parent.mkdir()
@@ -29,8 +29,8 @@ class OutputRouting(unittest.TestCase):
             "  routes:\n"
             "    - templates: [domain-rule, user-journey-bdd]\n"
             "      dir: {type: relative, path: docs/bdd}\n"
-            "    - templates: [onboarding]\n"
-            "      dir: {type: absolute, path: ~/other-repository/guides/onboarding}",
+            "    - templates: [how-to]\n"
+            "      dir: {type: absolute, path: ~/other-repository/guides/how-to}",
         ))
         resolved = self.call("bash", self.plugin / "scripts/resolve.sh", self.repo)
         self.assertEqual(resolved.returncode, 0, resolved.stderr)
@@ -67,10 +67,10 @@ class OutputRouting(unittest.TestCase):
         return self.call("bash", self.plugin / "scripts/resolve.sh", self.repo)
 
     def test_absolute_home_route_writes_outside_working_repository(self):
-        result = self.write("onboarding", "onboarding.md")
+        result = self.write("how-to", "how-to.md")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         output = json.loads(result.stdout)
-        self.assertEqual(Path(output["path"]), self.external / "onboarding.md")
+        self.assertEqual(Path(output["path"]), self.external / "how-to.md")
         self.assertEqual(output["destinationSource"], "route")
 
     def test_relative_route_is_based_on_working_repository(self):
@@ -131,13 +131,13 @@ class OutputRouting(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
 
     def test_duplicate_template_routes_are_rejected(self):
-        config = self.changed_config("templates: [onboarding]", "templates: [domain-rule]")
+        config = self.changed_config("templates: [how-to]", "templates: [domain-rule]")
         result = self.resolve(config)
         self.assertEqual(result.returncode, 2)
 
     def test_explicit_output_directory_has_priority_over_route(self):
         explicit = self.base / "one-off-output"
-        result = self.write("onboarding", "explicit.md", None, "--output-dir", explicit)
+        result = self.write("how-to", "explicit.md", None, "--output-dir", explicit)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         output = json.loads(result.stdout)
         self.assertEqual(Path(output["path"]), explicit / "explicit.md")
@@ -170,7 +170,7 @@ class OutputRouting(unittest.TestCase):
         result = self.call(
             "bash", self.plugin / "scripts/write-doc.sh",
             "--config", self.resolved_config,
-            "--template", "onboarding",
+            "--template", "how-to",
             "--target", existing,
             "--body-file", self.body,
             "--replace",

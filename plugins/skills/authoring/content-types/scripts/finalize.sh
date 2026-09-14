@@ -4,8 +4,8 @@
 # **resolve.sh から source される。** 設定の解決手順は共通なのでここには無い。
 # 使えるもの: merged / required / root / PLUGIN_ROOT / name / selected / source / explain / resolve_path
 # やること: 固有schemaの検査と、out への最終JSONの代入。
-jq -e '.version==1 and (.default_type|type=="string" and length>0) and (.instructions.selection.directive|type=="string" and length>0)' >/dev/null <<<"$merged" \
-  || { echo "[error] versionまたはinstructions.selection.directiveが不正" >&2; exit 2; }
+jq -e '.version==1 and (.default_type|type=="string" and length>0) and (.instructions.reader.directive|type=="string" and length>0) and (.instructions.selection.directive|type=="string" and length>0)' >/dev/null <<<"$merged" \
+  || { echo "[error] version、instructions.reader.directive、instructions.selection.directiveのいずれかが不正" >&2; exit 2; }
 
 dtype=$(jq -r '.default_type // "concept"' <<<"$merged")
 case "$dtype" in ''|*[!a-z0-9-]*) echo "[error] default_type が不正: ${dtype}（英小文字・数字・- のみ）" >&2; exit 2 ;; esac

@@ -27,9 +27,9 @@ steps:
     provides: [document_path]
 ```
 
-利用者は `~/.config/harness-plugins/dependencies.yml`（利用者ごと）、`<repo>/.harness-plugins/dependencies.yml`（repository ごと）、`<repo>/.harness-plugins/scopes/<入口 playbook>/dependencies.yml`（入口ごと）で、契約 ID `write-doc/write-doc` に別の実体を束縛できる。**消費側は `requires` を書き換えない。**
+利用者は `dependencies.yml`（置き場所と優先順位は README「依存先の差し替え」）で、契約 ID `write-doc/write-doc` に別の実体を束縛できる。**消費側は `requires` を書き換えない。**
 
-**束縛と `implements` は対になっている。** 利用者が書く `dependencies.yml` の `bindings` は、契約 ID `write-doc/write-doc` に対して差し替え先を `{plugin, marketplace}` で指すだけであり、path も version も書けない。差し替え先の側は自分の `plugin.json` の `metadata.harness.implements[]` に `{id: write-doc/write-doc, version: 1, kind: playbook, playbook: <入口 playbook 名>, types: [<扱える文書型>]}` を宣言する。resolver はこの 2 つを突き合わせ、宣言の無い plugin への束縛を `[error:binding-not-implemented]` で止める。消費側が `input.document_type` で要求した型が `types` に無ければ `[error:binding-capability-unsupported]` で止まる。top-level が `version: 1` と `bindings` だけであること、3 層の置き場所、優先順位は README「実行契約と保守」にある。
+**束縛と `implements` は対になっている。** 利用者が書く `dependencies.yml` の `bindings` は、契約 ID `write-doc/write-doc` に対して差し替え先を `{plugin, marketplace}` で指すだけであり、path も version も書けない。差し替え先の側は自分の `plugin.json` の `metadata.harness.implements[]` に `{id: write-doc/write-doc, version: 1, kind: playbook, playbook: <入口 playbook 名>, types: [<扱える文書型>]}` を宣言する。resolver はこの 2 つを突き合わせ、宣言の無い plugin への束縛を `[error:binding-not-implemented]` で止める。消費側が `input.document_type` で要求した型が `types` に無ければ `[error:binding-capability-unsupported]` で止まる。top-level が `version: 1` と `bindings` だけであること、3 層の置き場所、優先順位は README「依存先の差し替え」にある。
 
 ---
 
@@ -88,7 +88,7 @@ version: 1                             # 必須。固定
 document_type: domain-rule             # 任意。型 slug
 material:                              # 必須。1つ以上の絶対path
   - /var/folders/x/harness-run-abc/material.yml
-output_format: markdown                # 任意。markdown | html
+output_format: markdown                # 任意。markdown のみ
 name: order-cancellation.md            # 新規作成のとき必須
 output_directory: /Users/me/src/acme/docs/domain   # 任意。無ければ利用者の設定で決まる
 update_target: /Users/me/src/acme/docs/domain/order-cancellation.md  # 既存差し替えのとき必須
@@ -103,9 +103,9 @@ output_to: /var/folders/x/harness-run-abc/write-doc-output.yml   # 必須
 | `version` | int | ○ | `1` 固定 |
 | `document_type` | 型 slug | 任意 | 渡されたら**選び直さない**（G1）。実装済みの型でなければ exit 2 |
 | `material` | 絶対 path[] | ○ | 資料の中身の元。呼び出し元が束ねたもの。**配列**で 1 つ以上、それぞれ regular file |
-| `output_format` | `markdown` \| `html` | 任意 | 渡されたら提供側の既定より優先する（G4） |
-| `name` | ファイル名 | △ | **新規作成のとき必須。** path 区切りを含まないファイル名 |
-| `output_directory` | 絶対 path | 任意 | 新規作成先の directory。**省略できる**（下記） |
+| `output_format` | `markdown` | 任意 | 値は `markdown` だけ。渡されたら提供側の既定より優先する（G4） |
+| `name` | ファイル名 | △ | **新規作成のとき必須。** `[A-Za-z0-9_-][A-Za-z0-9._-]*\.md` に一致するファイル名 |
+| `output_directory` | 絶対 path | 任意 | 新規作成先の directory。存在する directory であること。**省略できる**（下記） |
 | `update_target` | 絶対 path | △ | 既存資料の差し替え先。regular file であること |
 | `references` | 絶対 path[] | 任意 | 追加指示。**呼び出し元自身の文書**であること |
 | `output_to` | 絶対 path | ○ | 出力 YAML の書き込み先。親 directory が存在し書き込めること。ファイル自体は無くてよい |
@@ -146,7 +146,7 @@ output_format: markdown
 | `status` | `completed` \| `failed` | 保存と確認まで到達したか |
 | `path` | 絶対 path | 保存した資料 1 本の path（`completed` のとき）。`update_target` を渡したならそれと一致し、`name` を渡したなら basename が `name` と一致する |
 | `document_type` | 型 slug | 実際に使った型（`completed` のとき） |
-| `output_format` | `markdown` \| `html` | 実際の媒体（`completed` のとき） |
+| `output_format` | `markdown` | 実際の媒体（`completed` のとき）。値は `markdown` だけ |
 | `reason` | string | 停止理由（`failed` のとき。`path` は持たない） |
 
 **1 回の呼び出しで作る資料は 1 本だけである。** 複数本が要るなら、呼び出し元が複数回呼ぶ。
@@ -178,8 +178,8 @@ output_format: markdown
 | G2 | `update_target` が無い限り、**既存 path を読まずに上書きしない**。同名があれば停止する |
 | G3 | `update_target` が渡されたら、**その絶対 path へ差し替える**。別の保存先を作り直さない |
 | G3b | `name` が渡されたら、**そのファイル名で保存する**。`output_directory` があればその directory、無ければ利用者の設定が決めた directory へ置く |
-| G4 | `output_format` が指定されたら、提供側の既定より優先する |
-| G5 | **保存前に、執筆の文脈を持たない読み手が合否を決める。** 選んだ読み手ペルソナと本文と到達点の問いだけを渡し、全部の問いに本文だけで答えられ、かつ詰まった箇所の報告が0件のときだけ合格とする。不合格の本文は保存しない |
+| G4 | `output_format` が指定されたら、提供側の既定より優先する。値は `markdown` だけである |
+| G5 | **読み手を一人決め、読後の到達点を本文だけで答えられる問いへ落としてから書く。** 意味の確認は draft 工程の `reader_review` が担い、別の読み手役による保存前の再検証は行わない |
 | G6 | **失敗は停止する。** 劣化した結果を返さない。下段が欠けたまま書かない |
 | G7 | `references` に渡された追加指示に従う。無視しない |
 | G8 | `output_to` へ出力 YAML を書く。書けない場合は G6 で停止する |
@@ -199,7 +199,7 @@ output_format: markdown
 | 内部 script | 保存・整形・後始末を行う script とその引数・exit code |
 | テンプレートと骨格 | 型ごとの骨格・記載例・カタログのファイル |
 | 図の選び方 | 図の型の決め方と、その手引き |
-| 媒体表現 | 役をどのタグ・記号へ写すか |
+| 媒体表現 | 役をどの記法へ写すか |
 | `playbook.contract.*` | 下段どうしをつなぐための内部の対応表 |
 | references | `references/` 配下の手引き |
 | config | `.harness-plugins/` に置く内部 plugin の設定キー（利用者が触るのは可、消費側 plugin が語るのは不可） |

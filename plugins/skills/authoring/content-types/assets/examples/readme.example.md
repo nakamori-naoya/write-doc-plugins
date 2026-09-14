@@ -2,7 +2,7 @@
 
 > これは`readme`型の記載例である。**構成の正本ではなく、粒度と具体性の見本として読む。**リポジトリ、clone先、識別子、計測値はすべて架空であり、**このまま実行しても動かない**。初めて開いた人へ入口を渡す書き方の例として使う。
 
-RoomFlowは、貸会議室を顧客へ時間単位で販売するサンプルサービスである。空き利用枠の検索、仮押さえ予約、確定予約、取消、順番待ちを提供する。このREADMEでは起動と空き確認までを案内し、予約作成は[スタートガイド](getting-started.example.md)、項目ごとの値は[APIリファレンス](api-reference.example.md)へ委ねる。
+RoomFlowは、貸会議室を顧客へ時間単位で販売するサンプルサービスである。空き利用枠の検索、仮押さえ予約、確定予約、取消、順番待ちを提供する。このREADMEでは起動と空き確認までを案内し、予約作成の手順は[90分の利用枠を予約する](how-to.example.md)へ委ねる。
 
 ## インストール
 
@@ -19,7 +19,7 @@ RoomFlowは、貸会議室を顧客へ時間単位で販売するサンプルサ
 curl 'http://localhost:8080/v1/rooms/M-301/availability?from=2026-09-18T10:00:00%2B09:00&to=2026-09-18T11:30:00%2B09:00'
 ```
 
-HTTP 200と`{"available":true}`が返れば利用できる。仮押さえ予約の作成は[スタートガイド](getting-started.example.md)で確認する。
+HTTP 200と`{"available":true}`が返れば利用できる。仮押さえ予約の作成は[90分の利用枠を予約する](how-to.example.md)で確認する。
 
 ## トラブルシューティング
 
@@ -32,12 +32,12 @@ HTTP 200と`{"available":true}`が返れば利用できる。仮押さえ予約�
 | 知りたいこと | 入口 |
 |---|---|
 | 予約状態の意味 | [コンセプト](concept.example.md) |
-| 予約APIの値 | [APIリファレンス](api-reference.example.md) |
-| 予約通知の変更作業 | [オンボーディング](onboarding.example.md) |
+| 予約の手順 | [90分の利用枠を予約する](how-to.example.md) |
+| 予約が作れないとき | [トラブルシューティング](troubleshooting.example.md) |
 
 ## 更新履歴
 
-[リリースノート](release-notes.example.md)に利用者へ影響する変更を記録する。
+利用者へ影響する変更は[期間ダイジェスト](period-digest.example.md)に記録する。
 
 ## メンテナー
 
@@ -49,6 +49,6 @@ MIT License。原文はリポジトリの`LICENSE`に置く。
 
 ## もっと詳しく
 
-- [スタートガイド](getting-started.example.md)
+- [90分の利用枠を予約する](how-to.example.md)
 - [コンセプト](concept.example.md)
-- [APIリファレンス](api-reference.example.md)
+- [トラブルシューティング](troubleshooting.example.md)

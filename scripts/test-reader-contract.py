@@ -37,7 +37,6 @@ class ReaderContractTest(unittest.TestCase):
             review = base / 'reader-review.md'
             path_table = base / 'reading-path.md'
             body = base / 'document.md'
-            judgement = base / 'judgement.md'
             call('init', '--repo', str(base))
             call('start', '--step', 'reader')
             reader_args = ['--step', 'reader', '--provide', 'type=concept',
@@ -70,18 +69,15 @@ class ReaderContractTest(unittest.TestCase):
             path_table.write_text('| concept | foothold | introduced | first used |\n')
             call('complete', *draft_args, '--provide', f'reader_review={review}',
                  '--provide', f'reading_path={path_table}')
+            # 図の工程を通さずに保存へ進めない。
+            call('start', '--step', 'save', expected=2)
             call('start', '--step', 'visual')
             self.assertFalse(playbook['requirements']['figures'])
-            call('complete', '--step', 'visual', '--provide', 'figures_applied=0')
-            # 判定を通す前に保存できない。判定は保存より前に置いてある。
-            call('start', '--step', 'save', expected=2)
-            call('start', '--step', 'judge')
-            call('complete', '--step', 'judge', expected=2)
-            call('fail', '--step', 'judge', '--reason', 'fixture: reader got stuck on an undefined term')
-            call('retry')
-            call('start', '--step', 'judge')
-            judgement.write_text('State contract fixture only; no semantic quality claim.\n')
-            call('complete', '--step', 'judge', '--provide', f'judgement={judgement}')
+            figures = base / 'figures-applied.yml'
+            # figures_applied はファイル。無いまま完了できない。
+            call('complete', '--step', 'visual', '--provide', f'figures_applied={figures}', expected=2)
+            figures.write_text('count: 0\nreason: contract fixture; no relation is faster as a figure\n')
+            call('complete', '--step', 'visual', '--provide', f'figures_applied={figures}')
             call('start', '--step', 'save')
             call('complete', '--step', 'save', '--provide', f'path={body}')
             status = json.loads(call('status').stdout)
@@ -89,8 +85,8 @@ class ReaderContractTest(unittest.TestCase):
             self.assertEqual(status['artifacts']['reader_context'], str(context))
             self.assertEqual(status['artifacts']['goal_questions'], str(goals))
             self.assertEqual(status['artifacts']['persona'], str(persona))
-            self.assertEqual(status['artifacts']['judgement'], str(judgement))
             self.assertEqual(status['artifacts']['reading_path'], str(path_table))
+            self.assertEqual(status['artifacts']['figures_applied'], str(figures))
             self.assertNotIn('decisions', status['artifacts'])
             settle = next(step for step in status['steps'] if step['id'] == 'settle')
             self.assertEqual(settle['status'], 'skipped')
