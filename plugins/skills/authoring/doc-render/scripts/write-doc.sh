@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 資料を1本、出力先へ安全に置く。
 #
-#   write-doc.sh --config <json|path> (--name <ファイル名> | --target <既存絶対path>) --body-file <path> [--template <文書型slug>] [--output-dir <明示された絶対path>] [--format <markdown|html>] [--replace]
+#   write-doc.sh --config <json|path> (--name <ファイル名> | --target <既存絶対path>) --body-file <path> [--template <文書型slug>] [--output-dir <明示された絶対path>] [--format markdown] [--replace]
 #
 #   -> {"decision":"written"|"replaced","path":"..."}
 #      既存があって --replace が無ければ {"decision":"exists",...} を出して exit 3
@@ -102,11 +102,9 @@ if [ -n "$explicit_out" ]; then
 fi
 
 configured_format=$(jq -r '.output.format // ""' <<<"$merged")
-theme=$(jq -r '.output.theme // ""' <<<"$merged")
-case "$configured_format" in markdown|html) ;; *) fail "設定のoutput.formatが不正: ${configured_format}" ;; esac
-case "$requested_format" in ''|markdown|html) ;; *) fail "--formatが不正: ${requested_format}（markdown / html）" ;; esac
+case "$configured_format" in markdown) ;; *) fail "設定のoutput.formatが不正: ${configured_format}（markdown のみ）" ;; esac
+case "$requested_format" in ''|markdown) ;; *) fail "--formatが不正: ${requested_format}（markdown のみ）" ;; esac
 format="${requested_format:-$configured_format}"
-case "$theme" in dark|light|auto) ;; *) fail "設定のoutput.themeが不正: ${theme}" ;; esac
 
 # --nameは新規作成の名前であってpathではない。--targetはguard済みの既存資料を
 # 同じ場所で差し替えるための口であり、絶対path・既存regular file・非symlinkを要求する。
@@ -132,25 +130,8 @@ else
   esac
 fi
 case "$name" in
-  *.html|*.md) ;;
-  *) fail "--name の拡張子は .html か .md（${name}）" ;;
-esac
-case "$format:$name" in
-  markdown:*.md|html:*.html) ;;
-  *) fail "有効なformat=${format}とファイル名が一致しない: ${name}" ;;
-esac
-
-# HTMLの本文断片をそのまま保存すると、CSS・theme・文字色を持たない壊れた資料になる。
-# 媒体の完全性だけを検査し、本文の良し悪しには立ち入らない。
-case "$name" in
-  *.html)
-    first=$(awk 'NF { print; exit }' "$body" | tr '[:upper:]' '[:lower:]')
-    case "$first" in '<!doctype html>'*) ;; *)
-      fail "HTML は本文断片ではなく <!doctype html> から始まる完全な1ファイルを渡すこと"
-    esac
-    grep -qi "<html[^>]*data-theme=\"${theme}\"" "$body" \
-      || fail "HTML の data-theme が設定値 ${theme} と一致しない"
-  ;;
+  *.md) ;;
+  *) fail "--name の拡張子は .md（${name}）" ;;
 esac
 
 if [ -z "$target_arg" ]; then

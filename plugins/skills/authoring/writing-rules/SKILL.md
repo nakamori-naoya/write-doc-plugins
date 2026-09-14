@@ -5,7 +5,7 @@ description: 文章を規律に従って書く／直す。構成・段落・主�
 
 # write-with-rules（規律に従って書く）
 
-**このスキルは媒体を知らない。** HTML なのか Markdown なのかプレーンテキストなのかは決めない。決めるのは**何をどう書くか**だけである。
+**このスキルは媒体を知らない。** Markdown なのかプレーンテキストなのかは決めない。決めるのは**何をどう書くか**だけである。
 
 **単独で使える。** PR の説明文、チケット、レビューコメント、メール。保存や媒体への変換はこのスキルの関心ではない。
 
@@ -37,24 +37,19 @@ printf '%s\n' "$CFG_FILE"
 本文中の `${...}` は解決済みYAMLのプロパティである。使用時に `yq -er` で読み、欠落または `null` なら停止する。
 <!-- END shared:skill-entry/config-load -->
 
-`${.instructions.writing.directive}` に従い、`${.rules.*.path}` と `${.extra[].path}` を読む。
-同梱規律は[path](references/path.md)、[structure](references/structure.md)、[section](references/section.md)、[emphasis](references/emphasis.md)、[style](references/style.md)、[terminology](references/terminology.md)、[citation](references/citation.md)、[evidence](references/evidence.md)、[annotated-code](references/annotated-code.md)である。解決されたpathだけを読む。
+`${.instructions.writing.directive}` に従い、`${.rules.*.path}` と `${.extra[].path}` を読む。解決されたpathだけを読む。同梱規律は10本で、役割は[README](README.md)の表にある。
 
 **exit 2 で止まったら先へ進まない。** 指したファイルが無いのに既定へ倒れると、差し替えたつもりで効いていない状態になる。
 
-`source` が `default` のものは、**citation以外なら「自分のファイルを指せば差し替えられる」と一度だけ伝える**。citationは上書きせず、追加規律を`${.extra[]}`へ置く。
+`source` が `default` の規律は、自分のファイルを `rules.<名前>` に指せば差し替えられる。`citation` と `terminology` は差し替えられず、resolver が拒否する。追加の規律は `${.extra[]}` へ置く。
 
 ## 2. 書く
 
-特に指定がなければ日本語で読む日本人向けに書く。英語・略語・難しい日本語は、読み手の知識に応じて平易に言い換えるか意味を説明する。詳しい判断基準は、解決された文章スタイルの規律を使う。
-
-[適用手順](references/apply.md)を必ず読み、読み手の前提と到達点から経路表を作り、本文の順序・範囲・長さをそこから決めて執筆する。write-docから渡された`reader_context`を使い、単独使用なら依頼と資料から同じ情報を整理する。強調の役は2つ（要点・キーワード）から必要なものを使い、出典の3点セットと用語の判定手順は設定でも解除できない。
+[適用手順](references/apply.md)を読み、その順で書く。write-doc から呼ばれた場合は渡された `persona`・`reader_context`・`goal_questions`・（settle を通ったなら）`decisions` を使い、単独使用なら依頼と資料から同じ情報を整理する。
 
 ## 3. 出す前に
 
-[final-check.md](references/final-check.md)を読み、本文だけから読後の説明・判断・行動ができるかを確認する。write-docで使う場合は、経路表を`reading_path`、問い・答え・本文の根拠・修正・残る未確認を`reader_review`として残して次工程へ渡す。
-
-設定の形式と差し替え例は[README](README.md)を参照する。指定したファイルが無ければresolverが停止する。
+[final-check.md](references/final-check.md)の問いに本文だけを根拠に答える。write-doc で使う場合は、`goal_questions` の各問いを本文だけで答え、`expected` と照合した結果を `reader_review` に残し、経路表を `reading_path` として次工程へ渡す。
 
 ## 実行設定の寿命
 

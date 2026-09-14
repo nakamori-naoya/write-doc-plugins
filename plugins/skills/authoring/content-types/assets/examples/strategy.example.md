@@ -50,7 +50,7 @@ Product North Starは、来場する権利を持つ人が、紙や端末の事�
 
 入場権を一続きにしても正当な来場者の不安や誤拒否が減らず、本人との結び付きなど別の要因が全体を止めていると分かったときに、診断と方針を見直す。
 
-![基本方針で選ぶことと選ばないことの比較](strategy-choice.example.svg)
+![基本方針で選ぶことと選ばないことの比較](strategy.example.assets/strategy-choice.svg)
 
 ## 一貫した行動
 
@@ -72,7 +72,7 @@ Product North Starは、来場する権利を持つ人が、紙や端末の事�
 
 入場できなかった理由、救済できたか、同種の問題が再発したかを記録し、その学びを入場権の扱いと正規の移転経路へ戻す。
 
-![もっとも弱い環から三つの行動が連なり、学習が戻る鎖構造](strategy-action-chain.example.svg)
+![もっとも弱い環から三つの行動が連なり、学習が戻る鎖構造](strategy.example.assets/strategy-action-chain.svg)
 
 ### 行動のつながり
 

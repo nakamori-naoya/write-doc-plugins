@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "plugin": "write-doc",
+  "version": "6.0.0",
+  "created_at": "2026-09-14T01:33:40.877649+00:00",
+  "notes": "文書型を15種に厳選し、システム構成（architecture）とドメインモデル（domain-model）を足す。domain-model はモデル図（集約ごとの公開コマンドだけの classDiagram）・集約どうしの協働・見出し形式の要素詳細を持つ。執筆規律に argument（主張は1つ、根拠は強いものを厳選、経緯は前提へ畳む、書き手と読み手は前提を共有しない）を足し、規律10本を1規則1か所へ整流、確認項目を final-check へ集約、カタログに型ごとの経緯の扱いを宣言。judge 工程（review-doc）を廃し、意味の確認は draft の reader_review が担う。HTML 出力を廃し Markdown 固定。共通実行基盤 2.5.1。",
+  "breaking": "文書型 landing-page / getting-started / tutorial / onboarding / glossary / runbook / design-doc / release-notes / api-reference / code-comment / code-map / code-reading / postmortem / decision-log / open-questions を削除。output_format は markdown のみ。name は英数と._-の .md に限る。review-doc 内部 plugin を削除。CONTRACT G5 は draft の reader_review による確認に変わる。",
+  "migration": "削除した型を document_type で要求している消費側は無い（bdd / product-planning / collect-and-digest / domain-modeling を確認）。output_format: html を渡していた呼び出しは markdown へ変える。既存の write-doc.config.yml で steps を上書きしている場合は judge 工程を消す。",
+  "checks": {
+    "codex": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed",
+      "evidence": "bash scripts/validate.sh: exit 0（Validation: 42 passed, 0 failed）"
+    },
+    "claude": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed",
+      "evidence": "bash scripts/validate.sh: exit 0（Validation: 42 passed, 0 failed）"
+    },
+    "real-distribution": "兄弟checkoutの実配布物（grill / write-doc / product-planning runtime-source）に対して解決した",
+    "runtime-sync": "scripts/sync-runtime.py --check --source <正本>: version 2.5.1、changed 空",
+    "post-version-validation": "bash scripts/validate.sh（版更新後）: exit 0（Validation: 42 passed, 0 failed）"
+  },
+  "files": [
+    ".agents/plugins/marketplace.json",
+    "plugins/.codex-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "plugins/.claude-plugin/plugin.json"
+  ]
+}

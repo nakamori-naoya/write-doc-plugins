@@ -38,7 +38,7 @@ INPUT_KEYS = {
     "contract", "version", "document_type", "material", "output_format",
     "output_directory", "name", "update_target", "references", "output_to",
 }
-OUTPUT_FORMATS = ("markdown", "html")
+OUTPUT_FORMATS = ("markdown",)
 TYPE_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 CATALOG_ROW = re.compile(r"^\| \*\*[^|]+\*\* \| `([a-z0-9-]+)`", re.M)
 # カタログのある内部pluginの論理名。**外部からは見えない内部の作りである。**
@@ -200,7 +200,7 @@ def validate_payload(block, context):
 
     output_format = block.get("output_format")
     if output_format is not None and output_format not in OUTPUT_FORMATS:
-        fail("input-schema", field="output_format", reason="markdown / html")
+        fail("input-schema", field="output_format", reason="markdown")
 
     # 保存先は排他。新規作成は name が必須で、output_directory は任意。
     # **directory を渡さない新規作成は、利用者が設定した保存先へ保存する。**
@@ -220,8 +220,8 @@ def validate_payload(block, context):
         if "name" not in block:
             fail("input-schema", field="name", reason="output_directoryを渡すならnameも要る")
         name = text(block["name"], "input-schema", field="name")
-        if name != os.path.basename(name) or name in {".", ".."} or "/" in name:
-            fail("input-schema", field="name", reason="path区切りを含まないファイル名")
+        if not re.fullmatch(r"[A-Za-z0-9_-][A-Za-z0-9._-]*\.md", name):
+            fail("input-schema", field="name", reason="[A-Za-z0-9_-][A-Za-z0-9._-]*.md に一致するファイル名")
         if "output_directory" in block:
             output_directory = absolute(block["output_directory"], "input-schema", field="output_directory")
             if not Path(output_directory).is_dir():
@@ -294,7 +294,7 @@ def normalize_result(raw, resolved, types):
 
     output_format = raw.get("output_format")
     if output_format not in OUTPUT_FORMATS:
-        fail("output-schema", field="output_format", reason="markdown / html")
+        fail("output-schema", field="output_format", reason="markdown")
     if resolved["output_format"] is not None and output_format != resolved["output_format"]:
         fail("output-schema", field="output_format", reason="指定された媒体を使わなかった")
 

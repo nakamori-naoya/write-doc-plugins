@@ -17,4 +17,5 @@ __pycache__/
 !/SECURITY.md
 !/.gitignore
 !/evals/
+!/docs/
 !/releases/

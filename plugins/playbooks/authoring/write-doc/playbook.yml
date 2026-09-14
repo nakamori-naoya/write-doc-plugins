@@ -19,19 +19,15 @@ requires:
   - {plugin: writing-rules, marketplace: write-doc}
   - {plugin: visual-guidance, marketplace: write-doc}
   - {plugin: doc-render, marketplace: write-doc}
-  - {plugin: review-doc, marketplace: write-doc}
 
 # 下段どうしをつなぐ契約。playbook が持つ。
 contract:
   roles: [要点, キーワード]
   figure_roles: [図の主張, 図の型, 図の内容]
-  figure_requirement: figures_required
   save_modes: [create, replace-existing-target]
-  output_format_precedence: [caller, doc-render]
-  output_formats: [markdown, html]
+  output_formats: [markdown]
 
-# 図の採用は読み手の理解に役立つかで決める。
-# 明示的に最低1つ必要な場合は requirements.figures: true を指定する。
+# requirements.figures の意味は references/figures.md にある。
 requirements:
   figures: false
 
@@ -61,7 +57,7 @@ steps:
 
   - id: draft
     skill: write-with-rules
-    purpose: 到達点に必要な概念だけで経路表を作り、その順で本文を書く。テンプレートは節の候補として参照するだけで、埋める枠として扱わない
+    purpose: 到達点に必要な概念だけで経路表を作り、その順で本文を書く
     needs: [persona, reader_context, goal_questions, type, template]
     conditional_needs:
       - when: open_questions.count > 0
@@ -76,23 +72,15 @@ steps:
     purpose: 主要な主張に合う図を設計する
     needs: [body]
     provides: [figures_applied]
+    file_artifacts: [figures_applied]
     completion: artifact-set
     on_failure: stop
-
-  - id: judge
-    skill: review-doc
-    purpose: 執筆の文脈を持たない読み手役へ本文とペルソナと問いだけを渡し、一読で到達点へ届くかを判定する。不合格なら draft へ戻す
-    needs: [body, persona, goal_questions, figures_applied]
-    provides: [judgement]
-    file_artifacts: [judgement]
-    completion: artifact-set
-    on_failure: draft
 
   - id: save
     plugin: doc-render
     script: scripts/write-doc.sh
-    purpose: 役を媒体の表現へ写し、上書きを防いで保存する。判定を通った本文だけを保存する
-    needs: [body, roles_applied, figures_applied, judgement]
+    purpose: 役を媒体の表現へ写し、上書きを防いで保存する
+    needs: [body, roles_applied, figures_applied]
     provides: [path]
     completion: artifact-set
     on_failure: stop

@@ -1,21 +1,20 @@
 # write-doc
 
-**資料を1本書いて保存する上段プラグイン。** 自分では型も規律も図の選択基準も媒体も持たず、執筆・図・保存・最終確認を組み合わせる。
+**資料を1本書いて保存する上段プラグイン。** 自分では型も規律も図の選択基準も媒体も持たず、下段を工程として組み合わせる。
 
 **外部から見える面は[CONTRACT.md](CONTRACT.md)（契約 ID `write-doc/write-doc`、版 1）だけである。** 下の表は内部の作りであり、契約ではない。
 
-| 下段 | 何を決めるか |
-|---|---|
-| `grill`（外部・公開playbook） | **何が決まっていないか** — 読み手・目的・求める判断が依頼から決まらないときだけ、1問ずつ合意を取る |
-| `content-types` | **何を書くか** — 型と、その骨格 |
-| `writing-rules` | **どう書くか** — 構成・段落・強調・文体・出典 |
-| `visual-guidance` | **何をどう図にするか** — 読み手の問いと図の型 |
-| `doc-render` | **どう出すか** — 媒体表現と保存 |
-| `review-doc` | **一読で届くか** — 執筆の文脈を持たない読み手役が、本文だけで到達点へ届くかを判定 |
+| 工程 | 下段 | 何を決めるか |
+|---|---|---|
+| `reader` | `content-types` | 読み手を1人、読後の到達点を問いへ、そこから型と骨格 |
+| `settle`（`open_questions.count > 0` のときだけ） | `grill`（外部・公開playbook） | 到達点の判断に必要で素材に無い事実を、推奨付きで1問ずつ合意する |
+| `draft` | `writing-rules` | 主張・経路・構成・段落・強調・文体・出典 |
+| `visual` | `visual-guidance` | 読み手の問いと図の型 |
+| `save` | `doc-render` | 媒体表現と保存 |
 
-各担当の間で、 読み手の前提と到達点、本文の確認記録、意味上の役を引き継ぐ。その契約はこのプラグインが持つ（[読者への引き継ぎ](references/reader-contract.md)、[役](references/roles.md)）。
+工程間で引き継ぐ記録の定義は[記録の契約](references/reader-contract.md)、強調と図の役は[役の契約](references/roles.md)にある。
 
-必要なidentityは`grill@grill`（外部）と、`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`、`review-doc@write-doc`（内部）。versionは固定せず、解決先のmanifest identityと各工程が指すものを検査する。外部の実体は利用者が`dependencies.yml`で契約ID`grill/grill`へ束縛して差し替えられる。
+必要なidentityは `grill@grill`（外部）と、`content-types@write-doc`、`writing-rules@write-doc`、`visual-guidance@write-doc`、`doc-render@write-doc`（内部）。versionは固定せず、解決先のmanifest identityと各工程が指すものを検査する。外部の実体は利用者が `dependencies.yml` で契約ID `grill/grill` へ束縛して差し替える。
 
 ## 使う
 
@@ -23,24 +22,20 @@
 /write-doc      資料を1本書く
 ```
 
-**下段が1つでも欠けていたら止まる。** 黙って劣化した結果を出さない。**「規律なしで資料が出る」は、資料が出ないことより悪い。**
+**下段が1つでも欠けていたら止まる。** 「規律なしで資料が出る」は、資料が出ないことより悪い。
 
 ```
 [error] 下段プラグインが見つからない: writing-rules
         write-doc は組み立て役なので、欠けたまま書くと質が担保されない。
 ```
 
-## 曖昧さを書く前に潰す
+## 外部playbookの呼び方
 
-`settle`工程は条件付き（`when: open_questions.count > 0`）で、外部の公開playbook `grill`を`playbook: grill`として呼ぶ。type工程が依頼と資料から決まらない問いを`open_questions`へ残したときだけ動き、返ってきた決定を`decisions`として執筆へ渡す。問いが無ければ`state.py skip`で飛ばす。
-
-**相手の中の作りは知らない。** 使うのは相手のCONTRACT.mdが公開した入口だけで、入力YAML（題材・文脈・問いと推奨・出力先）を一時領域に置いて渡し、返された出力YAMLから決定と未決を受け取る。相手が欠けていれば止まる。
-
-**解決は呼ぶ側が1回だけ行う。** こちらが相手の`prepare.sh`へ入力・scope・束縛を載せて解決し、得た解決済みYAMLのpathを相手の入口SKILL.mdへ渡す。相手にやり直させない。この段取り自身も、呼び出し元から解決済みYAMLのpathを受け取ったときは`prepare`を実行せず、それをそのまま使う（[CONTRACT.md](CONTRACT.md) §1）。
+`grill` は相手のCONTRACT.mdが公開した入口だけで呼ぶ。入力YAML（題材・文脈・問いと推奨・出力先）を一時領域に置いて渡し、返された出力YAMLから決定と未決を受け取る。解決はこちらが1回だけ行い、得た解決済みYAMLのpathを相手の入口SKILL.mdへ渡す。この段取り自身も、呼び出し元から解決済みYAMLのpathを受け取ったときは `prepare` を実行せず、それをそのまま使う（[CONTRACT.md](CONTRACT.md) §1）。
 
 ## 設定
 
-出力する資料全体にかかる決定的な要件だけは、この上段が持つ。既定では図を必須にせず、読み手の理解に役立つかで選ぶ。最低1つ必要な場合は次を指定する。
+出力する資料全体にかかる要件だけを、この上段が持つ。`requirements.figures` の意味は [references/figures.md](references/figures.md) にある。
 
 ```yaml
 # <repo>/.harness-plugins/write-doc.config.yml
@@ -48,36 +43,25 @@
 requirements: {figures: true}
 ```
 
-外部設定は`version`、`name`、`instructions`、`requires`、`contract`、`requirements`、`steps`をすべて持つ。部分設定は受け付けない。
-
-`false` は図を禁止する指定ではなく、最低1つという要件を外す指定である。図の題材と型は `visual-guidance`、媒体へどう描くかは `doc-render` が持つ。
+外部設定は `version`、`name`、`instructions`、`requires`、`contract`、`requirements`、`steps` をすべて持つ。部分設定は受け付けない。`steps` を書いた設定は同梱 playbook.yml の工程を引き継がず、丸ごと差し替わる。開始済みrunの設定は変更せず、新しいrunで使う。
 
 | ファイル | 誰のもの |
 |---|---|
-| `.harness-plugins/writing-rules.config.yml` | 規律の差し替え |
-| `visual-guidance` の references | 目的別の図の選択基準 |
-| `.harness-plugins/content-types.config.yml` | テンプレートの置き場・既定の型 |
-| `.harness-plugins/doc-render.config.yml` | 出力先・形式・テーマ |
 | `.harness-plugins/write-doc.config.yml` | 資料全体の要件・工程の上書き |
+| `.harness-plugins/content-types.config.yml` | 既定の型 |
+| `.harness-plugins/writing-rules.config.yml` | 規律の差し替え |
+| `.harness-plugins/doc-render.config.yml` | 保存先。文書型ごとの保存先は `output.routes` |
 
-呼び出し元playbookが`output_format`を固定した場合は、その値をdoc-render設定の`output.format`より優先する。これは、BDD資料のように媒体自体が上段の成果契約である場合に限る。指定が無い通常の呼び出しはdoc-render設定へ従う。
-
-作業repositoryごと・文書型ごとに保存先を変える場合は、そのrepositoryの`.harness-plugins/doc-render.config.yml`で`output.routes`を指定する。type工程が選んだslugを完全一致で照合し、一致しない型は`output.default`へ保存する。各`dir`は`type: relative|absolute`と`path`を持つので解釈基準が明示され、repository外も同じ設定へ記載できる。設定例とversion 1からの移行方法はdoc-renderのREADMEを参照する。
-
-## 読み手の理解を確認する
-
-reader工程で同梱5人から読み手を1人選び（`persona`）、案件固有の既知・未知を`reader_context`へ、読後の到達点を本文だけで答えられる問い2〜4個（`goal_questions`）へ落とす。執筆では経路表`reading_path`で概念の導入順と長さを決め、根拠付きの`reader_review`を返す。**これは自己申告であり合否ではない。** 保存の前にjudge工程がreview-docを呼び、執筆の文脈を持たない読み手役へ本文とペルソナと問いだけを渡して合否を決める。不合格ならdraftへ戻す。状態管理は記録の受け渡しを検査し、意味の評価はスキルが行う。
-
-既存のsteps全体を上書きしている設定には、新しい既定工程は自動で入らない。更新時は同梱playbook.ymlとの差分を確認し、これらの引き継ぎを取り込む。開始済みrunの設定は変更せず、新しいrunで使う。
+媒体は Markdown だけである。呼び出し元が `output_format` を渡す場合も値は `markdown` に限る。
 
 ## 実行状態
 
-各工程は `pending → running → completed` の順で進み、失敗は `failed` で止まる。前工程を飛ばした開始や、`provides`不足での完了は拒否する。状態はrepositoryではなく`${XDG_STATE_HOME:-~/.local/state}/harness-plugins/playbooks/write-doc/`へ保存する。成果物本文は台帳へ入れず、参照だけを持つ。
+工程の状態遷移・再開・保存場所は [references/state-management.md](references/state-management.md) にある。
 
 ## しないこと
 
-- **型を持たない。** カタログは `content-types`
-- **規律を持たない。** 書き方は `writing-rules`
-- **図の選択基準を持たない。** 図の設計は `visual-guidance`
-- **媒体を持たない。** タグも CSS も `doc-render`
-- **中身を機械で検査しない**
+- 型を持たない。カタログは `content-types`
+- 規律を持たない。書き方は `writing-rules`
+- 図の選択基準を持たない。図の設計は `visual-guidance`
+- 媒体を持たない。Markdown の記法は `doc-render`
+- 中身を機械で検査しない
