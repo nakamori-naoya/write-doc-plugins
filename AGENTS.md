@@ -2,7 +2,7 @@
 
 このrepositoryは、資料を1本作って保存する`write-doc` marketplaceのsourceである。
 
-- marketplaceへ公開するインストール対象は`write-doc` playbook packageだけにする。`content-types`、`writing-rules`、`visual-guidance`、`doc-render`、`review-doc`、`write-doc-cleanup`はpackage内部へ同梱し、別entryへ公開しない。
+- marketplaceへ公開するインストール対象は`write-doc` playbook packageだけにする。`content-types`、`writing-rules`、`visual-guidance`、`doc-render`、`write-doc-cleanup`はpackage内部へ同梱し、別entryへ公開しない。
 - `write-doc-cleanup`は、資料完成後の後始末として、明示された未追跡の中間成果物だけを最終資料を残して除く支援能力であるため配布する。`write-doc` playbookの必須依存にはしない。
 - BDD、対話、収集、PR、product、agent作業方針をこのrepositoryへ同梱しない。
 - **外部pluginは公開playbookとしてしか参照しない。** `grill`は`{plugin: grill, marketplace: grill}`として`requires`で宣言し、`when`付きのsettle工程から`playbook: grill`で呼ぶ。`skill:`や`script:`で掴まない。相手の内部skill名・工程id・script引数・exit code・設定キーを、SKILL.md、README、references、playbook.yml、scriptsのどこにも書かない。使ってよいのは相手のCONTRACT.mdが公開した入口・入力・出力・保証だけである。

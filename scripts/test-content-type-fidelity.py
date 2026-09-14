@@ -60,8 +60,8 @@ def fixed_headings(text: str) -> list[str]:
 
 
 def check_pairs(pairs: dict[str, dict[str, str]]) -> None:
-    if len(pairs) != 28:
-        fail(f"対応表の件数が28でない: {len(pairs)}")
+    if len(pairs) != 15:
+        fail(f"対応表の件数が15でない: {len(pairs)}")
     for slug, files in sorted(pairs.items()):
         for kind in ("template", "example"):
             rel = files.get(kind)
@@ -80,14 +80,18 @@ def check_pairs(pairs: dict[str, dict[str, str]]) -> None:
 # それ以外の型では、記載例の節の集合はその題材での一例にすぎない。
 CATALOG_TYPE_TO_SLUG = {
     "業務知識・コアドメイン": "domain-rule",
+    "ドメインモデル": "domain-model",
     "ユーザー目的達成BDD": "user-journey-bdd",
     "RDB論理設計": "rdb-logical-data-modeling",
     "RDB物理設計": "rdb-physical-design",
+    "システム構成": "architecture",
     "Product North Star": "north-star",
     "Product Strategy": "strategy",
     "実装解説（PR）": "pr-walkthrough",
-    "コード地図（マクロ）": "code-map",
-    "コードリーディング": "code-reading",
+    "期間ダイジェスト": "period-digest",
+    "README": "readme",
+    "ハウツーガイド": "how-to",
+    "トラブルシューティング": "troubleshooting",
 }
 
 
@@ -254,9 +258,48 @@ def check_logical_types(pairs: dict[str, dict[str, str]]) -> None:
                 fail(f"rdb-logical-data-modeling({kind}): DBMS固有の型名がある: {word.strip()!r}")
 
 
+def catalog_type_names() -> list[str]:
+    """カタログ一覧表の型名（太字）を返す。"""
+    return re.findall(r"^\| \*\*([^*|]+)\*\* \| `[a-z0-9-]+`", CATALOG.read_text(), re.M)
+
+
+def check_history_declared() -> None:
+    """カタログ一覧の全型に「経緯の扱い」が宣言されていること。通ったら言えるのは宣言の有無だけである。"""
+    text = CATALOG.read_text()
+    start = text.find("### 経緯の扱い")
+    if start < 0:
+        fail("catalog.md に「経緯の扱い」の節が無い")
+        return
+    section = text[start:text.find("###", start + 10)]
+    declared: dict[str, str] = {}
+    for line in section.splitlines():
+        if not line.startswith("| ") or line.startswith("| 扱い") or set(line) <= set("|- "):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        for name in re.split(r"[、,]", cells[1]):
+            name = name.strip()
+            if name in declared:
+                fail(f"「経緯の扱い」で型が2度宣言されている: {name}")
+            declared[name] = cells[0]
+    names = catalog_type_names()
+    for name in names:
+        if name not in declared:
+            fail(f"「経緯の扱い」に宣言が無い型: {name}")
+    for name in declared:
+        if name not in names:
+            fail(f"「経緯の扱い」にカタログ一覧に無い型がある: {name}")
+    allowed = {"時系列で残す", "前提へ畳む", "書かない"}
+    for name, value in declared.items():
+        if value not in allowed:
+            fail(f"「経緯の扱い」の値が3値の外: {name}={value}")
+
+
 def main() -> int:
     pairs = read_pairs()
     check_pairs(pairs)
+    check_history_declared()
     check_heading_alignment(pairs)
     check_section_comments(pairs)
     check_links(pairs)

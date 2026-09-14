@@ -13,7 +13,7 @@
 | Markdownの図はMermaidを第一候補にし、表現しきれないものだけ画像。枚数の上限なし | doc-render `markdown.md` `figures.md`、visual-guidance、playbook `figures.md` |
 | 日本語以外の引用に日本語訳を添える | writing-rules `citation.md`、doc-render `citation.md` |
 | grill@grillを`requires`へ宣言し、`open_questions.count > 0`のときだけ動く`settle`工程を追加。`state.py skip`で条件付き工程を飛ばせる | playbook `playbook.yml` `SKILL.md`、`scripts/state.py`、`scripts/validate.sh`（grillのcache fixture） |
-| draft工程が`reading_path`を残し、review-docが本文と照合する | playbook `playbook.yml` `reader-contract.md`、review-doc、`scripts/test-reader-contract.py` |
+| draft工程が`reading_path`を残し、本文と照合する | playbook `playbook.yml` `reader-contract.md`、`scripts/test-reader-contract.py` |
 
 ## 確認
 

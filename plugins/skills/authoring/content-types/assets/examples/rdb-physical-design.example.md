@@ -12,7 +12,7 @@
 - 対象DBMS: PostgreSQL
 - 対象バージョン: 16.4
 - 論理モデル: `rdb-logical-data-modeling.example.md`（2026-09-01）
-- 入力にした論理設計: [RDB論理設計の記載例](rdb-logical-data-modeling.example.md)（版: 2026年9月1日確定）
+- 入力にした論理設計: [RDB論理設計の記載例](rdb-logical-data-modeling.example.md)（版: 2026-09-01 確定）
 - 確認環境: PostgreSQL 16.4、1 primary（8 vCPU / 32 GiB / gp3 500 GiB）、東京リージョン、2026-09-02
 - 計測条件: `pgbench`で同時実行10、各Readを1,000回試行し、`EXPLAIN (ANALYZE, BUFFERS)`の実行時間を集計する。p95は1,000回の95パーセンタイル、キャッシュは事前に対象indexを温めた定常状態とする
 - 想定規模: 予約500万件、有効予約160万件、基底イベント1,300万件、ピーク150予約/秒、イベント7年保持

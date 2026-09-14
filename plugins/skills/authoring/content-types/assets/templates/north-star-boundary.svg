@@ -2,70 +2,37 @@
   <title id="title">プロダクトが担う範囲と担わない範囲</title>
   <desc id="desc">約束する価値を中心に、プロダクトが担う役割、他者が担うため担わない役割、担う範囲の内側でそれでも採らない方針、迷ったときの判断原則を区別して示すテンプレート図。</desc>
   <style>
-    :root {
-      color-scheme: light dark;
-      --bg: #f7f8fa;
-      --surface: #ffffff;
-      --text: #172033;
-      --muted: #53627a;
-      --line: #9aa3b2;
-      --inside: #247a4b;
-      --inside-soft: #e8f5ee;
-      --outside: #697386;
-      --outside-soft: #f1f2f4;
-      --principle: #6d28d9;
-      --principle-soft: #f5f3ff;
-      --anchor: #172033;
-      --anchor-text: #ffffff;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #101827;
-        --surface: #182235;
-        --text: #edf2f7;
-        --muted: #bdc8d8;
-        --line: #445169;
-        --inside: #34d399;
-        --inside-soft: #123a2a;
-        --outside: #9aa5bb;
-        --outside-soft: #222c3f;
-        --principle: #c4b5fd;
-        --principle-soft: #302554;
-        --anchor: #e2e8f0;
-        --anchor-text: #101827;
-      }
-    }
-    text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: var(--text); }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: #172033; }
     .heading { font-size: 30px; font-weight: 700; }
     .panel-title { font-size: 27px; font-weight: 700; }
     .band-title { font-size: 21px; font-weight: 700; }
     .body { font-size: 21px; }
-    .small { font-size: 19px; fill: var(--muted); }
+    .small { font-size: 19px; fill: #53627a; }
   </style>
 
-  <rect width="1300" height="680" rx="28" fill="var(--bg)"/>
+  <rect width="1300" height="680" rx="28" fill="#f7f8fa"/>
   <text x="650" y="62" text-anchor="middle" class="heading">約束する価値を守るため、役割の境界を決める</text>
 
-  <rect x="90" y="130" width="480" height="230" rx="24" fill="var(--inside-soft)" stroke="var(--inside)" stroke-width="3"/>
-  <text x="330" y="185" text-anchor="middle" class="panel-title" fill="var(--inside)">プロダクトが担う</text>
+  <rect x="90" y="130" width="480" height="230" rx="24" fill="#e8f5ee" stroke="#247a4b" stroke-width="3"/>
+  <text x="330" y="185" text-anchor="middle" class="panel-title" fill="#247a4b">プロダクトが担う</text>
   <text x="330" y="240" text-anchor="middle" class="body">〈固有に引き受ける責任〉</text>
   <text x="330" y="292" text-anchor="middle" class="small">〈約束した価値を届けるために外せない仕事〉</text>
 
-  <rect x="730" y="130" width="480" height="230" rx="24" fill="var(--outside-soft)" stroke="var(--outside)" stroke-width="3"/>
-  <text x="970" y="185" text-anchor="middle" class="panel-title" fill="var(--outside)">プロダクトが担わない</text>
+  <rect x="730" y="130" width="480" height="230" rx="24" fill="#f1f2f4" stroke="#697386" stroke-width="3"/>
+  <text x="970" y="185" text-anchor="middle" class="panel-title" fill="#697386">プロダクトが担わない</text>
   <text x="970" y="240" text-anchor="middle" class="body">〈他者へ残す責任〉</text>
   <text x="970" y="292" text-anchor="middle" class="small">〈誰が決め、誰が実施するか〉</text>
 
-  <path d="M650 108V385" stroke="var(--line)" stroke-width="3" stroke-dasharray="9 9"/>
+  <path d="M650 108V385" stroke="#9aa3b2" stroke-width="3" stroke-dasharray="9 9"/>
 
-  <rect x="90" y="392" width="1120" height="96" rx="22" fill="var(--principle-soft)" stroke="var(--principle)" stroke-width="3" stroke-dasharray="10 6"/>
+  <rect x="90" y="392" width="1120" height="96" rx="22" fill="#f5f3ff" stroke="#6d28d9" stroke-width="3" stroke-dasharray="10 6"/>
   <text x="130" y="430" class="band-title">担う範囲の内側で、それでも採らない方針（やらないこと）</text>
   <text x="130" y="464" class="small">他者の責任ではなく、このNorth Starが自分の判断として選ばないこと：〈追わない価値・引き受けない責任〉</text>
 
-  <rect x="90" y="506" width="1120" height="82" rx="22" fill="var(--surface)" stroke="var(--principle)" stroke-width="3"/>
+  <rect x="90" y="506" width="1120" height="82" rx="22" fill="#ffffff" stroke="#6d28d9" stroke-width="3"/>
   <text x="130" y="542" class="band-title">境界で迷ったときの判断原則</text>
   <text x="130" y="572" class="small">〈優先する判断〉／〈選ばない判断〉／〈North Starにつながる理由〉</text>
 
-  <rect x="300" y="606" width="700" height="54" rx="27" fill="var(--anchor)"/>
-  <text x="650" y="642" text-anchor="middle" class="band-title" fill="var(--anchor-text)">中心に置く価値：〈対象者へ守る約束〉</text>
+  <rect x="300" y="606" width="700" height="54" rx="27" fill="#172033"/>
+  <text x="650" y="642" text-anchor="middle" class="band-title" fill="#ffffff">中心に置く価値：〈対象者へ守る約束〉</text>
 </svg>

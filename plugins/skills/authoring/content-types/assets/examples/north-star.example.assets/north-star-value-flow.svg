@@ -7,67 +7,30 @@
     </marker>
   </defs>
   <style>
-    :root {
-      color-scheme: light dark;
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --text: #172033;
-      --muted: #526079;
-      --arrow: #64748b;
-      --target: #0369a1;
-      --target-soft: #e0f2fe;
-      --harm: #be123c;
-      --harm-soft: #fff1f2;
-      --role: #6d28d9;
-      --role-soft: #f5f3ff;
-      --value: #b45309;
-      --value-soft: #fffbeb;
-      --future: #047857;
-      --future-soft: #ecfdf5;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #101827;
-        --surface: #182235;
-        --text: #edf2f7;
-        --muted: #bdc8d8;
-        --arrow: #aab5c6;
-        --target: #38bdf8;
-        --target-soft: #12334a;
-        --harm: #fb7185;
-        --harm-soft: #421c2a;
-        --role: #c4b5fd;
-        --role-soft: #302554;
-        --value: #fbbf24;
-        --value-soft: #493311;
-        --future: #34d399;
-        --future-soft: #12392f;
-      }
-    }
-    text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: var(--text); }
-    .arrow-head { fill: var(--arrow); }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif; fill: #172033; }
+    .arrow-head { fill: #64748b; }
     .heading { font-size: 30px; font-weight: 600; }
     .node-title { font-size: 21px; font-weight: 600; }
     .body { font-size: 18px; }
-    .small { font-size: 15px; fill: var(--muted); }
+    .small { font-size: 15px; fill: #526079; }
   </style>
 
-  <rect width="1100" height="950" rx="20" fill="var(--bg)"/>
+  <rect width="1100" height="950" rx="20" fill="#f8fafc"/>
   <text x="60" y="62" class="heading">North Starの価値の流れ</text>
   <text x="60" y="94" class="small">実現手段ではなく、誰のどんな不利益をどの未来へ変えるかをつなぐ</text>
 
-  <rect x="90" y="125" width="920" height="120" rx="18" fill="var(--surface)" stroke="var(--target)" stroke-width="3"/>
-  <path d="M108 125 H330 V245 H108 Q90 245 90 227 V143 Q90 125 108 125" fill="var(--target-soft)"/>
+  <rect x="90" y="125" width="920" height="120" rx="18" fill="#ffffff" stroke="#0369a1" stroke-width="3"/>
+  <path d="M108 125 H330 V245 H108 Q90 245 90 227 V143 Q90 125 108 125" fill="#e0f2fe"/>
   <text x="130" y="174" class="small">対象</text>
   <text x="130" y="208" class="node-title">正規の入場権を持つ人</text>
   <text x="370" y="176" class="body">
     <tspan x="370" dy="0">自分で購入した人、正規に譲り受けた人、</tspan>
     <tspan x="370" dy="30">会場や許可されたエリアへ入退場する人</tspan>
   </text>
-  <line x1="550" y1="245" x2="550" y2="272" stroke="var(--arrow)" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="550" y1="245" x2="550" y2="272" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <rect x="90" y="285" width="920" height="120" rx="18" fill="var(--surface)" stroke="var(--harm)" stroke-width="3"/>
-  <path d="M108 285 H330 V405 H108 Q90 405 90 387 V303 Q90 285 108 285" fill="var(--harm-soft)"/>
+  <rect x="90" y="285" width="920" height="120" rx="18" fill="#ffffff" stroke="#be123c" stroke-width="3"/>
+  <path d="M108 285 H330 V405 H108 Q90 405 90 387 V303 Q90 285 108 285" fill="#fff1f2"/>
   <text x="130" y="334" class="small">損なわれている価値</text>
   <text x="130" y="368" class="node-title">安心して権利を使えない</text>
   <text x="370" y="328" class="body">
@@ -75,30 +38,30 @@
     <tspan x="370" dy="30">不正転売、表示の複製、理由不明の拒否</tspan>
     <tspan x="370" dy="30">権利が誰にあるか分からず、回復できない</tspan>
   </text>
-  <line x1="550" y1="405" x2="550" y2="432" stroke="var(--arrow)" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="550" y1="405" x2="550" y2="432" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <rect x="70" y="445" width="960" height="120" rx="18" fill="var(--role-soft)" stroke="var(--role)" stroke-width="4"/>
-  <path d="M88 445 H330 V565 H88 Q70 565 70 547 V463 Q70 445 88 445" fill="var(--role-soft)"/>
+  <rect x="70" y="445" width="960" height="120" rx="18" fill="#f5f3ff" stroke="#6d28d9" stroke-width="4"/>
+  <path d="M88 445 H330 V565 H88 Q70 565 70 547 V463 Q70 445 88 445" fill="#f5f3ff"/>
   <text x="110" y="494" class="small">プロダクトの役割</text>
   <text x="110" y="528" class="node-title">権利と判断根拠を一貫させる</text>
   <text x="370" y="488" class="body">
     <tspan x="370" dy="0">入場権、所有と正規譲渡、利用の変化、</tspan>
     <tspan x="370" dy="30">入口の判断と救済の根拠を媒体をまたいで扱い、示す</tspan>
   </text>
-  <line x1="550" y1="565" x2="550" y2="592" stroke="var(--arrow)" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="550" y1="565" x2="550" y2="592" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <rect x="90" y="605" width="920" height="120" rx="18" fill="var(--surface)" stroke="var(--value)" stroke-width="3"/>
-  <path d="M108 605 H330 V725 H108 Q90 725 90 707 V623 Q90 605 108 605" fill="var(--value-soft)"/>
+  <rect x="90" y="605" width="920" height="120" rx="18" fill="#ffffff" stroke="#b45309" stroke-width="3"/>
+  <path d="M108 605 H330 V725 H108 Q90 725 90 707 V623 Q90 605 108 605" fill="#fffbeb"/>
   <text x="130" y="654" class="small">約束する価値</text>
   <text x="130" y="688" class="node-title">安心・自由・予測可能性・公平性</text>
   <text x="370" y="648" class="body">
     <tspan x="370" dy="0">権利が途切れず、媒体に縛られず、判断を見通せる</tspan>
     <tspan x="370" dy="30">不正が正当な来場者の入場機会を奪いにくい</tspan>
   </text>
-  <line x1="550" y1="725" x2="550" y2="752" stroke="var(--arrow)" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="550" y1="725" x2="550" y2="752" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <rect x="90" y="765" width="920" height="120" rx="18" fill="var(--future-soft)" stroke="var(--future)" stroke-width="4"/>
-  <path d="M108 765 H330 V885 H108 Q90 885 90 867 V783 Q90 765 108 765" fill="var(--future-soft)"/>
+  <rect x="90" y="765" width="920" height="120" rx="18" fill="#ecfdf5" stroke="#047857" stroke-width="4"/>
+  <path d="M108 765 H330 V885 H108 Q90 885 90 867 V783 Q90 765 108 765" fill="#ecfdf5"/>
   <text x="130" y="814" class="small">望む状態</text>
   <text x="130" y="848" class="node-title">権利を安心して引き継ぎ、行使できる</text>
   <text x="370" y="808" class="body">
