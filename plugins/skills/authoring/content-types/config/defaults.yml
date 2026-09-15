@@ -1,9 +1,0 @@
-# version: 設定形式。default_type: 指定が無いときの文書型。
-# instructions: skillが必ず従う実行規則（通常は変更しない）。
-version: 1
-default_type: concept
-instructions:
-  reader:
-    directive: personasから読み手を1人選び、読後の到達点を本文だけで答えられる問い2〜4個へ落としてから型を決める
-  selection:
-    directive: 到達点を達成する型を、catalogの選び方を上から判定して1つだけ選ぶ

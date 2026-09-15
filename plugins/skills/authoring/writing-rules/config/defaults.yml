@@ -1,8 +1,0 @@
-# rules: 規律名から規律ファイルpathへの対応。{}は同梱既定を使う。citationとterminologyは指定できない。
-# extra: 既定規律へ追加する指示。instructionsは適用順序。
-version: 1
-rules: {}
-extra: ""
-instructions:
-  writing:
-    directive: rulesの各ファイルと適用手順を読み、読み手の前提と到達点からargumentで主張と根拠と経緯の扱いを決め、pathで経路表を作り、structure、section、style、terminology、emphasisを適用し、citation、evidence、annotated-codeを該当時に適用する
