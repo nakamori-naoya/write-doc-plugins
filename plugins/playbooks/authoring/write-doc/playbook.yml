@@ -1,86 +1,15 @@
-# write-doc — 資料を1本書いて保存する。
-#
-# **この playbook は個々の手順を知らない。** 何を、どの順で呼ぶかだけを持つ。
-# 順番を変えたい・工程を差し替えたいときは、
-# <repo>/.harness-plugins/write-doc.config.yml で上書きする。
 version: 2
 name: write-doc
-description: 資料を1本書いて保存する
+description: 素材からMarkdown資料を1本書いて保存する
 instructions:
   execution:
-    directive: stepsを上から順に実行し、needsを前工程のprovidesから受け取る
-  config:
-    directive: 各工程の解決済みYAMLファイルから必要なinstructionsをプロパティアクセスで読む
+    directive: 契約入力をauthor-documentへ渡し、返されたstatusとpathまたはreasonをそのまま返す
 
-# 欠けていたら止める。黙って劣化した結果を出さない。
 requires:
-  - {plugin: grill, marketplace: grill}
-  - {plugin: content-types, marketplace: write-doc}
-  - {plugin: writing-rules, marketplace: write-doc}
-  - {plugin: visual-guidance, marketplace: write-doc}
-  - {plugin: doc-render, marketplace: write-doc}
+  - {plugin: author-document, marketplace: write-doc}
 
-# 下段どうしをつなぐ契約。playbook が持つ。
-contract:
-  roles: [要点, キーワード]
-  figure_roles: [図の主張, 図の型, 図の内容]
-  save_modes: [create, replace-existing-target]
-  output_formats: [markdown]
-
-# requirements.figures の意味は references/figures.md にある。
-requirements:
-  figures: false
-
-# stepsは上から実行する。skill/script/playbookは呼ぶ処理、needsは開始条件、
-# providesは完了時に登録する成果物。completionは完了判定、on_failureは失敗時の遷移。
-# when: 条件が真のときだけ実行する。偽なら state.py の skip で飛ばす。
-# on_failure に工程idを書いた場合は、その工程からやり直す。
-# conditional_needs: 同じ条件のときだけ増える開始条件。
 steps:
-  - id: reader
-    skill: pick-content-type
-    purpose: 同梱ペルソナから読み手を1人選び、読後の到達点を本文だけで答えられる問いへ落とし、そこから型と骨格を取る。到達点に必要な事実で素材に無いものを open_questions に残す
-    provides: [persona, reader_context, goal_questions, type, template, open_questions]
-    file_artifacts: [reader_context, goal_questions, open_questions]
-    completion: artifact-set
-    on_failure: stop
-
-  - id: settle
-    playbook: grill
-    when: open_questions.count > 0
-    purpose: 到達点から逆算して足りない事実を、推奨付きで1問ずつ確かめ、決定と未決を残す
-    needs: [persona, reader_context, goal_questions, open_questions]
-    provides: [decisions]
-    file_artifacts: [decisions]
-    completion: artifact-set
-    on_failure: stop
-
-  - id: draft
-    skill: write-with-rules
-    purpose: 到達点に必要な概念だけで経路表を作り、その順で本文を書く
-    needs: [persona, reader_context, goal_questions, type, template]
-    conditional_needs:
-      - when: open_questions.count > 0
-        needs: [decisions]
-    provides: [body, roles_applied, reading_path, reader_review]
-    file_artifacts: [reading_path, reader_review]
-    completion: artifact-set
-    on_failure: stop
-
-  - id: visual
-    skill: choose-visual
-    purpose: 主要な主張に合う図を設計する
-    needs: [body]
-    provides: [figures_applied]
-    file_artifacts: [figures_applied]
-    completion: artifact-set
-    on_failure: stop
-
-  - id: save
-    plugin: doc-render
-    script: scripts/write-doc.sh
-    purpose: 役を媒体の表現へ写し、上書きを防いで保存する
-    needs: [body, roles_applied, figures_applied]
-    provides: [path]
-    completion: artifact-set
-    on_failure: stop
+  - id: author
+    skill: author-document
+    purpose: 読み手と目的を固定し、Markdown資料を直接執筆して保存する
+    provides: [status, path, reason]
