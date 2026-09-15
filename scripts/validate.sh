@@ -331,7 +331,8 @@ else
   fail "契約の自己宣言またはカタログとの一致"
 fi
 if yq -o=json -I=0 '.' "$pb/playbook.yml" | jq -e 'all(.requires[]; .plugin!="write-doc-cleanup") and all(.steps[]; (.skill // "")!="remove-intermediate-artifacts" and (.playbook // "")!="write-doc-cleanup")' >/dev/null \
-  && rg -F '`write-doc` playbookは削除を実行せず' "$ROOT/plugins/skills/authoring/write-doc-cleanup/README.md" >/dev/null; then
+  && rg -F '最終資料を `--keep`' "$ROOT/plugins/skills/authoring/write-doc-cleanup/README.md" >/dev/null \
+  && rg -F '削除対象が明示されていない場合は何も削除しない' "$ROOT/plugins/skills/authoring/write-doc-cleanup/README.md" >/dev/null; then
   pass "write-docとcleanupの責務境界"
 else
   fail "write-docとcleanupの責務境界"
@@ -427,7 +428,7 @@ else
   mkdir -p "$TMP_ROOT/contract-io"
   io=$(cd "$TMP_ROOT/contract-io" && pwd -P)
   mkdir -p "$io/material" "$io/docs" "$io/out"
-  printf '%s\n' 'material: fixture' > "$io/material/material.yml"
+  printf '%s\n' '# 予約サービスの日本語素材' '根拠状態と未決を保持する。' > "$io/material/material.yml"
   printf '%s\n' '# 追加指示' > "$io/material/deliverable.md"
   printf '%s\n' '# 既存資料' > "$io/docs/existing.md"
   write_contract_input() { # write_contract_input <出力file> <jq式>
@@ -464,6 +465,37 @@ else
     fail "$contract_runtime 契約入力を .input として受け取れない: $(head -2 "$io/prepare.err" "$io/read.err" 2>/dev/null | tr '\n' ' ')"
   fi
   done
+  contract_runtime=codex
+
+  reserved_types_ok=1
+  for contract_runtime in codex claude; do
+    for reserved_type in requirements-discovery workload-model quality-requirements cloud-architecture; do
+      case "$reserved_type" in
+        requirements-discovery) reserved_name=requirements-discovery.md; reserved_title='要求発見正本' ;;
+        workload-model) reserved_name=workload-model.md; reserved_title='利用・負荷モデル' ;;
+        quality-requirements) reserved_name=quality-requirements.md; reserved_title='品質要求正本' ;;
+        cloud-architecture) reserved_name=cloud-architecture.md; reserved_title='クラウドアーキテクチャ' ;;
+      esac
+      reserved_input="$io/${contract_runtime}-${reserved_type}.yml"
+      write_contract_input "$reserved_input" '.document_type="'"$reserved_type"'" | .name="'"$reserved_name"'"'
+      if reserved_cfg=$(contract_prepare "$reserved_input" 2> "$io/reserved-prepare.err") \
+        && reserved_parsed=$(python3 "$copy_pb/scripts/contract-io.py" read --config "$reserved_cfg" 2> "$io/reserved-read.err") \
+        && jq -e --arg expected "$reserved_type" --arg name "$reserved_name" \
+          '.document_type==$expected and .name==$name and (.material|length)==1' >/dev/null <<<"$reserved_parsed"; then
+        printf '# %s\n\n予約サービスの日本語正本。\n' "$reserved_title" > "$io/docs/$reserved_name"
+        printf '{"status":"completed","path":"%s","document_type":"%s","output_format":"markdown"}\n' \
+          "$io/docs/$reserved_name" "$reserved_type" > "$io/reserved-result.json"
+        if ! python3 "$copy_pb/scripts/contract-io.py" write --config "$reserved_cfg" --result "$io/reserved-result.json" >/dev/null 2> "$io/reserved-write.err"; then
+          echo "  $contract_runtime で専用型の日本語正本を保存結果へ変換できない: $reserved_type"
+          reserved_types_ok=0
+        fi
+      else
+        echo "  $contract_runtime で専用型を公開入口から解決できない: $reserved_type"
+        reserved_types_ok=0
+      fi
+    done
+  done
+  [ "$reserved_types_ok" -eq 1 ] && pass "Codex/Claudeの公開入口でシステム設計4型を選択" || fail "システム設計4型を公開入口で選択できない"
   contract_runtime=codex
 
   # 負の試験：入口で止まるもの（契約ID・実装していない型）と、変換層で止まるもの（排他規則）。
@@ -604,16 +636,55 @@ specialist_examples=(
 )
 specialist_boundary_ok=1
 for detail in "${specialist_details[@]}"; do
-  rg -F '呼び出し元' "$detail" >/dev/null || specialist_boundary_ok=0
+  rg -F '入力として与えられた事実' "$detail" >/dev/null || specialist_boundary_ok=0
 done
 for example in "${specialist_examples[@]}"; do
   [ -s "$example" ] || specialist_boundary_ok=0
 done
 if [ "$specialist_boundary_ok" -eq 1 ] \
   && ! rg -n '(^|[^A-Za-z])(Given|When|Then)([^A-Za-z]|$)|診断|基本方針|一貫した行動|分離レベル|transaction|rollback|再試行' "${specialist_details[@]}" >/dev/null; then
-  pass "専門型は記載例を保ち実行規律を呼び出し元へ委譲"
+  pass "専門型は記載例を保ち入力事実の範囲を越えない"
 else
   fail "content-typesに専門領域の実行規律が混入"
+fi
+
+if ! rg -n -i 'playbook|プレイブック' "$ROOT/plugins/skills" --glob '*.md' >/dev/null; then
+  pass "内部Markdownは公開構成単位を前提にしない"
+else
+  fail "内部Markdownに公開構成単位への依存が混入"
+fi
+
+internal_reference_findings="$({
+  find "$ROOT/plugins/skills" -type f -name '*.md' \
+    \( -path '*/references/*' -o -path '*/assets/*' \) -exec \
+    rg -n -i '(^|[^A-Za-z])(skill|plugin)([^A-Za-z]|$)|スキル|プラグイン|content-types|writing-rules|visual-guidance|doc-render|write-doc-cleanup|SKILL\.md|skills/' {} +
+} 2>/dev/null || true)"
+if [ -z "$internal_reference_findings" ]; then
+  pass "内部referencesとassetsは担当領域だけを記述"
+else
+  printf '%s\n' "$internal_reference_findings" >&2
+  fail "内部referencesまたはassetsに構成単位への依存が混入"
+fi
+
+reader_input="$content_types/references/reader-input.md"
+reader_input_ok=1
+for required in \
+  '無ければ `前提は共有しない`' \
+  '既定は `初耳`' \
+  '既定は `リンクを開く`' \
+  'count: 1' \
+  'questions:' \
+  'recommended_answer:' \
+  'consequence:' \
+  '英数字と `.` `_` `-` だけ' \
+  '文言を直しても同じ問いならIDを変えない' \
+  '`count` に反映する'; do
+  rg -F "$required" "$reader_input" >/dev/null || reader_input_ok=0
+done
+if [ "$reader_input_ok" -eq 1 ]; then
+  pass "読み手情報は既定値と未確認事項の判定可能な形を自己完結で定義"
+else
+  fail "読み手情報の既定値または未確認事項の形が不足"
 fi
 
 journey_template="$content_types/assets/templates/user-journey-bdd.md"
@@ -622,7 +693,7 @@ journey_detail="$content_types/references/detail/user-journey-bdd.md"
 if rg -F 'user-journey-bdd:' "$content_types/assets/template-examples.yml" >/dev/null \
   && rg -F 'ユーザーが目的を達成するまで' "$content_types/references/catalog.md" >/dev/null \
   && rg -F '何がJourneyで何がJourneyでないか' "$journey_detail" >/dev/null \
-  && rg -F '呼び出し元' "$journey_detail" >/dev/null \
+  && rg -F '入力として与えられた事実' "$journey_detail" >/dev/null \
   && rg -F '**接続**:' "$journey_template" >/dev/null \
   && rg -F '**Journeyとして扱う理由**:' "$journey_template" >/dev/null \
   && rg -F '**Journeyに含めない問い**:' "$journey_template" >/dev/null \
@@ -640,15 +711,23 @@ else
 fi
 
 doc_render="$ROOT/plugins/skills/authoring/doc-render"
-if rg -F '`writing-rules` が付与済みの役だけ' "$doc_render/references/markdown.md" >/dev/null \
-  && rg -F '`writing-rules` が確定した出典リンク' "$doc_render/references/citation.md" >/dev/null \
-  && rg -F '`visual-guidance` から受け取る' "$doc_render/references/markdown.md" >/dev/null \
+if rg -F '入力で付与済みの役と図だけ' "$doc_render/references/markdown.md" >/dev/null \
+  && rg -F '入力で確定した出典リンク' "$doc_render/references/citation.md" >/dev/null \
+  && rg -F '図の主張・図の型・図の内容は入力として受け取る' "$doc_render/references/markdown.md" >/dev/null \
   && [ ! -e "$doc_render/references/emphasis.md" ] && [ ! -e "$doc_render/references/figures.md" ] \
   && rg -F '受け取った意味上の役を媒体表現へ写す' "$doc_render/config/defaults.yml" >/dev/null \
   && ! rg -n 'R[0-9]+|引用の量|表で足りるなら|何に付けるか' "$doc_render/references" >/dev/null; then
   pass "doc-renderは確定済みの役から媒体表現への写像だけを持つ"
 else
   fail "doc-renderに文章判断または図の選択が混入"
+fi
+
+if rg -F '`<資料名>.assets` directoryを保存するMarkdownと同じdirectoryに置き、画像ファイルはそのassets directory内に置く' "$doc_render/references/markdown.md" >/dev/null \
+  && rg -F 'Markdownから画像へのリンクは相対pathにする' "$doc_render/references/markdown.md" >/dev/null \
+  && ! rg -F '画像ファイルは保存する Markdown と同じdirectoryに置く' "$doc_render/references/markdown.md" >/dev/null; then
+  pass "画像はMarkdownに隣接するassets directoryへ保存して相対参照"
+else
+  fail "画像とassets directoryの配置契約が矛盾"
 fi
 
 roles="$pb/references/roles.md"
@@ -668,6 +747,7 @@ while IFS= read -r script; do PYTHONPYCACHEPREFIX="$TMP_ROOT/pycache" python3 -m
 [ "$python_failed" -eq 0 ] && pass "Python構文" || fail "Python構文"
 
 python3 "$ROOT/scripts/test-content-type-fidelity.py" && pass "テンプレートと記載例の対応" || fail "テンプレートと記載例の対応"
+python3 "$ROOT/scripts/test-system-design-content-types.py" && pass "システム設計4型の日本語・追跡・配布契約" || fail "システム設計4型の日本語・追跡・配布契約"
 python3 "$ROOT/scripts/test-reader-contract.py" && pass "読者の前提と本文確認の工程間引き継ぎ" || fail "読者の前提と本文確認の工程間引き継ぎ"
 python3 "$ROOT/scripts/test-output-routing.py" && pass "repository・文書型ごとの出力先ルーティング" || fail "repository・文書型ごとの出力先ルーティング"
 

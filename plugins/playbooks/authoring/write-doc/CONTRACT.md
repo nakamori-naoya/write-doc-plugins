@@ -44,7 +44,7 @@ steps:
 | E3 | `<root>/scripts/resolve.sh` | `prepare.sh` が内部で呼ぶ入口（`--check-steps` 経路を含む） |
 | E4 | `${.deps.<論理名>.entry}` | **playbook 入口 SKILL.md の絶対 path**。実行手順はここに従う |
 
-**`<root>` から組み立ててよいのは E1〜E3 の 3 つだけである。** `<root>/skills/...`、`<root>/references/...`、`<root>/config/...`、`<root>/scripts/` 配下のそれ以外のファイルは、存在しても参照してはならない。
+**`<root>` から組み立ててよいのは E1〜E3 の 3 つだけである。** root配下の非公開ディレクトリやE1〜E3以外のファイルは、存在しても参照してはならない。
 
 **skill 名で入口を指す形（`deps.<論理名>` の `.skills.<名前>`）は禁止である。** 外部依存の入口は `entry` だけで指す。`entry` は、採用した実体の `implements[]` のうち**契約 ID が一致する要素の `playbook` が指す directory の `SKILL.md`** である。だから差し替え先が公開 skill をどう名付けていても、消費側の書き方は変わらない。
 
@@ -93,7 +93,7 @@ name: order-cancellation.md            # 新規作成のとき必須
 output_directory: /Users/me/src/acme/docs/domain   # 任意。無ければ利用者の設定で決まる
 update_target: /Users/me/src/acme/docs/domain/order-cancellation.md  # 既存差し替えのとき必須
 references:                            # 任意。追加指示（呼び出し元自身の文書）
-  - /Users/me/src/acme-bdd/plugins/playbooks/bdd/domain-bdd-formulation/references/formulation-deliverable.md
+  - /Users/me/src/acme/docs/input/domain-formulation.md
 output_to: /var/folders/x/harness-run-abc/write-doc-output.yml   # 必須
 ```
 

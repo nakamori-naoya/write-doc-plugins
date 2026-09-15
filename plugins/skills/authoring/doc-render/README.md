@@ -51,7 +51,7 @@ instructions: ...  # defaults.ymlのinstructions全体を省略せず持つ
 - `type: relative` は作業repositoryのrootを基準にする。上のBDD系資料は `<作業repo>/docs/bdd` へ出る。
 - `type: absolute` は作業repositoryを基準にしない。`path` には `~/...` か `/...` を指定する。上のハウツーガイドは `~/Documents/GitHub/ops-docs/guides/how-to` へ出る。home配下は `~/` で書くと、ユーザー名を埋め込む `/Users/...` より共有しやすい。
 - `relative` に `/Users/...` や `~/...` を書く、`absolute` に `docs/bdd` を書く、環境変数、`..`、末尾の `/` は拒否する。
-- 同じ文書型を複数routeへ書かない。`templates` には content-types が返すslugを指定する。
+- 同じ文書型を複数routeへ書かない。`templates` には入力された文書型slugを指定する。
 - 今回だけ別の場所へ出す依頼はrouteへ書かず、呼び出し元が依頼から取得した絶対pathを `--output-dir` へ渡す。依頼で明示されていない絶対pathは推測しない。
 
 ## しないこと

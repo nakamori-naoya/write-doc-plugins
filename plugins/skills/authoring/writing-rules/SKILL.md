@@ -9,7 +9,7 @@ description: 文章を規律に従って書く／直す。構成・段落・主�
 
 **単独で使える。** PR の説明文、チケット、レビューコメント、メール。保存や媒体への変換はこのスキルの関心ではない。
 
-## 0. プラグイン root を決める
+## 0. 同梱物の root を決める
 
 <!-- BEGIN shared:skill-entry/root-block -->
 ```bash
@@ -21,7 +21,7 @@ else
 fi
 ```
 
-`PLUGIN_ROOT`は配布物rootの絶対パスである。単一skill pluginではこの`SKILL.md`があるdirectory、複数skill pluginでは`skills/<skill>/`の2つ上に当たる。Claude Codeでは`${CLAUDE_PLUGIN_ROOT}`が自動展開される。
+`PLUGIN_ROOT`は、この能力に同梱されたファイル群のrootを示す絶対パスである。実行環境から値が与えられない場合は、このファイルがあるdirectoryを明示する。
 <!-- END shared:skill-entry/root-block -->
 
 ## 1. 規律を解決して読む
@@ -45,11 +45,11 @@ printf '%s\n' "$CFG_FILE"
 
 ## 2. 書く
 
-[適用手順](references/apply.md)を読み、その順で書く。write-doc から呼ばれた場合は渡された `persona`・`reader_context`・`goal_questions`・（settle を通ったなら）`decisions` を使い、単独使用なら依頼と資料から同じ情報を整理する。
+[適用手順](references/apply.md)を読み、その順で書く。入力に `persona`・`reader_context`・`goal_questions`・`decisions` があれば使い、無ければ依頼と資料から同じ情報を整理する。
 
 ## 3. 出す前に
 
-[final-check.md](references/final-check.md)の問いに本文だけを根拠に答える。write-doc で使う場合は、`goal_questions` の各問いを本文だけで答え、`expected` と照合した結果を `reader_review` に残し、経路表を `reading_path` として次工程へ渡す。
+[final-check.md](references/final-check.md)の問いに本文だけを根拠に答える。`goal_questions` が入力されていれば、各問いを本文だけで答え、`expected` と照合した結果を `reader_review` に残す。経路表は `reading_path` として返す。
 
 ## 実行設定の寿命
 

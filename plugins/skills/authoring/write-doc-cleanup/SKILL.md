@@ -7,7 +7,7 @@ description: 最終資料や入力資料を残し、資料化後に不要とな�
 
 削除対象を推測せず、最終成果物が存在することを確かめてから、明示された未追跡の中間ファイルだけを削除する。
 
-## 0. plugin rootを検証する
+## 0. 同梱物のrootを検証する
 
 <!-- BEGIN shared:skill-entry/root-only -->
 ```bash
