@@ -22,6 +22,19 @@ MD_LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)#\s]+)(?:#[^)\s]*)?\)")
 IMG_LINK = re.compile(r"!\[[^\]]*\]\(([^)#\s]+)\)")
 PY_TOOL = re.compile(r"`?([A-Za-z_][A-Za-z0-9_]*\.py)\s+\w+")
 PLACEHOLDER = re.compile(r"[<＜][^>＞]*[>＞]")
+SYSTEM_DESIGN_SLUGS = {
+    "requirements-discovery", "workload-model", "quality-requirements", "cloud-architecture",
+}
+NAKED_ENGLISH = (
+    "actor", "action", "event", "payload", "latency", "throughput", "availability",
+    "consistency", "durability", "recovery", "security", "privacy", "operability",
+    "cost", "provider", "failure", "degradation", "node", "application",
+)
+SYSTEM_DESIGN_PLACEHOLDER = re.compile(
+    r"<(?!br\s*/?>)(?:[A-Za-z][A-Za-z0-9_-]*|[^<>\n]*(?:未入力|未記入|未確定|要確認|保留)[^<>\n]*)>"
+    r"|＜[^＜＞\n]*(?:未入力|未記入|未確定|要確認|保留)[^＜＞\n]*＞",
+    re.IGNORECASE,
+)
 
 failures: list[str] = []
 
@@ -60,8 +73,8 @@ def fixed_headings(text: str) -> list[str]:
 
 
 def check_pairs(pairs: dict[str, dict[str, str]]) -> None:
-    if len(pairs) != 15:
-        fail(f"対応表の件数が15でない: {len(pairs)}")
+    if len(pairs) != 19:
+        fail(f"対応表の件数が19でない: {len(pairs)}")
     for slug, files in sorted(pairs.items()):
         for kind in ("template", "example"):
             rel = files.get(kind)
@@ -85,6 +98,10 @@ CATALOG_TYPE_TO_SLUG = {
     "RDB論理設計": "rdb-logical-data-modeling",
     "RDB物理設計": "rdb-physical-design",
     "システム構成": "architecture",
+    "要求発見正本": "requirements-discovery",
+    "利用・負荷モデル": "workload-model",
+    "品質要求正本": "quality-requirements",
+    "クラウドアーキテクチャ": "cloud-architecture",
     "Product North Star": "north-star",
     "Product Strategy": "strategy",
     "実装解説（PR）": "pr-walkthrough",
@@ -147,6 +164,46 @@ def check_examples_are_not_frames(pairs: dict[str, dict[str, str]]) -> None:
             fail(f"{slug}: 記載例に「構成の正本ではなく、粒度と具体性の見本」の宣言が無い")
         if PLACEHOLDER.search(text.replace("&nbsp;", "")) and slug not in ("landing-page",):
             pass  # プレースホルダーの混入検査は型ごとの記法差が大きいため、ここでは行わない
+
+
+def heading_anchors(text: str) -> set[str]:
+    anchors = set()
+    for heading in re.findall(r"(?m)^#{1,6}\s+(.+?)\s*$", text):
+        plain = re.sub(r"`([^`]+)`", r"\1", heading).strip().lower()
+        plain = re.sub(r"[^\w\-\sぁ-んァ-ヶ一-龯]", "", plain)
+        anchors.add(re.sub(r"\s+", "-", plain))
+    return anchors
+
+
+def check_system_design_display(pairs: dict[str, dict[str, str]]) -> None:
+    """システム設計4型だけ、表示上の未置換値・節リンク・図ラベルを検査する。"""
+    for slug in sorted(SYSTEM_DESIGN_SLUGS):
+        for kind in ("template", "example"):
+            path = CT / pairs[slug][kind]
+            text = path.read_text(encoding="utf-8")
+            if SYSTEM_DESIGN_PLACEHOLDER.search(text):
+                fail(f"{slug}({kind}): 未置換placeholderが残っている")
+            anchors = heading_anchors(text)
+            for target in re.findall(r"\[[^]]+\]\((#[^)\s]+)\)", text):
+                if target[1:] not in anchors:
+                    fail(f"{slug}({kind}): 壊れたMarkdown節anchor: {target}")
+            for block in re.findall(r"```mermaid\s*\n(.*?)\n```", text, re.S):
+                labels = re.findall(r'\["([^"\n]+)"\]|\|([^|\n]+)\|', block)
+                visible = " ".join(left or right for left, right in labels)
+                visible = re.sub(r"<br\s*/?>", " ", visible, flags=re.I)
+                visible = re.sub(r"\b(?:REQ|WL|QR|ADR|NODE|SRC|CON|FAIL|ARC)[-_][A-Z0-9_-]+\b", "", visible)
+                for token in NAKED_ENGLISH:
+                    if re.search(rf"(?<![A-Za-z0-9_-]){token}(?![A-Za-z0-9_-])", visible, re.I):
+                        fail(f"{slug}({kind}): 裸の英語図label: {token}")
+
+
+def check_system_design_placeholder_negative() -> None:
+    """ASCIIと日本語の未置換値を拒否し、MermaidのHTML改行を許可する。"""
+    for value in ("<TBD>", "<未入力>", "＜未記入＞"):
+        if SYSTEM_DESIGN_PLACEHOLDER.search(value) is None:
+            fail(f"システム設計型の未置換placeholder負例を拒否できない: {value}")
+    if SYSTEM_DESIGN_PLACEHOLDER.search("NODE-API<br/>予約API") is not None:
+        fail("MermaidのHTML改行をplaceholderとして拒否している")
 
 
 def check_personas() -> None:
@@ -307,6 +364,8 @@ def main() -> int:
     check_bdd_rules(pairs)
     check_logical_types(pairs)
     check_examples_are_not_frames(pairs)
+    check_system_design_display(pairs)
+    check_system_design_placeholder_negative()
     check_personas()
     for msg in failures:
         print(f"  - {msg}", file=sys.stderr)

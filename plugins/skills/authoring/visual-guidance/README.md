@@ -21,5 +21,5 @@
 ## 判断しないこと
 
 - 文章の構成・文体・強調
-- Mermaid の記法と画像の置き場所（doc-render）
-- 資料全体で図を必須にするか（write-doc の `references/figures.md`）
+- Mermaid の記法と画像の置き場所
+- 資料全体で図を必須にするか

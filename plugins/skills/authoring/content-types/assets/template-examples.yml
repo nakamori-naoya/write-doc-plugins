@@ -36,6 +36,18 @@ pairs:
   rdb-physical-design:
     template: assets/templates/rdb-physical-design.md
     example: assets/examples/rdb-physical-design.example.md
+  requirements-discovery:
+    template: assets/templates/requirements-discovery.md
+    example: assets/examples/requirements-discovery.example.md
+  workload-model:
+    template: assets/templates/workload-model.md
+    example: assets/examples/workload-model.example.md
+  quality-requirements:
+    template: assets/templates/quality-requirements.md
+    example: assets/examples/quality-requirements.example.md
+  cloud-architecture:
+    template: assets/templates/cloud-architecture.md
+    example: assets/examples/cloud-architecture.example.md
   readme:
     template: assets/templates/readme.md
     example: assets/examples/readme.example.md

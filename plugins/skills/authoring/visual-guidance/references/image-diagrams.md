@@ -1,6 +1,6 @@
 # 画像で作る技術図
 
-同梱の参考画像は[drawio-diagram-skills](https://github.com/enomoso-pm/drawio-diagram-skills)の作例であり、[MIT License](../assets/LICENSE.drawio-diagram-skills)に従って配布する。内容の正本ではなく、余白、整列、境界、凡例の視覚的な参考として使う。
+同梱の参考画像は第三者提供の作例であり、同梱のMIT Licenseに従って配布する。内容の正本ではなく、余白、整列、境界、凡例の視覚的な参考として使う。
 
 ## 画像にする条件
 
