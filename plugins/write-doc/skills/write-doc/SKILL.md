@@ -15,7 +15,7 @@ description: 素材、文書型、保存先を受け取り、主な読み手の�
 - `document_type`: [`assets/template-examples.yml`](assets/template-examples.yml) にある型slug。任意。
 - `output_directory` と `name`: 新規作成の保存先。`name` はpath要素を含まない `.md` 名。日本語名を含め文字種は制限しない。
 - `update_target`: 更新する既存Markdownの絶対path。
-- `references`: 追加で従う資料の絶対path配列。任意。
+- `references`: 追加で従う資料の絶対path配列。任意。手順の最初に読む。プロジェクト固有の規約や文脈（置き場、命名、文体）は、対象repositoryのAGENTS.md / CLAUDE.mdとこの入力で渡される。
 
 新規作成は `output_directory` + `name`、更新は `update_target` のどちらか一方だけを受け取る。契約に無いキー、空の `content`、相対path、読めないpath、未知の `kind` は入力不備として扱う。
 
