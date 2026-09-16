@@ -8,7 +8,7 @@
       "name": "write-doc",
       "source": {
         "source": "local",
-        "path": "./plugins"
+        "path": "./plugins/write-doc"
       },
       "policy": {
         "installation": "AVAILABLE",

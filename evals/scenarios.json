@@ -3,7 +3,7 @@
   "cases": [
     {
       "id": "representative-boundary",
-      "skill": "../plugins/playbooks/authoring/write-doc/SKILL.md",
+      "skill": "../plugins/write-doc/skills/write-doc/SKILL.md",
       "messages": [
         {
           "role": "user",
