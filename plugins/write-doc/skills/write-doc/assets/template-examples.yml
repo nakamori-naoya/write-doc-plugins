@@ -21,6 +21,9 @@ pairs:
   period-digest:
     template: assets/templates/period-digest.md
     example: assets/examples/period-digest.example.md
+  agent-session-digest:
+    template: assets/templates/agent-session-digest.md
+    example: assets/examples/agent-session-digest.example.md
   north-star:
     template: assets/templates/north-star.md
     example: assets/examples/north-star.example.md

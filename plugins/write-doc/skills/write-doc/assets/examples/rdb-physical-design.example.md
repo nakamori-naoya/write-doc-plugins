@@ -11,6 +11,7 @@
 - 対象バージョン: 16.4
 - 論理モデル: `rdb-logical-data-modeling.example.md`（2026-09-01）
 - 入力にした論理設計: [RDB論理設計の記載例](rdb-logical-data-modeling.example.md)（版: 2026-09-01 確定）
+- 論理構造の指紋: sha256:715a958cc72fcc500c3d833f96c6f33b21060ea68a05c6d86ca44e3bb3005f9e
 - 確認環境: PostgreSQL 16.4、1 primary（8 vCPU / 32 GiB / gp3 500 GiB）、東京リージョン、2026-09-02
 - 計測条件: `pgbench`で同時実行10、各Readを1,000回試行し、`EXPLAIN (ANALYZE, BUFFERS)`の実行時間を集計する。p95は1,000回の95パーセンタイル、キャッシュは事前に対象indexを温めた定常状態とする
 - 想定規模: 予約500万件、有効予約160万件、基底イベント1,300万件、ピーク150予約/秒、イベント7年保持
@@ -306,6 +307,8 @@ VALUES ($3, $4, $5, $6, $7);
 
 - 採用箇所: 同じ会議室の重なる時間帯を`room_booking_claims`から排除する
 - 採用理由: まだ存在しない空き時間をロックせず、書込み時に重複時間を拒否できる
+- 利用可能な版: 9.0（排他制約の導入版）
+- 根拠: https://www.postgresql.org/docs/16/sql-createtable.html#SQL-CREATETABLE-EXCLUDE
 - 対象バージョンで確認すること: `btree_gist`を有効化し、境界接触する二範囲は共存し、一分でも重なる範囲は拒否されること
 - 運用上の注意: extensionをmigration前に確認し、GiST indexの膨張率を月次監視する
 
@@ -313,6 +316,8 @@ VALUES ($3, $4, $5, $6, $7);
 
 - 採用箇所: 同じ予約に対する確定、取消、期限切れ
 - 採用理由: 状態とcurrent_versionを再検査するまで後発の更新を待機させられる
+- 利用可能な版: 対象版より前の現行版すべてで利用できる
+- 根拠: https://www.postgresql.org/docs/16/explicit-locking.html#LOCKING-ROWS
 - 対象バージョンで確認すること: 待機後のstatementが最新状態を読み、同じversionから二つの状態変更を作らないこと
 - 運用上の注意: transaction内で外部通知を行わず、ロック保持時間を100ms以内にする
 
