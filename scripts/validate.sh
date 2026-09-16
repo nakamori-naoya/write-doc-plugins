@@ -5,6 +5,9 @@
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+# 保守toolの正本は兄弟checkoutの harness-tools。無ければ止まる（fixtureで代用しない）。
+TOOLS="$ROOT/../harness-tools/tools"
+[ -d "$TOOLS" ] || { echo "[error] 兄弟 checkout harness-tools が無い: $TOOLS" >&2; exit 2; }
 passed=0
 failed=0
 
@@ -60,12 +63,12 @@ if same_set "$skill_dirs" "write-doc"; then pass "skills/直下はwrite-docだ�
 claude_identity=$(jq -c '{name,version,skills,harness:.metadata.harness}' "$CLAUDE")
 codex_identity=$(jq -c '{name,version,skills,harness:.metadata.harness}' "$CODEX")
 if [ "$claude_identity" = "$codex_identity" ]; then pass "Claude/Codex package identity一致"; else fail "Claude/Codex package identity一致"; fi
-expect "package version 9.0.0" jq -e '.version=="9.0.0"' "$CODEX"
+expect "package version 9.1.0" jq -e '.version=="9.1.0"' "$CODEX"
 expect "harness marketplace / contractVersion" jq -e '.metadata.harness.marketplace=="write-doc" and .metadata.harness.contractVersion==2 and (.metadata.harness|has("installationSurface")|not) and (.metadata.harness|has("entryRoot")|not) and (.metadata.harness|has("internalPlugins")|not)' "$CODEX"
 expect "implements は write-doc/write-doc v2 の1件" jq -e '.metadata.harness.implements==[{"id":"write-doc/write-doc","version":2,"kind":"playbook","playbook":"write-doc","types":.metadata.harness.implements[0].types}]' "$CODEX"
 expect "公開入口はskills/write-docの1つでplaybooksにも載る" jq -e '.skills==["./skills/write-doc"] and .metadata.harness.playbooks=={"write-doc":"./skills/write-doc"}' "$CODEX"
 for market in .claude-plugin/marketplace.json .agents/plugins/marketplace.json; do
-  if jq -e '.name=="write-doc" and (.plugins|length)==1 and .plugins[0].name=="write-doc" and .plugins[0].version=="9.0.0"
+  if jq -e '.name=="write-doc" and (.plugins|length)==1 and .plugins[0].name=="write-doc" and .plugins[0].version=="9.1.0"
             and ((.plugins[0].source=="./plugins/write-doc") or (.plugins[0].source=={"source":"local","path":"./plugins/write-doc"}))' "$ROOT/$market" >/dev/null; then
     pass "$market identityとsource"
   else
@@ -89,15 +92,16 @@ if same_set "$reference_list" "$expected_references"; then pass "参照文書は
 if ! same_set "$(printf '%s\n' core-principles.md integrity-check.md)" "$expected_references"; then pass "self-test: 参照2本を拒否"; else fail "self-test: 参照2本を拒否"; fi
 if ! same_set "$(printf '%s\n' core-principles.md extra.md integrity-check.md visuals-and-tables.md | sort)" "$expected_references"; then pass "self-test: 参照4本を拒否"; else fail "self-test: 参照4本を拒否"; fi
 
-expect "template資産23件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 23' sh "$ENTRY/assets/templates"
-expect "template Markdown 19件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 19' sh "$ENTRY/assets/templates"
-expect "example資産23件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 23' sh "$ENTRY/assets/examples"
-expect "example Markdown 19件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 19' sh "$ENTRY/assets/examples"
+expect "template資産24件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 24' sh "$ENTRY/assets/templates"
+expect "template Markdown 20件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 20' sh "$ENTRY/assets/templates"
+expect "example資産24件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 24' sh "$ENTRY/assets/examples"
+expect "example Markdown 20件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 20' sh "$ENTRY/assets/examples"
 expect "persona 5件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 5' sh "$ENTRY/assets/personas"
 expect "型対応表を保持" test -f "$ENTRY/assets/template-examples.yml"
 
 expected_asset_paths=$(printf '%s\n' \
   examples/adr.example.md \
+  examples/agent-session-digest.example.md \
   examples/architecture.example.md \
   examples/cloud-architecture.example.md \
   examples/concept.example.md \
@@ -122,7 +126,7 @@ expected_asset_paths=$(printf '%s\n' \
   examples/workload-model.example.md \
   personas/backend-1.md personas/backend-5.md personas/pm-1.md personas/pm-3.md personas/product-user.md \
   template-examples.yml \
-  templates/adr.md templates/architecture.md templates/cloud-architecture.md templates/concept.md \
+  templates/adr.md templates/agent-session-digest.md templates/architecture.md templates/cloud-architecture.md templates/concept.md \
   templates/domain-model.md templates/domain-rule.md templates/how-to.md \
   templates/north-star-boundary.svg templates/north-star-value-flow.svg templates/north-star.md \
   templates/period-digest.md templates/pr-walkthrough.md templates/quality-requirements.md \
@@ -134,12 +138,12 @@ expected_asset_paths=$(printf '%s\n' \
   visual-guidance/reference-cicd-pipeline.png \
   visual-guidance/reference-system-architecture.png | sort)
 actual_asset_paths=$(cd "$ENTRY/assets" && find . -type f | sed 's#^./##' | sort)
-if same_set "$actual_asset_paths" "$expected_asset_paths"; then pass "継承資産56 path完全一致"; else fail "継承資産56 path完全一致"; fi
+if same_set "$actual_asset_paths" "$expected_asset_paths"; then pass "継承資産58 path完全一致"; else fail "継承資産58 path完全一致"; fi
 if ! same_set "$actual_asset_paths" "${expected_asset_paths%templates/workload-model.md}templates/arbitrary.md"; then pass "self-test: 同数renameを拒否"; else fail "self-test: 同数renameを拒否"; fi
 
 map_file="$ENTRY/assets/template-examples.yml"
 map_paths=$(awk '/^    (template|example): / {print $2}' "$map_file")
-if [ "$(printf '%s\n' "$map_paths" | sed '/^$/d' | wc -l | tr -d ' ')" -eq 38 ] && paths_exist "$ENTRY" "$map_paths"; then pass "型対応表19組の参照先が存在"; else fail "型対応表19組の参照先が存在"; fi
+if [ "$(printf '%s\n' "$map_paths" | sed '/^$/d' | wc -l | tr -d ' ')" -eq 40 ] && paths_exist "$ENTRY" "$map_paths"; then pass "型対応表20組の参照先が存在"; else fail "型対応表20組の参照先が存在"; fi
 if ! paths_exist "$ENTRY" "assets/templates/missing.md"; then pass "self-test: 対応表の欠損参照を拒否"; else fail "self-test: 対応表の欠損参照を拒否"; fi
 map_slugs=$(awk '/^  [a-z0-9-]+:$/ {sub(/^  /, ""); sub(/:$/, ""); print}' "$map_file" | sort)
 manifest_slugs=$(jq -r '.metadata.harness.implements[0].types[]' "$CODEX" | sort)
@@ -170,6 +174,9 @@ if rg -n 'prepare\.sh|resolve\.sh|run-config\.py|reader_context\.ya?ml|reading_p
 else
   pass "執筆SKILLに旧runtime・中間YAML呼び出しがない"
 fi
+
+# repositoryの回帰検査（harness-tools）: CI workflowのSHA固定、公開入口の一意性、doctorの読み取り専用性、templateと記載例の対応
+if python3 "$TOOLS/test-hardening.py" --repository "$ROOT" >/dev/null 2>&1; then pass "test-hardening --repository"; else fail "test-hardening --repository"; fi
 
 symlink_count=$(find "$ROOT" -type l | wc -l | tr -d ' ')
 if [ "$symlink_count" -eq 0 ]; then pass "symlinkなし"; else fail "symlinkなし"; fi

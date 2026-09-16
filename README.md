@@ -34,7 +34,7 @@ plugins/write-doc/
     ├── playbook.yml                同じagentが辿る7工程の宣言順
     ├── CONTRACT.md                 公開契約 v2
     ├── references/                 文章原則、正確性の確認、図表の役割
-    └── assets/                     templates 19型、examples、personas、visual-guidance、型カタログ
+    └── assets/                     templates 20型、examples、personas、visual-guidance、型カタログ
 ```
 
 ## 検証
@@ -43,5 +43,7 @@ plugins/write-doc/
 bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/write-doc-plugins/scripts/validate.sh
 bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/scripts/validate.sh /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/write-doc-plugins
 ```
+
+保守用tool（root契約の構造検査、回帰検査、release、eval）の正本は兄弟checkoutの `../harness-tools/` であり、このrepositoryは複製を持たない。`scripts/validate.sh` は `../harness-tools/tools/` の実在を確認してから呼び、無ければ止まる。CIの `validate.yml` も `harness-tools` を兄弟checkoutして `harness-tools/ci/validate.sh` を実行する。
 
 構造検査の成功は文章の妥当性を保証しない。SKILL.md、templates、生成資料は読んで根拠付きで評価する。契約 v1 からの移行記録は [契約 v2 移行表](docs/contract-v2-migration.md) にある。
