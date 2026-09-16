@@ -25,7 +25,7 @@
 
 `material` の各要素は、インライン素材なら `{kind: text, content: "..."}`、ファイル素材なら `{kind: file, path: /absolute/path}` とする。空の `content`、相対 path、読み取れない path、未知の kind やキーは受け付けない。この区別により、存在しないファイルパスを文章として扱わない。
 
-`references` は読み取り可能な絶対パスでなければならない。`update_target` は `.md` ファイルでなければならない。`name` はパス要素を含まない `.md` ファイル名とする。表にない入力キーは受け付けない。`document_type` が渡された場合は選び直さない。
+`references` は読み取り可能な絶対パスでなければならない。プロジェクト固有の規約や文脈は、対象repositoryのAGENTS.md / CLAUDE.mdと `references` で渡される。`update_target` は `.md` ファイルでなければならない。`name` はパス要素を含まない `.md` ファイル名とする。表にない入力キーは受け付けない。`document_type` が渡された場合は選び直さない。
 
 ## 出力
 
