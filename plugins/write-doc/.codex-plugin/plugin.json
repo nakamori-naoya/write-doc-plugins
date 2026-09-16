@@ -1,6 +1,6 @@
 {
   "name": "write-doc",
-  "version": "7.0.0",
+  "version": "8.0.0",
   "description": "素材からMarkdown資料を直接執筆して保存する公開playbook write-docを提供する",
   "author": {
     "name": "NaoyaNakamori"
