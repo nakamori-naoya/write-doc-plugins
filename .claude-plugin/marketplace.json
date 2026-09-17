@@ -9,7 +9,7 @@
       "name": "write-doc",
       "source": "./plugins/write-doc",
       "description": "素材からMarkdown資料を直接執筆して保存する",
-      "version": "9.2.0"
+      "version": "9.3.0"
     }
   ]
 }
