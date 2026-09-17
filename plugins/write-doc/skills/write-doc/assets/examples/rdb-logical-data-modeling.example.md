@@ -47,38 +47,61 @@
 
 ## 論理データモデル図
 
-図は8テーブルの関係、主要キー、多重度に絞る。全列、NULL制約、値域、業務制約は後続の定義表と本文を正本にする。DBMS固有の型へどう写すかは物理設計で決める。
+図は8テーブルの関係、全論理列、PostgreSQL型、キー、NULL制約、多重度を示す。値域と業務制約は後続の定義表と本文を正本にする。indexやDDLは物理設計で決める。
 
 ```mermaid
 erDiagram
     reservations {
-        identifier reservation_id PK "予約番号 / NOT NULL"
+        uuid reservation_id PK "予約番号 / NOT NULL"
+        text room_code "会議室 / NOT NULL"
+        text customer_code "予約者 / NOT NULL"
+        timestamptz started_at "利用開始 / NOT NULL"
+        timestamptz ended_at "利用終了 / NOT NULL"
+        text status "予約状態 / NOT NULL"
+        bigint current_version "現在version / NOT NULL"
+        timestamptz created_at "作成日時 / NOT NULL"
+        timestamptz updated_at "最終更新日時 / NOT NULL"
     }
     room_booking_claims {
-        identifier reservation_id PK, FK "予約番号 / NOT NULL"
+        uuid reservation_id PK, FK "予約番号 / NOT NULL"
+        text room_code "会議室 / NOT NULL"
+        timestamptz started_at "利用開始 / NOT NULL"
+        timestamptz ended_at "利用終了 / NOT NULL"
+        timestamptz created_at "作成日時 / NOT NULL"
     }
     tentative_hold_deadlines {
-        identifier reservation_id PK, FK "予約番号 / NOT NULL"
+        uuid reservation_id PK, FK "予約番号 / NOT NULL"
+        timestamptz expired_at "期限 / NOT NULL"
+        timestamptz created_at "作成日時 / NOT NULL"
     }
     reservation_base_events {
-        identifier id PK "基底イベント番号 / NOT NULL"
-        identifier reservation_id FK "予約番号 / NOT NULL"
+        uuid id PK "基底イベント番号 / NOT NULL"
+        uuid reservation_id FK "予約番号 / NOT NULL"
+        text event_type "イベント種別 / NOT NULL"
+        bigint version "イベントversion / NOT NULL"
+        text actor_code "行為者 / NOT NULL"
+        timestamptz occurred_at "発生日時 / NOT NULL"
     }
     reservation_tentative_created_events {
-        identifier id PK "仮押さえ成立イベント番号 / NOT NULL"
-        identifier base_event_id FK, UK "基底イベント番号 / NOT NULL"
+        uuid id PK "仮押さえ成立イベント番号 / NOT NULL"
+        uuid base_event_id FK, UK "基底イベント番号 / NOT NULL"
+        text room_code "会議室 / NOT NULL"
+        text customer_code "予約者 / NOT NULL"
+        timestamptz started_at "利用開始 / NOT NULL"
+        timestamptz ended_at "利用終了 / NOT NULL"
+        timestamptz expired_at "期限 / NOT NULL"
     }
     reservation_confirmed_events {
-        identifier id PK "予約確定イベント番号 / NOT NULL"
-        identifier base_event_id FK, UK "基底イベント番号 / NOT NULL"
+        uuid id PK "予約確定イベント番号 / NOT NULL"
+        uuid base_event_id FK, UK "基底イベント番号 / NOT NULL"
     }
     reservation_cancelled_events {
-        identifier id PK "予約取消イベント番号 / NOT NULL"
-        identifier base_event_id FK, UK "基底イベント番号 / NOT NULL"
+        uuid id PK "予約取消イベント番号 / NOT NULL"
+        uuid base_event_id FK, UK "基底イベント番号 / NOT NULL"
     }
     reservation_expired_events {
-        identifier id PK "予約期限切れイベント番号 / NOT NULL"
-        identifier base_event_id FK, UK "基底イベント番号 / NOT NULL"
+        uuid id PK "予約期限切れイベント番号 / NOT NULL"
+        uuid base_event_id FK, UK "基底イベント番号 / NOT NULL"
     }
 
     reservations ||--o| room_booking_claims : "現在の利用枠を占有する"
@@ -100,19 +123,19 @@ erDiagram
 - 識別: 予約番号が同じなら同じ予約である
 - 対応するシナリオ: BDD-001からBDD-010
 
-論理型、NULL制約、値域、キーの詳細は、この定義表と業務制約を正本にする。図はテーブル間の関係と主要キーを把握するために使う。すべての列はNOT NULLである。
+PostgreSQL型、NULL制約、値域、キーの詳細は、この定義表と業務制約を正本にする。図は全列とテーブル間の関係を把握するために使う。すべての列はNOT NULLである。
 
 | 論理列 | 論理型・キー・値域 | 業務上の意味 | 値を決める事実 |
 |---|---|---|---|
-| `reservation_id`（予約番号） | `identifier`、PK | 予約を追跡する番号 | 仮押さえ成立時に一意に採番する |
-| `room_code`（会議室） | `string` | 予約対象の会議室 | 仮押さえ申込みで指定された会議室 |
-| `customer_code`（予約者） | `string` | 利用する予約者 | 仮押さえを申し込んだ予約者 |
-| `starts_at`（利用開始） | `instant`、`ends_at`より前 | 利用枠の始点 | 仮押さえ申込みで指定された利用開始 |
-| `ends_at`（利用終了） | `instant` | 利用枠の終点 | 仮押さえ申込みで指定された利用終了 |
-| `status`（予約状態） | `string`、`tentative`・`confirmed`・`cancelled`・`expired` | 仮押さえ・確定・取消済み・期限切れのどれか | 最後に成立した基底イベントの種別 |
-| `current_version`（現在version） | `integer`、1以上 | 現在の姿へ最後に反映した基底イベントのversion | 最後に成立した基底イベントのversion |
-| `created_at`（作成日時） | `instant` | 予約が成立した日時 | 仮押さえ成立イベントの発生日時 |
-| `updated_at`（最終更新日時） | `instant` | 現在の姿へ最後に変わった日時 | 最後に反映した基底イベントの発生日時 |
+| `reservation_id`（予約番号） | `uuid`、PK | 予約を追跡する番号 | 仮押さえ成立時に一意に採番する |
+| `room_code`（会議室） | `text` | 予約対象の会議室 | 仮押さえ申込みで指定された会議室 |
+| `customer_code`（予約者） | `text` | 利用する予約者 | 仮押さえを申し込んだ予約者 |
+| `started_at`（利用開始） | `timestamptz`、`ended_at`より前 | 利用枠の始点 | 仮押さえ申込みで指定された利用開始 |
+| `ended_at`（利用終了） | `timestamptz` | 利用枠の終点 | 仮押さえ申込みで指定された利用終了 |
+| `status`（予約状態） | `text`、`tentative`・`confirmed`・`cancelled`・`expired` | 仮押さえ・確定・取消済み・期限切れのどれか | 最後に成立した基底イベントの種別 |
+| `current_version`（現在version） | `bigint`、1以上 | 現在の姿へ最後に反映した基底イベントのversion | 最後に成立した基底イベントのversion |
+| `created_at`（作成日時） | `timestamptz` | 予約が成立した日時 | 仮押さえ成立イベントの発生日時 |
+| `updated_at`（最終更新日時） | `timestamptz` | 現在の姿へ最後に変わった日時 | 最後に反映した基底イベントの発生日時 |
 
 #### 業務制約: 予約期間は正の長さ
 
@@ -134,11 +157,11 @@ erDiagram
 
 | 論理列 | 論理型・キー・値域 | 業務上の意味 | 値を決める事実 |
 |---|---|---|---|
-| `reservation_id`（予約番号） | `identifier`、PK・FK、NOT NULL | 占有を持つ予約 | 占有を生んだ仮押さえ予約 |
-| `room_code`（会議室） | `string`、NOT NULL | 占有されている会議室 | 予約の会議室 |
-| `starts_at`（利用開始） | `instant`、NOT NULL、`ends_at`より前 | 半開区間の始点 | 予約の利用開始 |
-| `ends_at`（利用終了） | `instant`、NOT NULL | 半開区間の終点 | 予約の利用終了 |
-| `created_at`（作成日時） | `instant`、NOT NULL | 占有が成立した日時 | 仮押さえ成立イベントの発生日時 |
+| `reservation_id`（予約番号） | `uuid`、PK・FK、NOT NULL | 占有を持つ予約 | 占有を生んだ仮押さえ予約 |
+| `room_code`（会議室） | `text`、NOT NULL | 占有されている会議室 | 予約の会議室 |
+| `started_at`（利用開始） | `timestamptz`、NOT NULL、`ended_at`より前 | 半開区間の始点 | 予約の利用開始 |
+| `ended_at`（利用終了） | `timestamptz`、NOT NULL | 半開区間の終点 | 予約の利用終了 |
+| `created_at`（作成日時） | `timestamptz`、NOT NULL | 占有が成立した日時 | 仮押さえ成立イベントの発生日時 |
 
 同じ会議室の時間帯は、境界接触を除いて二つの占有に属さない。
 
@@ -155,9 +178,9 @@ erDiagram
 
 | 論理列 | 論理型・キー・値域 | 業務上の意味 | 値を決める事実 |
 |---|---|---|---|
-| `reservation_id`（予約番号） | `identifier`、PK・FK、NOT NULL | 期限が適用される仮押さえ予約 | 期限を生んだ仮押さえ予約 |
-| `expires_at`（期限） | `instant`、NOT NULL | 確定しなければ占有を解放する時刻 | 仮押さえ成立イベントの発生日時から15分後 |
-| `created_at`（作成日時） | `instant`、NOT NULL | 期限が成立した日時 | 仮押さえ成立イベントの発生日時 |
+| `reservation_id`（予約番号） | `uuid`、PK・FK、NOT NULL | 期限が適用される仮押さえ予約 | 期限を生んだ仮押さえ予約 |
+| `expired_at`（期限） | `timestamptz`、NOT NULL | 確定しなければ占有を解放する時刻 | 仮押さえ成立イベントの発生日時から15分後 |
+| `created_at`（作成日時） | `timestamptz`、NOT NULL | 期限が成立した日時 | 仮押さえ成立イベントの発生日時 |
 
 #### 業務制約: 仮押さえだけが期限を持つ
 
@@ -174,12 +197,12 @@ erDiagram
 
 | 論理列 | 論理型・キー・値域 | 業務上の意味 | 値を決める事実 |
 |---|---|---|---|
-| `id`（基底イベント番号） | `identifier`、PK、NOT NULL | 一つの出来事を追跡する番号 | 出来事の成立時に一意に採番する |
-| `reservation_id`（予約番号） | `identifier`、FK・複合UK、NOT NULL | 出来事が属する予約 | 出来事の対象になった予約 |
-| `event_type`（イベント種別） | `string`、NOT NULL、`tentative_created`・`confirmed`・`cancelled`・`expired` | 仮押さえ成立・確定・取消・期限切れのどれか | 成立した業務イベントの種類 |
-| `version`（イベントversion） | `integer`、複合UK、NOT NULL、1以上 | 同じ予約で出来事が成立した順序 | 同じ予約の直前のversionに1を足した値。最初は1 |
-| `actor_code`（行為者） | `string`、NOT NULL | 予約者または期限管理 | 出来事を起こした主体 |
-| `occurred_at`（発生日時） | `instant`、NOT NULL | 業務上、出来事が成立した日時 | 業務イベントが成立した時刻 |
+| `id`（基底イベント番号） | `uuid`、PK、NOT NULL | 一つの出来事を追跡する番号 | 出来事の成立時に一意に採番する |
+| `reservation_id`（予約番号） | `uuid`、FK・複合UK、NOT NULL | 出来事が属する予約 | 出来事の対象になった予約 |
+| `event_type`（イベント種別） | `text`、NOT NULL、`tentative_created`・`confirmed`・`cancelled`・`expired` | 仮押さえ成立・確定・取消・期限切れのどれか | 成立した業務イベントの種類 |
+| `version`（イベントversion） | `bigint`、複合UK、NOT NULL、1以上 | 同じ予約で出来事が成立した順序 | 同じ予約の直前のversionに1を足した値。最初は1 |
+| `actor_code`（行為者） | `text`、NOT NULL | 予約者または期限管理 | 出来事を起こした主体 |
+| `occurred_at`（発生日時） | `timestamptz`、NOT NULL | 業務上、出来事が成立した日時 | 業務イベントが成立した時刻 |
 
 #### 業務制約: イベントversionは予約内で一意
 
@@ -211,19 +234,19 @@ erDiagram
 
 | テーブル | 論理列 | 論理型・キー |
 |---|---|---|
-| 仮押さえ成立 | `id` | `identifier`、PK |
-| 仮押さえ成立 | `base_event_id` | `identifier`、FK・UK |
-| 仮押さえ成立 | `room_code` | `string` |
-| 仮押さえ成立 | `customer_code` | `string` |
-| 仮押さえ成立 | `starts_at` | `instant` |
-| 仮押さえ成立 | `ends_at` | `instant` |
-| 仮押さえ成立 | `expires_at` | `instant` |
-| 予約確定 | `id` | `identifier`、PK |
-| 予約確定 | `base_event_id` | `identifier`、FK・UK |
-| 予約取消 | `id` | `identifier`、PK |
-| 予約取消 | `base_event_id` | `identifier`、FK・UK |
-| 期限切れ | `id` | `identifier`、PK |
-| 期限切れ | `base_event_id` | `identifier`、FK・UK |
+| 仮押さえ成立 | `id` | `uuid`、PK |
+| 仮押さえ成立 | `base_event_id` | `uuid`、FK・UK |
+| 仮押さえ成立 | `room_code` | `text` |
+| 仮押さえ成立 | `customer_code` | `text` |
+| 仮押さえ成立 | `started_at` | `timestamptz` |
+| 仮押さえ成立 | `ended_at` | `timestamptz` |
+| 仮押さえ成立 | `expired_at` | `timestamptz` |
+| 予約確定 | `id` | `uuid`、PK |
+| 予約確定 | `base_event_id` | `uuid`、FK・UK |
+| 予約取消 | `id` | `uuid`、PK |
+| 予約取消 | `base_event_id` | `uuid`、FK・UK |
+| 期限切れ | `id` | `uuid`、PK |
+| 期限切れ | `base_event_id` | `uuid`、FK・UK |
 
 ## ライフサイクルと時間軸
 
