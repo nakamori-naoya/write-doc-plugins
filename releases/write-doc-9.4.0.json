@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "plugin": "write-doc",
+  "version": "9.4.0",
+  "created_at": "2026-09-19T17:04:17.284067+00:00",
+  "notes": "要求・利用負荷・品質要求のtemplateとexampleを、人間向けの結論・因果・自然な見出しを中心とする構成へ更新する",
+  "breaking": "なし",
+  "migration": "既存資料の更新では従来の固定見出しへ置換せず、既存の体裁を優先する。後続追跡が必要な場合だけ末尾の追跡情報を使う",
+  "checks": {
+    "codex": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed（merge後に導入）",
+      "evidence": "bash scripts/validate.sh: exit 0 (44 passed, 0 failed)"
+    },
+    "claude": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed（merge後に導入）",
+      "evidence": "bash scripts/validate.sh: exit 0 (44 passed, 0 failed)"
+    },
+    "root-validation": "workspace root scripts/validate.sh: Root validation passed"
+  },
+  "files": [
+    ".agents/plugins/marketplace.json",
+    "plugins/write-doc/.codex-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "plugins/write-doc/.claude-plugin/plugin.json"
+  ]
+}
