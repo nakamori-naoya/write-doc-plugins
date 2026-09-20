@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "plugin": "write-doc",
+  "version": "9.4.2",
+  "created_at": "2026-09-20T02:58:00.000000+00:00",
+  "notes": "テンプレート執筆指示と記載例からWhy禁止令を撤廃し、問題のメカニズム・因果のナラティブ解説および足場かけ（Scaffolding）を保護・強化",
+  "breaking": "なし",
+  "migration": "既存資料の更新では既存の体裁を優先しつつ、各節の冒頭に因果やメカニズムを解説する本文段落を自然に配置する",
+  "checks": {
+    "codex": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed（merge後に導入）",
+      "evidence": "bash scripts/validate.sh: exit 0 (44 passed, 0 failed)"
+    },
+    "claude": {
+      "status": "manifest-and-contract-tests-passed",
+      "native-client-installation": "not-executed（merge後に導入）",
+      "evidence": "bash scripts/validate.sh: exit 0 (44 passed, 0 failed)"
+    },
+    "root-validation": "workspace root scripts/validate.sh: Root validation passed"
+  },
+  "files": [
+    ".agents/plugins/marketplace.json",
+    "plugins/write-doc/.codex-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    "plugins/write-doc/.claude-plugin/plugin.json"
+  ]
+}
