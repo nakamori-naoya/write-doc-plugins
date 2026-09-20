@@ -30,6 +30,8 @@ flowchart LR
 
 ## 構成要素
 
+利用者のWebリクエストを処理する `roomflow-api` と、期限切れタスクを処理する `roomflow-worker` は、いずれもコンテナとして Cloud Run 上で独立して稼働する。Webトラフィックの急激なスパイクが起きた場合でも、期限切れ処理の負荷が同期APIの応答を圧迫しないよう、処理境界を分離している。
+
 | 要素 | 役割（一文） | 実行場所 | 技術・製品 | 所有者 |
 |---|---|---|---|---|
 | 外部HTTPSロードバランサ | 利用者からのHTTPSを受け、`roomflow-api`へ転送する | Google Cloud `roomflow-prod`、グローバル | Cloud Load Balancing、マネージド証明書 | 予約チーム |
@@ -42,6 +44,8 @@ flowchart LR
 | Cloud Logging | アクセスログとアプリケーションログを保持する | Google Cloud `roomflow-prod`、`asia-northeast1` | Cloud Logging | 予約チーム |
 
 ## 通信と依存
+
+APIとワーカー間の連携には Cloud Tasks を採用している。仮押さえの発生から15分後の期限到来を非同期タスクとして配送することで、データベースの定期ポーリングを不要にし、DBのCPU負荷とロック競合を最小限に抑えている。
 
 | 呼ぶ側 → 呼ばれる側 | 経路 | 認証 | 相手が応答しないとき |
 |---|---|---|---|
