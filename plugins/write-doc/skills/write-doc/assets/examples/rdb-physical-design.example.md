@@ -1,6 +1,6 @@
 # RDB物理設計 — 貸会議室の予約
 
-<!-- これは`rdb-physical-design`型の記載例である。**構成の正本ではなく、粒度と具体性の見本として読む。**
+<!-- これは`rdb-physical-design`型の記載例である。**構成の基準資料ではなく、粒度と具体性の見本として読む。**
      対象製品、件数、計測結果は架空だが、判断と検証の粒度は実案件で再利用できる形にしている。 -->
 
 **対象DBMSをPostgreSQL 16.4に固定し、論理設計の8テーブルを変えずに、制約、index、分離性、代表的なReadを設計する。** 存在しない空き枠は行ロックできないため、重複占有の成立判定には時間範囲の排他制約を使う。
@@ -12,10 +12,10 @@
 - 論理モデル: `rdb-logical-data-modeling.example.md`（2026-09-01）
 - 入力にした論理設計: [RDB論理設計の記載例](rdb-logical-data-modeling.example.md)（版: 2026-09-01 確定）
 - 論理構造の指紋: sha256:6743b2b97a22ee5dea3eea721e318ce3346cfe075be9bc3465468c8e8b54bf25
-- 要求正本: `requirements-discovery.example.md`（説明用の仮想入力）
+- 要求資料: `requirements-discovery.example.md`（説明用の仮想入力）
 - 利用・負荷モデル: `workload-model.example.md`（説明用の仮想入力）
-- 品質要求正本: `quality-requirements.example.md`（説明用の仮想入力）
-- 基盤構成正本: `cloud-architecture.example.md`（説明用の仮想入力）
+- 品質要求資料: `quality-requirements.example.md`（説明用の仮想入力）
+- 基盤構成資料: `cloud-architecture.example.md`（説明用の仮想入力）
 - 検証証拠: 未実施。この記載例の数値は仮想であり、実案件では実行計画・負荷試験・競合試験・復旧試験の絶対pathへ置き換える
 - 確認環境: PostgreSQL 16.4、1 primary（8 vCPU / 32 GiB / gp3 500 GiB）、東京リージョン、2026-09-02
 - 計測条件: `pgbench`で同時実行10、各Readを1,000回試行し、`EXPLAIN (ANALYZE, BUFFERS)`の実行時間を集計する。p95は1,000回の95パーセンタイル、キャッシュは事前に対象indexを温めた定常状態とする
@@ -45,8 +45,8 @@
 
 - 論理上の意味: 同じ会議室について、成立中の予約時間帯は重ならない
 - 物理実装: `room_booking_claims`の開始・終了から半開区間を作り、`room_code`とのGiST排他制約で競合を拒否する
-- 正本と同期: 予約の現在状態と同じtransactionで占有を追加・削除し、単独ではcommitしない
-- 再構築・撤去: 成立中予約から占有を再構築して検査後に切り替える。別方式へ移る場合も予約正本は変えない
+- 一次データと同期: 予約の現在状態と同じtransactionで占有を追加・削除し、単独ではcommitしない
+- 再構築・撤去: 成立中予約から占有を再構築して検査後に切り替える。別方式へ移る場合も予約の一次データは変えない
 - 不変条件の保存: 時間帯の境界接触は許し、実際に重なる二予約だけを拒否する論理制約を保つ
 
 | 論理上の判断 | 物理化 | 理由 |

@@ -27,7 +27,7 @@
   <line x1="100" y1="332" x2="530" y2="332" stroke="#cad3df"/>
   <text x="100" y="373" class="body">
     <tspan x="100" dy="0">券面や表示ではなく、現在の権利を</tspan>
-    <tspan x="100" dy="29">判断の正本にする</tspan>
+    <tspan x="100" dy="29">判断根拠にする</tspan>
   </text>
   <line x1="100" y1="447" x2="530" y2="447" stroke="#cad3df"/>
   <text x="100" y="488" class="body">正規の経路を通った権利を行使可能にする</text>

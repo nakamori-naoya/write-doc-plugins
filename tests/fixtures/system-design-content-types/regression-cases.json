@@ -1,9 +1,9 @@
 {
   "cases": [
-    {"id": "ascii-placeholder", "text": "# 正本\n\n<TBD>", "expected": "reject"},
-    {"id": "japanese-placeholder", "text": "# 正本\n\n未記入: <未入力>", "expected": "reject"},
-    {"id": "broken-anchor", "text": "# 正本\n\n[不存在](#存在しない節)", "expected": "reject"},
-    {"id": "english-diagram-label", "text": "# 正本\n\n```mermaid\nflowchart LR\n  A[\"application\"]\n```", "expected": "reject"},
-    {"id": "valid-mermaid-html-machine", "text": "# 正本\n\n機械値: `provider`\n\n```mermaid\nflowchart LR\n  A[\"NODE-API<br/>予約API\"]\n```", "expected": "accept"}
+    {"id": "ascii-placeholder", "text": "# 基準資料\n\n<TBD>", "expected": "reject"},
+    {"id": "japanese-placeholder", "text": "# 基準資料\n\n未記入: <未入力>", "expected": "reject"},
+    {"id": "broken-anchor", "text": "# 基準資料\n\n[不存在](#存在しない節)", "expected": "reject"},
+    {"id": "english-diagram-label", "text": "# 基準資料\n\n```mermaid\nflowchart LR\n  A[\"application\"]\n```", "expected": "reject"},
+    {"id": "valid-mermaid-html-machine", "text": "# 基準資料\n\n機械値: `provider`\n\n```mermaid\nflowchart LR\n  A[\"NODE-API<br/>予約API\"]\n```", "expected": "accept"}
   ]
 }
