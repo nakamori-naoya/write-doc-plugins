@@ -98,9 +98,9 @@ CATALOG_TYPE_TO_SLUG = {
     "RDB論理設計": "rdb-logical-data-modeling",
     "RDB物理設計": "rdb-physical-design",
     "システム構成": "architecture",
-    "要求発見正本": "requirements-discovery",
+    "要求発見資料": "requirements-discovery",
     "利用・負荷モデル": "workload-model",
-    "品質要求正本": "quality-requirements",
+    "品質要求資料": "quality-requirements",
     "クラウドアーキテクチャ": "cloud-architecture",
     "Product North Star": "north-star",
     "Product Strategy": "strategy",
@@ -159,9 +159,9 @@ def check_examples_are_not_frames(pairs: dict[str, dict[str, str]]) -> None:
             continue
         text = ex.read_text()
         if "../templates/" in text:
-            fail(f"{slug}: 記載例がテンプレートへリンクしている。構成の正本と誤読される")
-        if "構成の正本ではなく" not in text:
-            fail(f"{slug}: 記載例に「構成の正本ではなく、粒度と具体性の見本」の宣言が無い")
+            fail(f"{slug}: 記載例がテンプレートへリンクしている。構成の基準資料と誤読される")
+        if "構成の基準資料ではなく" not in text:
+            fail(f"{slug}: 記載例に「構成の基準資料ではなく、粒度と具体性の見本」の宣言が無い")
         if PLACEHOLDER.search(text.replace("&nbsp;", "")) and slug not in ("landing-page",):
             pass  # プレースホルダーの混入検査は型ごとの記法差が大きいため、ここでは行わない
 

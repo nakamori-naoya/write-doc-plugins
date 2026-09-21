@@ -1,5 +1,5 @@
 # write-doc — 素材からMarkdown資料を1本書いて保存する。
-# 公開する入力・出力・保証は CONTRACT.md が正本。工程順はこのYAMLが正本で、
+# 公開する入力・出力・保証は CONTRACT.md が契約定義である。工程順の正式な定義はこのYAMLであり、
 # すべての工程を同じagentが同じ文脈で辿る。工程間で運ぶ値は無く、配列順だけが依存である。
 version: 2
 name: write-doc

@@ -1,6 +1,6 @@
 # システム構成 — RoomFlow 予約サービス
 
-<!-- これは`architecture`型の記載例である。**構成の正本ではなく、粒度と具体性の見本として読む。**
+<!-- これは`architecture`型の記載例である。**構成の基準資料ではなく、粒度と具体性の見本として読む。**
      RoomFlowは組織内の共用会議室を予約する架空のサービスで、プロジェクトID・リージョン・値はすべて説明用である。実在の構成を確認したものではない。 -->
 
 RoomFlowは、Cloud Run上のAPIとワーカーがCloud SQL（PostgreSQL）を共有して動く。利用者からの入口はロードバランサである。仮押さえ期限の到来だけをCloud Tasks経由で非同期処理する。組織のIDプロバイダより外へ出る通信は無い。
@@ -75,7 +75,7 @@ APIとワーカー間の連携には Cloud Tasks を採用している。仮押�
 | 秘密情報 | Secret Manager | 版ごとに保持 | Secret Managerの版から戻す |
 | アクセスログ・アプリケーションログ | Cloud Logging | 30日 | 復元しない |
 
-論理データモデルは[貸会議室予約のRDB論理設計](rdb-logical-data-modeling.example.md)、業務の決まりは[貸会議室予約の業務知識・コアドメイン](domain-rule.example.md)が正本である。この資料はそれらを繰り返さない。
+論理データモデルは[貸会議室予約のRDB論理設計](rdb-logical-data-modeling.example.md)、業務の決まりは[貸会議室予約の業務知識・コアドメイン](domain-rule.example.md)が参照元である。この資料はそれらを繰り返さない。
 
 ## 環境
 

@@ -3,7 +3,7 @@
   "plugin": "write-doc",
   "version": "9.3.0",
   "created_at": "2026-09-17T13:04:56Z",
-  "notes": "RDB物理設計templateとexampleへ上流正本、物理写像、検証状態、合格条件、見直し条件を追加",
+  "notes": "RDB物理設計templateとexampleへ上流資料、物理写像、検証状態、合格条件、見直し条件を追加",
   "breaking": "なし",
   "migration": "新しいrdb-design packageで物理設計を作成・改訂する場合は追加欄を埋め、実測証拠が無い判断をplannedとして記録する",
   "checks": {
