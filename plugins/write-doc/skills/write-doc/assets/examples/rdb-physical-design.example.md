@@ -3,7 +3,7 @@
 <!-- これは`rdb-physical-design`型の記載例である。**構成の基準資料ではなく、粒度と具体性の見本として読む。**
      架空の題材「図書館の貸出」の論理データモデルを写した。件数と計測値は説明用の仮想値である。 -->
 
-**対象DBMSをPostgreSQL 16.4に固定し、論理設計の9テーブルを変えずに、導いた値の保存、制約、index、分離レベルとやり直し、代表的なReadを決める。** 論理設計はいまの貸出の状態を持たないが、毎回の貸出で「一冊一つ」と「一人5冊まで」を確かめるために、物理設計で貸出のいまの状態を導いて保存する。延滞の通知の回収は、利用者から見えないが件数とともに遅くなるReadとして台帳に載せる。
+**対象DBMSをPostgreSQL 16.4に固定し、論理設計の9テーブルを変えずに、制約、index、分離レベルとやり直し、代表的なReadを決める。** 借りている冊数は集計列を足さずに数え、貸出上限は`SERIALIZABLE`とやり直しで守る。延滞の通知の回収は、利用者から見えないが件数とともに遅くなるReadとして台帳に載せる。
 
 ## 対象と論理設計
 
@@ -11,7 +11,7 @@
 - 対象バージョン: 16.4
 - 論理モデル: `rdb-logical-data-modeling.example.md`（2026-10-01）
 - 入力にした論理設計: [RDB論理設計の記載例](rdb-logical-data-modeling.example.md)（版: 2026-10-01 確定）
-- 論理構造の指紋: sha256:bb48c8747e7969f3b0d2944b997e76a1c8aa2fb2d5a20bbef8ee8571de335880
+- 論理構造の指紋: sha256:94ef79e7d5c823f2e615218d15754ffe2f63eaa38cc776543ba04db37a2c40d3
 - 要求資料: `requirements-discovery.example.md`（説明用の仮想入力）
 - 利用・負荷モデル: `workload-model.example.md`（説明用の仮想入力）
 - 品質要求資料: `quality-requirements.example.md`（説明用の仮想入力）
@@ -26,28 +26,28 @@
 
 | 制約名 | 対象 | PostgreSQL 16.4での実現 | 適用時点 | 違反時の扱い |
 |---|---|---|---|---|
-| 一冊の本の貸出中か延滞の貸出は一つ | `loan_current_states` | `book_number`の部分一意index（`status IN ('lent', 'overdue')`） | 行の書込み時 | SQLSTATE `23505`を「貸出中の本を借りる」へ変換する。やり直さない |
-| 一人の貸出中と延滞の貸出は5冊まで | `loan_current_states` | `SERIALIZABLE`のtransactionで件数を読んでから書く | commit時 | SQLSTATE `40001`なら transaction の中で最大3回やり直す |
-| 貸出の中の版は一つずつ増える | `loan_base_events` | `loan_id, version`の一意制約。追加する版は読んだ最後の版の次にする | 行の書込み時 | `23505`なら競合として返す。やり直さない |
+| 一冊の本の貸出中か延滞の貸出は一つ | `loans` | `book_number`の部分一意index（`status IN ('lent', 'overdue')`） | 行の書込み時 | SQLSTATE `23505`を「貸出中の本を借りる」へ変換する。やり直さない |
+| 一人の貸出中と延滞の貸出は5冊まで | `loans` | `SERIALIZABLE`のtransactionで件数を読んでから書く | commit時 | SQLSTATE `40001`なら transaction の中で最大3回やり直す |
+| 現在の版は最後のイベントの版 | `loans`、`loan_base_events` | `loans`の`current_version`を読んだ版で条件付きに更新し、`loan_base_events`の`loan_id, version`の一意制約と同じtransactionで組み合わせる | 状態変更時 | 更新件数0か`23505`なら競合として返す。やり直さない |
 | 成功と失敗はどちらか一つ | `overdue_notice_succeeded_events`、`overdue_notice_failed_events` | 両表の`request_id`主キーと、書く前に他方が無いことを同じtransactionで確かめる | 書込み時 | 他方が先にあれば書かずに終える |
 
-値の範囲の CHECK は、ドメインモデルだけが書く業務の表（`loans`、基底イベント、詳細イベント、`loan_current_states`）には置かない。値の正しさの持ち主はドメインモデルで、持ち主を二つにしないためである。技術処理の表はドメインモデルの外の送り手が書くので、`overdue_notice_claimed_events.version`が1以上であることと、`overdue_notice_failed_events.reason`が空でないことを CHECK で拒む。
+値の範囲の CHECK は、ドメインモデルだけが書く業務の表（`loans`、基底イベント、詳細イベント）には置かない。値の正しさの持ち主はドメインモデルで、持ち主を二つにしないためである。技術処理の表はドメインモデルの外の送り手が書くので、`overdue_notice_claimed_events.version`が1以上であることと、`overdue_notice_failed_events.reason`が空でないことを CHECK で拒む。
 
 ## 物理化の方針
 
-### 物理写像: 貸出のいまの状態
+### 物理写像: 貸出の状態と版
 
-- 論理上の意味: 貸出のいまの状態は、最後の基底イベントの種類から導ける情報であり、論理設計は持たない
-- 物理実装: 派生の表`loan_current_states`（`loan_id`、`user_number`、`book_number`、`status`、`last_version`、`due_on`）を置く。導いた値を保存する理由は、毎回の貸出で「一冊一つ」を部分一意indexで、「一人5冊まで」を件数で確かめ、延滞にする候補を返却期限で走査するためである。基底イベントを毎回畳み込むと、これらを索引で支えられない
-- 一次データと同期: 一次データは基底イベントと詳細イベントである。基底イベントを追加するのと同じtransactionで`loan_current_states`を更新し、片方だけをcommitしない
-- 再構築・撤去: 基底イベントを`version`順に畳み込んで作り直せる。毎日一度、作り直した結果と比べ、食い違いがあれば運用へ知らせる。要らなくなれば表を消すだけで、事実は失われない
-- 不変条件の保存: `last_version`は、その貸出の基底イベントの最大の`version`と等しい
+- 論理上の意味: 貸出のいまの状態と`current_version`は、基底イベントから導けるが、楽観ロックと毎回の貸出での読み取りのために論理設計が妥協として持つ
+- 物理実装: `loans.status`は`text`、`loans.current_version`は`bigint`で持ち、状態を変えるたびに読んだ版を条件に更新する
+- 一次データと同期: 一次データは基底イベントと詳細イベントである。基底イベントの追加と`loans`の更新を同じtransactionで確定し、片方だけをcommitしない
+- 再構築・撤去: 基底イベントを`version`順に畳み込んで状態と版を作り直せる。毎日一度、作り直した結果と比べ、食い違いがあれば運用へ知らせる
+- 不変条件の保存: `current_version`は、その貸出の基底イベントの最大の`version`と等しい
 
 ## index
 
-### index: `loan_current_states_book_active_key`
+### index: `loans_book_active_key`
 
-- 対象: `loan_current_states (book_number)` の部分一意index。`status IN ('lent', 'overdue')`の行だけ
+- 対象: `loans (book_number)` の部分一意index。`status IN ('lent', 'overdue')`の行だけ
 - 種類: B-tree部分一意index
 - 目的: 一冊の本の貸出中か延滞の貸出を一つに限り、Read-001の本の確認を支える
 - 列の順番: 単一列
@@ -56,9 +56,9 @@
 - 更新費用: 貸出で追加、返却で対象外になる
 - 検証状態: planned
 
-### index: `loan_current_states_user_active_idx`
+### index: `loans_user_active_idx`
 
-- 対象: `loan_current_states (user_number)` の部分index。`status IN ('lent', 'overdue')`の行だけ。`status`をINCLUDEする
+- 対象: `loans (user_number)` の部分index。`status IN ('lent', 'overdue')`の行だけ。`status`をINCLUDEする
 - 種類: B-tree部分index
 - 目的: 一人の貸出中と延滞の貸出を数え、延滞の有無を同時に見る
 - 列の順番: 単一列
@@ -67,9 +67,9 @@
 - 更新費用: 貸出で追加、延滞でINCLUDE列を更新、返却で対象外になる
 - 検証状態: planned
 
-### index: `loan_current_states_due_lent_idx`
+### index: `loans_due_lent_idx`
 
-- 対象: `loan_current_states (due_on, loan_id)` の部分index。`status = 'lent'`の行だけ
+- 対象: `loans (due_on, loan_id)` の部分index。`status = 'lent'`の行だけ
 - 種類: B-tree複合・部分index
 - 目的: 延滞にする候補（返却期限を過ぎた貸出中の貸出）を返却期限の順に走査する
 - 列の順番: `due_on`の範囲を先に絞り、同じ日の行を`loan_id`で安定して並べる
@@ -114,13 +114,13 @@
 
 ### 分離性判断: 同じ本を二人が借りる
 
-同じ本を二人が同時に借りると、どちらも「まだ貸出中でない」と読んで書きうる。貸出上限と同じ`SERIALIZABLE`のtransactionの中で、`loan_current_states_book_active_key`の部分一意indexが後の一方を`23505`で拒む。やり直さず「貸出中の本を借りる」を返す。二つのsessionで同じ本を借り、後の一方が`23505`で中断することを確かめる。
+同じ本を二人が同時に借りると、どちらも「まだ貸出中でない」と読んで書きうる。貸出上限と同じ`SERIALIZABLE`のtransactionの中で、`loans_book_active_key`の部分一意indexが後の一方を`23505`で拒む。やり直さず「貸出中の本を借りる」を返す。二つのsessionで同じ本を借り、後の一方が`23505`で中断することを確かめる。
 
 検証状態: planned
 
 ### 分離性判断: 延滞にするのと返却が重なる
 
-同じ貸出を延滞にする処理と本を返す処理が、どちらも版1を読んで版2を書こうとする（ロストアップデート）。`READ COMMITTED`で、`loan_id, version`の一意制約が後の一方を`23505`で拒む。やり直さない。延滞にする側は、その貸出を次の走査に任せる。二つのsessionで版1の貸出を同時に進め、後の一方が`23505`になることを確かめる。
+同じ貸出を延滞にする処理と本を返す処理が、どちらも版1を読んで版2を書こうとする（ロストアップデート）。`READ COMMITTED`で、読んだ版を条件にした`loans`の更新が後の一方で0件になり、それでも進んだ場合は`loan_id, version`の一意制約が`23505`で拒む。やり直さない。延滞にする側は、その貸出を次の走査に任せる。二つのsessionで版1の貸出を同時に進め、後の一方の更新が0件になることを確かめる。
 
 検証状態: planned
 
@@ -132,7 +132,7 @@
 
 ## パーティションと配置
 
-初期は論理設計の9テーブルと派生の表とも非partitionとする。基底イベントが3,000万件を超えたら、`occurred_at`による年次partitionを再検討する。通知の要求は削除しないので、累計100万件で走査の方法を見直す（index: `overdue_notice_requested_events_occurred_idx`）。
+初期は9テーブルとも非partitionとする。基底イベントが3,000万件を超えたら、`occurred_at`による年次partitionを再検討する。通知の要求は削除しないので、累計100万件で走査の方法を見直す（index: `overdue_notice_requested_events_occurred_idx`）。
 
 ## 容量・性能・運用
 
@@ -140,14 +140,14 @@
 |---|---|---|---|
 | データ量 | 貸出300万件、基底イベント700万件 | 非partition | 基底イベント3,000万件で再評価 |
 | 貸出の書込み | ピーク20件/秒 | 貸出を`SERIALIZABLE`の一transactionに閉じる | p95 50ms、`40001`のやり直し率1%未満 |
-| 派生の表の整合 | 毎日一度作り直して比べる | 食い違いは運用へ知らせる | 食い違いが1件でもあれば調査 |
+| 状態と版の整合 | 毎日一度イベントから作り直して比べる | 食い違いは運用へ知らせる | 食い違いが1件でもあれば調査 |
 | 通知の滞留 | 月2万件 | 未完了の要求だけを読む | Read-004で未完了が1,000件を超えたら警告 |
 
 ## 採用するRDB機能
 
 ### 機能: 部分一意index
 
-- 採用箇所: `loan_current_states_book_active_key`
+- 採用箇所: `loans_book_active_key`
 - 採用理由: 返却済みの行を残したまま、貸出中と延滞の行だけを一冊一つに限れる
 - 利用可能な版: 対象版で利用できる
 - 根拠: https://www.postgresql.org/docs/16/indexes-partial.html
@@ -200,7 +200,7 @@ Readには、利用者の問い合わせだけでなく、背景処理の走査�
 - 鮮度と一貫性: 貸出を書くのと同じ`SERIALIZABLE`のtransactionで読む
 - 想定件数: 同時15万行のうち、利用者あたり最大5行
 - SLO: p95 5ms
-- 支えるindex: `loan_current_states_user_active_idx`、`loan_current_states_book_active_key`
+- 支えるindex: `loans_user_active_idx`、`loans_book_active_key`
 
 ### Read-002: 延滞にする候補を返却期限の順に走査する
 
@@ -209,10 +209,10 @@ Readには、利用者の問い合わせだけでなく、背景処理の走査�
 - 結合: なし
 - 並び順と上限: `due_on, loan_id`の昇順、100件ずつ
 - 返す情報: 貸出、読んだ版
-- 鮮度と一貫性: primaryから読む。延滞にする書込みが版の一意で確かめるので、読んだ後の変化は許す
+- 鮮度と一貫性: primaryから読む。延滞にする書込みが読んだ版で確かめるので、読んだ後の変化は許す
 - 想定件数: 貸出中15万行のうち、一日分の候補は平均400行
 - SLO: 100件の取得で p95 20ms
-- 支えるindex: `loan_current_states_due_lent_idx`
+- 支えるindex: `loans_due_lent_idx`
 
 ### Read-003: 回収できる通知の要求を探す
 
