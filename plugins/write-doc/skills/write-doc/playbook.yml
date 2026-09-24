@@ -1,5 +1,5 @@
 # write-doc — 素材からMarkdown資料を1本書いて保存する。
-# 外に約束する入力、出力、保証は CONTRACT.md が決める。工程の順番はこの file が決め、
+# 外に約束する入力、出力、保証は CONTRACT.md が決める。工程の順番はこのファイルが決め、
 # すべての工程を同じ agent が同じ文脈で進める。工程の間で受け渡す値は無く、並びの順だけが前後の関係である。
 version: 2
 name: write-doc
@@ -10,7 +10,7 @@ requires: []
 steps:
   - id: check-input
     agent_work: invoking_agent
-    purpose: 入力と保存先を確かめ、すべて通るまで file を作らない
+    purpose: 入力と保存先を確かめ、すべて通るまでファイルを作らない
     needs: [material, document_type, output_directory, update_target, name, references]
 
   - id: fix-reader
@@ -19,7 +19,7 @@ steps:
 
   - id: choose-type
     agent_work: invoking_agent
-    purpose: 型の一覧から template と見本を引き、最終版の資産の保存先を決める
+    purpose: 型の一覧からテンプレートと見本を引き、最終版の資産の保存先を決める
 
   - id: outline
     agent_work: invoking_agent
@@ -27,7 +27,7 @@ steps:
 
   - id: draft
     agent_work: invoking_agent
-    purpose: 本文、表、図の受け持ちを分けて、Markdown を手元で組み立てる
+    purpose: 本文、表、図の受け持ちを分けて、Markdownを手元で組み立てる
 
   - id: self-edit
     agent_work: invoking_agent
@@ -35,5 +35,5 @@ steps:
 
   - id: save
     agent_work: invoking_agent
-    purpose: 最終版の資産と Markdown を保存し、読み直してから結果を返す
+    purpose: 最終版の資産とMarkdownを保存し、読み直してから結果を返す
     provides: [status, path, reason]
