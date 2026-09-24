@@ -45,60 +45,25 @@
 
 ## index
 
-### index: `loans_book_active_key`
+index は、下の四つの Read と、同じ本の二重の貸出を拒む制約を支えるものだけを置く。
 
-- 対象: `loans (book_number)` の部分一意index。`status IN ('lent', 'overdue')`の行だけ
-- 種類: B-tree部分一意index
-- 目的: 一冊の本の貸出中か延滞の貸出を一つに限り、Read-001の本の確認を支える
-- 列の順番: 単一列
-- 対象Read・更新: 本を借りる、Read-001
-- 根拠: 同時15万行のうち一冊の確認は1行を読む
-- 更新費用: 貸出で追加、返却で対象外になる
-- 検証状態: planned
+| index | 対象 | 種類 | 支えるRead・更新 | 更新費用 | 検証状態 |
+|---|---|---|---|---|---|
+| `loans_book_active_key` | `loans (book_number)`、`status IN ('lent', 'overdue')` の行だけ | B-tree部分一意index | 本を借りる、Read-001 | 貸出で追加、返却で対象外になる | planned |
+| `loans_user_active_idx` | `loans (user_number)`、`status IN ('lent', 'overdue')` の行だけ、`status` をINCLUDE | B-tree部分index | Read-001 | 貸出で追加、延滞でINCLUDE列を更新、返却で対象外になる | planned |
+| `loans_due_lent_idx` | `loans (due_on, loan_id)`、`status = 'lent'` の行だけ | B-tree複合・部分index | Read-002 | 貸出で追加、延滞と返却で対象外になる | planned |
+| `overdue_notice_requested_events_occurred_idx` | `overdue_notice_requested_events (occurred_at, request_id)` | B-tree複合index | Read-003、Read-004 | 要求の追加ごとに一エントリ増える | planned |
+| `overdue_notice_claimed_events_request_version_key` | `overdue_notice_claimed_events (request_id, version)` | 一意制約が作るB-tree複合index | 回収、Read-003 | 回収ごとに一エントリ増える | planned |
 
-### index: `loans_user_active_idx`
+`loans_book_active_key`は、一冊の本の貸出中か延滞の貸出を一つに限る。本の確認は、同時に貸し出している15万行のうち1行を読むだけで済む。
 
-- 対象: `loans (user_number)` の部分index。`status IN ('lent', 'overdue')`の行だけ。`status`をINCLUDEする
-- 種類: B-tree部分index
-- 目的: 一人の貸出中と延滞の貸出を数え、延滞の有無を同時に見る
-- 列の順番: 単一列
-- 対象Read・更新: Read-001
-- 根拠: 利用者あたり最大5行を読むIndex Only Scanという仮想結果を置く
-- 更新費用: 貸出で追加、延滞でINCLUDE列を更新、返却で対象外になる
-- 検証状態: planned
+`loans_user_active_idx`は、一人が借りている冊数と延滞の有無を、一度の走査で読むために置く。利用者あたり最大5行を、表を読まずにindexだけで返すという仮の結果を置いている。
 
-### index: `loans_due_lent_idx`
+`loans_due_lent_idx`は、返却期限を過ぎた貸出中の貸出を、返却期限の順に探すために置く。`due_on`の範囲で先に絞り、同じ日の行は`loan_id`で並びを安定させる。一日分の候補は平均400行という仮の値を置いている。
 
-- 対象: `loans (due_on, loan_id)` の部分index。`status = 'lent'`の行だけ
-- 種類: B-tree複合・部分index
-- 目的: 延滞にする候補（返却期限を過ぎた貸出中の貸出）を返却期限の順に走査する
-- 列の順番: `due_on`の範囲を先に絞り、同じ日の行を`loan_id`で安定して並べる
-- 対象Read・更新: Read-002
-- 根拠: 貸出中15万行のうち、一日分の候補は平均400行という仮想結果を置く
-- 更新費用: 貸出で追加、延滞と返却で対象外になる
-- 検証状態: planned
+`overdue_notice_requested_events_occurred_idx`は、回収できる要求を古い順に探すために置く。要求は削除しないので、累計は増え続ける。成功と失敗の表の主キーとのアンチ結合で、未完了の要求だけを読む。未完了が100件以下なら p95 10ms という仮の値を置き、累計が100万件を超えたら、未完了の要求だけを持つ派生の表を考え直す。
 
-### index: `overdue_notice_requested_events_occurred_idx`
-
-- 対象: `overdue_notice_requested_events (occurred_at, request_id)`
-- 種類: B-tree複合index
-- 目的: 回収できる要求を古い順に探す
-- 列の順番: `occurred_at`の順に読み、同じ時点を`request_id`で安定して並べる
-- 対象Read・更新: Read-003、Read-004
-- 根拠: 要求は削除しないので累計は増え続ける。成功と失敗の主キーに対するアンチ結合で、未完了の要求だけを読む。未完了が100件以下なら p95 10ms という仮想結果を置く。累計が100万件を超えたら、未完了の要求だけの派生の表を再検討する
-- 更新費用: 要求の追加ごとに一エントリ増える
-- 検証状態: planned
-
-### index: `overdue_notice_claimed_events_request_version_key`
-
-- 対象: `overdue_notice_claimed_events (request_id, version)`
-- 種類: 一意制約が作るB-tree複合index
-- 目的: 同じ要求の同じ版の回収を一つに限り、最新の回収を引く
-- 列の順番: `request_id`で一つの要求に絞り、`version`の降順で最新を取る
-- 対象Read・更新: 回収、Read-003
-- 根拠: 一意制約が同じindexを作るので、別のindexを足さない
-- 更新費用: 回収ごとに一エントリ増える
-- 検証状態: planned
+`overdue_notice_claimed_events_request_version_key`は、同じ要求の同じ版を二度回収させない一意制約が作るindexである。`request_id`で要求に絞り、`version`の降順で最新の回収を引く用途にもそのまま使えるので、別のindexは足さない。
 
 ## トランザクションと分離レベル
 
@@ -190,50 +155,17 @@
 
 Readには、利用者の問い合わせだけでなく、背景処理の走査、監視の集計、書込みの中の判定条件も載せる。どれも件数とともに遅くなるからである。
 
-### Read-001: 本を借りる前に、利用者の貸出状況と本の貸出を読む
+| Read | 利用者 | 並び順と上限 | 鮮度と一貫性 | 想定件数 | SLO | 支えるindex |
+|---|---|---|---|---|---|---|
+| Read-001 | 本を借りる処理（書込みの中の判定） | なし。利用者は最大5行、本は最大1行 | 貸出を書くのと同じ`SERIALIZABLE`のtransactionで読む | 同時15万行のうち、利用者あたり最大5行 | p95 5ms | `loans_user_active_idx`、`loans_book_active_key` |
+| Read-002 | 延滞にする処理（背景処理） | `due_on, loan_id`の昇順、100件ずつ | primaryから読む。読んだ後の変化は許す | 一日分の候補は平均400行 | 100件の取得で p95 20ms | `loans_due_lent_idx` |
+| Read-003 | 延滞の通知の送り手（背景処理） | `occurred_at, request_id`の昇順、20件 | primaryから読む | 要求の累計は月2万件ずつ増え、未完了は通常100件以下 | 20件の取得で p95 10ms | `overdue_notice_requested_events_occurred_idx`、`overdue_notice_claimed_events_request_version_key` |
+| Read-004 | 運用担当者（監視） | なし（件数だけ） | 1分遅れてよい | 未完了は通常100件以下、打ち切りは一日数件 | 1分ごとに p95 50ms | `overdue_notice_requested_events_occurred_idx` |
 
-- 利用者と目的: 本を借りる処理が、貸出上限と延滞の有無、本がほかに貸出中でないかを判断する（書込みの中の判定条件）
-- 入力・検索条件: `user_number`の等価条件と`status IN ('lent', 'overdue')`、`book_number`の等価条件
-- 結合: なし
-- 並び順と上限: なし。利用者は最大5行、本は最大1行
-- 返す情報: 借りている冊数、延滞の貸出があるか、本の貸出の有無
-- 鮮度と一貫性: 貸出を書くのと同じ`SERIALIZABLE`のtransactionで読む
-- 想定件数: 同時15万行のうち、利用者あたり最大5行
-- SLO: p95 5ms
-- 支えるindex: `loans_user_active_idx`、`loans_book_active_key`
+Read-001は、本を借りてよいかを判断するための読み取りである。`user_number`と`status IN ('lent', 'overdue')`で利用者の貸出を読み、借りている冊数と延滞の貸出があるかを返す。あわせて`book_number`で、その本がほかに貸し出されていないかを確かめる。結合はしない。
 
-### Read-002: 延滞にする候補を返却期限の順に走査する
+Read-002は、判定の日に返却期限を過ぎた貸出中の貸出を探す。条件は`status = 'lent'`と`due_on < 判定日`で、結合はせず、貸出と読んだ版を返す。延滞にする書込みが読んだ版で確かめ直すので、読んだ後に返却されても誤って延滞にはしない。
 
-- 利用者と目的: 延滞にする処理（背景処理）が、判定日に返却期限を過ぎた貸出中の貸出を探す
-- 入力・検索条件: `status = 'lent'`、`due_on < 判定日`
-- 結合: なし
-- 並び順と上限: `due_on, loan_id`の昇順、100件ずつ
-- 返す情報: 貸出、読んだ版
-- 鮮度と一貫性: primaryから読む。延滞にする書込みが読んだ版で確かめるので、読んだ後の変化は許す
-- 想定件数: 貸出中15万行のうち、一日分の候補は平均400行
-- SLO: 100件の取得で p95 20ms
-- 支えるindex: `loans_due_lent_idx`
+Read-003は、成功も失敗も無く、生きている回収も無い通知の要求を、古い順に探す。成功と失敗の表とはアンチ結合し、回収の表からは最新の版を結合する。最新の回収が無いか、その`occurred_at`からリースの10分を過ぎていれば、回収できる。返すのは、要求、起因になった基底イベント、次の回収の版である。
 
-### Read-003: 回収できる通知の要求を探す
-
-- 利用者と目的: 延滞の通知の送り手（背景処理）が、成功も失敗も無く、生きている回収も無い要求を古い順に探す
-- 入力・検索条件: 成功と失敗の表に無い要求、最新の回収が無いか、その`occurred_at`からリースの10分を過ぎたもの
-- 結合: 成功と失敗の表とのアンチ結合、回収の表の最新版との結合
-- 並び順と上限: `occurred_at, request_id`の昇順、20件
-- 返す情報: 要求、起因の基底イベント、次の回収の版
-- 鮮度と一貫性: primaryから読む
-- 想定件数: 要求の累計は月2万件ずつ増える。未完了は通常100件以下
-- SLO: 20件の取得で p95 10ms
-- 支えるindex: `overdue_notice_requested_events_occurred_idx`、`overdue_notice_claimed_events_request_version_key`
-
-### Read-004: 通知の滞留と打ち切りを数える
-
-- 利用者と目的: 運用担当者（監視）が、未完了の要求の件数と、この24時間に打ち切った件数を見る
-- 入力・検索条件: 成功と失敗の表に無い要求、失敗の`occurred_at`が直近24時間
-- 結合: 成功と失敗の表とのアンチ結合
-- 並び順と上限: なし（件数だけ）
-- 返す情報: 未完了の件数、最も古い未完了の`occurred_at`、打ち切った件数
-- 鮮度と一貫性: 1分遅れてよい
-- 想定件数: 未完了は通常100件以下、打ち切りは一日数件
-- SLO: p95 50ms、1分ごと
-- 支えるindex: `overdue_notice_requested_events_occurred_idx`
+Read-004は、未完了の要求の件数と、この24時間に打ち切った件数を数える。成功と失敗の表とのアンチ結合で未完了を数え、最も古い未完了の`occurred_at`もあわせて返す。打ち切りは、失敗の`occurred_at`が直近24時間のものを数える。
