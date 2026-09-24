@@ -25,7 +25,7 @@
 
 1. **仮押さえを要求する** — 顧客と利用枠を受け取る。
 2. **データベースへ占有を書き込む** — 既存の保存処理が予約と占有を一緒に記録し、重複ならDB制約が拒否する。
-3. **競合を業務結果へ変換する** — 対象の制約違反だけを`SLOT_UNAVAILABLE`にし、別の障害は再送出する。
+3. **競合を業務結果へ変換する** — 対象の制約違反だけを`SLOT_UNAVAILABLE`にし、別の障害はそのまま呼び出し元へ返す。
 
 ## ② 何が変わったか
 
@@ -64,7 +64,7 @@ export async function createTentativeHold(input: HoldInput, repository: Reposito
     ▼［削除］await なしの return repository.createTentativeHold(input); は無くなった
     return await repository.createTentativeHold(input);
   } catch (error) {
-    ▼［新規］対象の制約違反だけを競合結果へ変え、それ以外は従来どおり再送出する
+    ▼［新規］対象の制約違反だけを競合結果へ変え、それ以外は従来どおり呼び出し元へ返す
     if (error instanceof ExclusionViolation && error.constraint === "room_booking_claims_room_time_excl") return slotUnavailable();
     throw error;
   }
