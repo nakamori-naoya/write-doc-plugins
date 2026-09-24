@@ -29,7 +29,7 @@
 | 一冊の本の貸出中か延滞の貸出は一つ | `loans` | `book_number`の部分一意index（`status IN ('lent', 'overdue')`） | 行の書込み時 | SQLSTATE `23505`を「貸出中の本を借りる」へ変換する。やり直さない |
 | 一人の貸出中と延滞の貸出は5冊まで | `loans` | `SERIALIZABLE`のtransactionで件数を読んでから書く | commit時 | SQLSTATE `40001`なら transaction の中で最大3回やり直す |
 | 現在の版は最後のイベントの版 | `loans`、`loan_base_events` | `loans`の`current_version`を読んだ版で条件付きに更新し、`loan_base_events`の`loan_id, version`の一意制約と同じtransactionで組み合わせる | 状態変更時 | 更新件数0か`23505`なら競合として返す。やり直さない |
-| 成功と失敗はどちらか一つ | `overdue_notice_succeeded_events`、`overdue_notice_failed_events` | 両表の`request_id`主キーと、書く前に他方が無いことを同じtransactionで確かめる | 書込み時 | 他方が先にあれば書かずに終える |
+| 成功と失敗はどちらか一つ | `overdue_notice_succeeded_events`、`overdue_notice_failed_events` | 両表の`request_id`主キーと、`READ COMMITTED`のtransactionで要求の行を`FOR UPDATE`で押さえてから、他方が無いことを確かめて書く | 書込み時 | 他方が先にあれば書かずに終える |
 
 値の範囲の CHECK は、ドメインモデルだけが書く業務の表（`loans`、基底イベント、詳細イベント）には置かない。値の正しさの持ち主はドメインモデルで、持ち主を二つにしないためである。技術処理の表はドメインモデルの外の送り手が書くので、`overdue_notice_claimed_events.version`が1以上であることと、`overdue_notice_failed_events.reason`が空でないことを CHECK で拒む。
 
@@ -92,6 +92,12 @@ index は、下の四つの Read と、同じ本の二重の貸出を拒む制�
 ### 分離性判断: 通知の要求の回収
 
 二つの送り手が同じ要求を回収しようとすると、どちらも未回収と読んで回収を書きうる。`READ COMMITTED`で、`request_id, version`の一意制約が後の一方を`23505`で拒み、その送り手は次の候補へ進む。追加のみの型にそのまま合うので一意制約を既定にした。回収の待ち行列が長く衝突が多すぎる場合に限り、候補の走査に`FOR UPDATE SKIP LOCKED`を足して他の送り手が見ている要求を飛ばす。外部への送信は、回収のtransactionをcommitしてから行う。
+
+検証状態: planned
+
+### 分離性判断: 成功と失敗を書く
+
+リースが切れて二つの送り手が同じ要求を持つと、一方が成功を、他方が失敗を同時に書きうる。書く表が別なので、主キーだけでは両方が入る（書き込みスキュー）。`READ COMMITTED`で、成功か失敗を書く前に`overdue_notice_requested_events`の要求の行を`SELECT … FOR UPDATE`で押さえ、同じtransactionの中で他方の表にその`request_id`が無いことを確かめてから書く。後から来た一方は、ロックが解けた後に他方を読み、書かずに終える。やり直さない。`SERIALIZABLE`でも守れるが、この処理は一件ずつで競合の相手が決まっているので、行ロックで足りる。二つのsessionで同じ要求の成功と失敗を同時に書き、後の一方が何も書かずに終わることを確かめる。
 
 検証状態: planned
 
