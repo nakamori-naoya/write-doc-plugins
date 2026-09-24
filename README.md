@@ -31,7 +31,7 @@ plugins/write-doc/
 ├── .claude-plugin/plugin.json      二つの実行環境の manifest
 ├── .codex-plugin/plugin.json
 ├── LICENSE
-└── skills/write-doc/               公開入口（公開 playbook）
+└── skills/write-doc/               公開入口。工程の順番を playbook.yml で宣言するので、公開 playbook でもある
     ├── SKILL.md                    目的、入力、判断基準、手順、止まるとき、出力
     ├── playbook.yml                同じ agent が進める7つの工程の順番
     ├── CONTRACT.md                 公開契約の版2
