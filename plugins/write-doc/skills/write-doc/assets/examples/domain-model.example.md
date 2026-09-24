@@ -15,44 +15,44 @@ classDiagram
         +本を返す()
         +延滞にする(判定日時)
     }
-    class UserNo["利用者番号"] {
+    class UserNumber["利用者番号"] {
         <<値オブジェクト・文脈共有>>
     }
-    class BookNo["資料番号"] {
+    class BookNumber["資料番号"] {
         <<値オブジェクト・文脈共有>>
     }
     class LentAt["貸出日時"] {
         <<値オブジェクト>>
     }
-    class Due["返却期限"] {
+    class DueDate["返却期限"] {
         <<値オブジェクト>>
     }
     class CheckedAt["判定日時"] {
         <<値オブジェクト>>
     }
-    class Standing["貸出状況"] {
+    class LoanStatus["貸出状況"] {
         <<値オブジェクト>>
         借りている冊数
         延滞の貸出があるか
     }
-    class Lent["本が貸し出された"] {
+    class LoanLent["本が貸し出された"] {
         <<ドメインイベント>>
     }
-    class Returned["本が返却された"] {
+    class LoanReturned["本が返却された"] {
         <<ドメインイベント>>
     }
-    class Overdue["貸出が延滞になった"] {
+    class LoanMarkedOverdue["貸出が延滞になった"] {
         <<ドメインイベント>>
     }
-    Loan --> UserNo : 誰の貸出か
-    Loan --> BookNo : どの一冊か
+    Loan --> UserNumber : 誰の貸出か
+    Loan --> BookNumber : どの一冊か
     Loan *-- LentAt
-    Loan *-- Due
-    Loan ..> Standing : 受け取る
+    Loan *-- DueDate
+    Loan ..> LoanStatus : 受け取る
     Loan ..> CheckedAt : 受け取る
-    Loan ..> Lent : 発する
-    Loan ..> Returned : 発する
-    Loan ..> Overdue : 発する
+    Loan ..> LoanLent : 発する
+    Loan ..> LoanReturned : 発する
+    Loan ..> LoanMarkedOverdue : 発する
 ```
 
 ## 貸出
@@ -96,7 +96,7 @@ stateDiagram-v2
 
 ### 貸出番号
 
-同じ利用者が同じ本を返してまた借りると、利用者番号と資料番号だけでは貸出を見分けられない（概念「貸出」、BDD-007）。業務用語へ足す。
+同じ利用者が同じ本を返してまた借りると、利用者番号と資料番号だけでは貸出を見分けられない（概念「貸出」、BDD-007）。業務用語と、英名の対応表へ足す。英名は業務知識で決めてもらう。
 
 ### 拒む理由「返却済みの貸出を延滞にする」「延滞の貸出を延滞にする」
 
