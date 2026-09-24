@@ -1,12 +1,12 @@
 # write-doc
 
-素材から Markdown の資料を1本書いて保存する plugin である。外から呼べる skill は `write-doc` の一つだけで、読み手を決める、型を選ぶ、構成を決める、書く、読み直す、保存する、を同じ agent が最後まで続けて行う。ほかの skill や、設定を組み立てる script、途中の YAML は使わない。
+素材から Markdown の資料を1本書いて保存する package である。公開入口（外部から呼べる skill）は `write-doc` の一つだけで、読み手を決める、型を選ぶ、構成を決める、書く、読み直す、保存する、を同じ agent が最後まで続けて行う。ほかの skill や、設定を組み立てる script、途中の YAML は使わない。
 
 ## 使い方
 
 `write-doc` に、素材の `material` と保存先を渡す。新しく作るなら `output_directory` と `name` を、書き直すなら `update_target` を渡す。文書型の `document_type` と、追加で従う資料の `references` は省略してよい。保存先と名前は依頼のとおりに使い、日本語の directory 名や file 名も使える。
 
-ほかの plugin からは、公開契約 `write-doc/write-doc` の版2で呼ぶ。入力、出力、約束することは [公開契約](plugins/write-doc/skills/write-doc/CONTRACT.md) が決める。
+外部 package からは、公開契約 `write-doc/write-doc` の版2で呼ぶ。入力、出力、約束することは [公開契約](plugins/write-doc/skills/write-doc/CONTRACT.md) が決める。
 
 ```yaml
 requires:
@@ -31,7 +31,7 @@ plugins/write-doc/
 ├── .claude-plugin/plugin.json      二つの実行環境の manifest
 ├── .codex-plugin/plugin.json
 ├── LICENSE
-└── skills/write-doc/               外から呼べる skill
+└── skills/write-doc/               公開入口（公開 playbook）
     ├── SKILL.md                    目的、入力、判断基準、手順、止まるとき、出力
     ├── playbook.yml                同じ agent が進める7つの工程の順番
     ├── CONTRACT.md                 公開契約の版2
