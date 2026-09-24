@@ -41,7 +41,9 @@
             "adr",
             "period-digest",
             "agent-session-digest",
-            "pr-walkthrough"
+            "pr-walkthrough",
+            "deferred-scope",
+            "document-map"
           ]
         }
       ]

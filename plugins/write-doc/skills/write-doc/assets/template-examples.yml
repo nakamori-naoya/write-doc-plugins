@@ -60,3 +60,9 @@ pairs:
   architecture:
     template: assets/templates/architecture.md
     example: assets/examples/architecture.example.md
+  deferred-scope:
+    template: assets/templates/deferred-scope.md
+    example: assets/examples/deferred-scope.example.md
+  document-map:
+    template: assets/templates/document-map.md
+    example: assets/examples/document-map.example.md

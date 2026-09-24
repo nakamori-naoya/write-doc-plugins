@@ -36,7 +36,7 @@ plugins/write-doc/
     ├── playbook.yml                同じ agent が進める7つの工程の順番
     ├── CONTRACT.md                 公開契約の版2
     ├── references/                 書くときの規範、保存する前の読み直し、本文と表と図の受け持ち
-    └── assets/                     20の型の template と見本、読み手の像、図の参考、型の一覧
+    └── assets/                     22の型のテンプレートと見本、読み手の像、図の参考、型の一覧
 ```
 
 ## 検査
