@@ -92,10 +92,10 @@ if same_set "$reference_list" "$expected_references"; then pass "参照文書は
 if ! same_set "$(printf '%s\n' writing-norms.md integrity-check.md)" "$expected_references"; then pass "self-test: 参照2本を拒否"; else fail "self-test: 参照2本を拒否"; fi
 if ! same_set "$(printf '%s\n' extra.md integrity-check.md visuals-and-tables.md writing-norms.md | sort)" "$expected_references"; then pass "self-test: 参照4本を拒否"; else fail "self-test: 参照4本を拒否"; fi
 
-expect "template資産24件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 24' sh "$ENTRY/assets/templates"
-expect "template Markdown 20件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 20' sh "$ENTRY/assets/templates"
-expect "example資産24件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 24' sh "$ENTRY/assets/examples"
-expect "example Markdown 20件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 20' sh "$ENTRY/assets/examples"
+expect "template資産26件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 26' sh "$ENTRY/assets/templates"
+expect "template Markdown 22件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 22' sh "$ENTRY/assets/templates"
+expect "example資産26件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 26' sh "$ENTRY/assets/examples"
+expect "example Markdown 22件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 22' sh "$ENTRY/assets/examples"
 expect "persona 5件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 5' sh "$ENTRY/assets/personas"
 expect "型対応表を保持" test -f "$ENTRY/assets/template-examples.yml"
 
@@ -105,6 +105,8 @@ expected_asset_paths=$(printf '%s\n' \
   examples/architecture.example.md \
   examples/cloud-architecture.example.md \
   examples/concept.example.md \
+  examples/deferred-scope.example.md \
+  examples/document-map.example.md \
   examples/domain-model.example.md \
   examples/domain-rule.example.md \
   examples/how-to.example.md \
@@ -126,7 +128,7 @@ expected_asset_paths=$(printf '%s\n' \
   examples/workload-model.example.md \
   personas/backend-1.md personas/backend-5.md personas/pm-1.md personas/pm-3.md personas/product-user.md \
   template-examples.yml \
-  templates/adr.md templates/agent-session-digest.md templates/architecture.md templates/cloud-architecture.md templates/concept.md \
+  templates/adr.md templates/agent-session-digest.md templates/architecture.md templates/cloud-architecture.md templates/concept.md templates/deferred-scope.md templates/document-map.md \
   templates/domain-model.md templates/domain-rule.md templates/how-to.md \
   templates/north-star-boundary.svg templates/north-star-value-flow.svg templates/north-star.md \
   templates/period-digest.md templates/pr-walkthrough.md templates/quality-requirements.md \
@@ -138,12 +140,12 @@ expected_asset_paths=$(printf '%s\n' \
   visual-guidance/reference-cicd-pipeline.png \
   visual-guidance/reference-system-architecture.png | sort)
 actual_asset_paths=$(cd "$ENTRY/assets" && find . -type f | sed 's#^./##' | sort)
-if same_set "$actual_asset_paths" "$expected_asset_paths"; then pass "継承資産58 path完全一致"; else fail "継承資産58 path完全一致"; fi
+if same_set "$actual_asset_paths" "$expected_asset_paths"; then pass "継承資産62 path完全一致"; else fail "継承資産62 path完全一致"; fi
 if ! same_set "$actual_asset_paths" "${expected_asset_paths%templates/workload-model.md}templates/arbitrary.md"; then pass "self-test: 同数renameを拒否"; else fail "self-test: 同数renameを拒否"; fi
 
 map_file="$ENTRY/assets/template-examples.yml"
 map_paths=$(awk '/^    (template|example): / {print $2}' "$map_file")
-if [ "$(printf '%s\n' "$map_paths" | sed '/^$/d' | wc -l | tr -d ' ')" -eq 40 ] && paths_exist "$ENTRY" "$map_paths"; then pass "型対応表20組の参照先が存在"; else fail "型対応表20組の参照先が存在"; fi
+if [ "$(printf '%s\n' "$map_paths" | sed '/^$/d' | wc -l | tr -d ' ')" -eq 44 ] && paths_exist "$ENTRY" "$map_paths"; then pass "型対応表22組の参照先が存在"; else fail "型対応表22組の参照先が存在"; fi
 if ! paths_exist "$ENTRY" "assets/templates/missing.md"; then pass "self-test: 対応表の欠損参照を拒否"; else fail "self-test: 対応表の欠損参照を拒否"; fi
 map_slugs=$(awk '/^  [a-z0-9-]+:$/ {sub(/^  /, ""); sub(/:$/, ""); print}' "$map_file" | sort)
 manifest_slugs=$(jq -r '.metadata.harness.implements[0].types[]' "$CODEX" | sort)
