@@ -87,10 +87,10 @@ expect "最終工程がstatus/path/reasonをprovideする" jq -e '.steps[-1].pro
 
 # ── 参照文書と資産の閉じた集合 ────────────────────────────────────────────
 reference_list=$(find "$ENTRY/references" -maxdepth 1 -type f -name '*.md' -exec basename {} \; | sort)
-expected_references=$(printf '%s\n' core-principles.md integrity-check.md visuals-and-tables.md)
+expected_references=$(printf '%s\n' integrity-check.md visuals-and-tables.md writing-norms.md)
 if same_set "$reference_list" "$expected_references"; then pass "参照文書は指定3本"; else fail "参照文書は指定3本"; fi
-if ! same_set "$(printf '%s\n' core-principles.md integrity-check.md)" "$expected_references"; then pass "self-test: 参照2本を拒否"; else fail "self-test: 参照2本を拒否"; fi
-if ! same_set "$(printf '%s\n' core-principles.md extra.md integrity-check.md visuals-and-tables.md | sort)" "$expected_references"; then pass "self-test: 参照4本を拒否"; else fail "self-test: 参照4本を拒否"; fi
+if ! same_set "$(printf '%s\n' writing-norms.md integrity-check.md)" "$expected_references"; then pass "self-test: 参照2本を拒否"; else fail "self-test: 参照2本を拒否"; fi
+if ! same_set "$(printf '%s\n' extra.md integrity-check.md visuals-and-tables.md writing-norms.md | sort)" "$expected_references"; then pass "self-test: 参照4本を拒否"; else fail "self-test: 参照4本を拒否"; fi
 
 expect "template資産24件" sh -c 'test "$(find "$1" -type f | wc -l | tr -d " ")" -eq 24' sh "$ENTRY/assets/templates"
 expect "template Markdown 20件" sh -c 'test "$(find "$1" -type f -name "*.md" | wc -l | tr -d " ")" -eq 20' sh "$ENTRY/assets/templates"
