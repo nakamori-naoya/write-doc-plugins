@@ -1,459 +1,270 @@
-# RDB物理設計 — 貸会議室の予約
+# RDB物理設計 — 図書館の貸出
 
 <!-- これは`rdb-physical-design`型の記載例である。**構成の基準資料ではなく、粒度と具体性の見本として読む。**
-     対象製品、件数、計測結果は架空だが、判断と検証の粒度は実案件で再利用できる形にしている。 -->
+     架空の題材「図書館の貸出」の論理データモデルを写した。件数と計測値は説明用の仮想値である。 -->
 
-**対象DBMSをPostgreSQL 16.4に固定し、論理設計の8テーブルを変えずに、制約、index、分離性、代表的なReadを設計する。** 存在しない空き枠は行ロックできないため、重複占有の成立判定には時間範囲の排他制約を使う。
+**対象DBMSをPostgreSQL 16.4に固定し、論理設計の9テーブルを変えずに、制約、index、分離レベルと再試行、代表的なReadを決める。** 貸出上限は複数の行にまたがる件数なので、集計列を足さずに`SERIALIZABLE`と再試行で守る。延滞の通知の回収は、利用者から見えないが件数とともに遅くなるReadとして台帳に載せる。
 
 ## 対象と論理設計
 
 - 対象DBMS: PostgreSQL
 - 対象バージョン: 16.4
-- 論理モデル: `rdb-logical-data-modeling.example.md`（2026-09-01）
-- 入力にした論理設計: [RDB論理設計の記載例](rdb-logical-data-modeling.example.md)（版: 2026-09-01 確定）
-- 論理構造の指紋: sha256:6743b2b97a22ee5dea3eea721e318ce3346cfe075be9bc3465468c8e8b54bf25
+- 論理モデル: `rdb-logical-data-modeling.example.md`（2026-10-01）
+- 入力にした論理設計: [RDB論理設計の記載例](rdb-logical-data-modeling.example.md)（版: 2026-10-01 確定）
+- 論理構造の指紋: sha256:e1ca7c353838906aecd5ba2897ad6a1d08361fdb144a9586bb4f9e445ac49654
 - 要求資料: `requirements-discovery.example.md`（説明用の仮想入力）
 - 利用・負荷モデル: `workload-model.example.md`（説明用の仮想入力）
 - 品質要求資料: `quality-requirements.example.md`（説明用の仮想入力）
 - 基盤構成資料: `cloud-architecture.example.md`（説明用の仮想入力）
-- 検証証拠: 未実施。この記載例の数値は仮想であり、実案件では実行計画・負荷試験・競合試験・復旧試験の絶対pathへ置き換える
-- 確認環境: PostgreSQL 16.4、1 primary（8 vCPU / 32 GiB / gp3 500 GiB）、東京リージョン、2026-09-02
-- 計測条件: `pgbench`で同時実行10、各Readを1,000回試行し、`EXPLAIN (ANALYZE, BUFFERS)`の実行時間を集計する。p95は1,000回の95パーセンタイル、キャッシュは事前に対象indexを温めた定常状態とする
-- 想定規模: 予約500万件、有効予約160万件、基底イベント1,300万件、ピーク150予約/秒、イベント7年保持
+- 検証証拠: 未実施。この記載例の数値は仮想であり、実案件では実行計画・競合試験の絶対pathへ置き換える
+- 確認環境: PostgreSQL 16.4、1 primary（4 vCPU / 16 GiB）、2026-10-02
+- 想定規模: 貸出の累計300万件、貸出中と延滞は同時に15万件、基底イベント700万件、通知の要求は月2万件、ピークは開館直後の20貸出/秒
 
-論理設計のER図、列定義、CUDのBDD、Before / Afterは再掲しない。
-
-**以下の数値はすべて説明用の仮想結果である。** 実測ではなく、設計目標として置いた値でもない。この記載例が示すのは「何を、どの条件で測り、どこまで書けば実案件で再利用できるか」という粒度だけである。実案件では上の計測条件を対象環境で実行し、実測値へ置き換える。イベントの7年保持は法務確認前の暫定値であり、未決として「未決」の節に残している。
+論理設計のER図、列定義、BDD、Before / Afterは再掲しない。
 
 ## 物理制約
 
 | 制約名 | 対象 | PostgreSQL 16.4での実現 | 適用時点 | 違反時の扱い |
 |---|---|---|---|---|
-| 予約期間は正の長さ | `reservations`、`room_booking_claims` | `starts_at < ends_at`のCHECK | 行の書込み時 | transactionを中断し、入力不正として扱う |
-| 同じ会議室の占有は重ならない | `room_booking_claims` | `room_code`の等価と半開時間範囲の重なりをGiST排他制約で拒否 | 行の書込み時 | 後発を中断し、利用枠を確保できなかった結果へ変換する |
-| 仮押さえだけが期限を持つ | `reservations`、`tentative_hold_deadlines` | 外部キーと、状態変更transaction内の状態再検査 | 状態変更時 | 前提不一致としてtransactionを中断する |
-| イベントversionは予約内で一意 | `reservation_base_events` | `reservation_id, version`の一意制約 | 基底イベントの書込み時 | 競合した状態変更を中断する |
-| 基底イベントと詳細イベントは一対一 | 4つの詳細イベント | `base_event_id`の外部キーと一意制約 | 詳細イベントの書込み時 | transaction全体を中断する |
-| 基底イベントの種類と詳細の種類が一致する | 基底イベントと4つの詳細イベント | 一つのtransactionで対応する一種類だけを書き、commit前に整合を検査する | 業務イベントの成立時 | 不一致ならrollbackする |
-| 現在versionは最後のイベントversionと一致する | `reservations`、`reservation_base_events` | 予約行ロック後のversion検査と、一意制約を同一transactionで組み合わせる | 状態変更時 | 更新件数0または一意制約違反として中断する |
-
-異なるテーブルをまたぐ「イベント種別に対応する詳細がちょうど一行ある」という制約は、単純なCHECKだけでは表せない。基底イベントだけを先にcommitせず、基底イベントと対応する詳細イベントを同じtransactionで確定する。
+| 一冊の本の貸出中か延滞の貸出は一つ | `loans` | `book_number`の部分一意index（`status IN ('lent', 'overdue')`） | 行の書込み時 | SQLSTATE `23505`を「貸出中の本を借りる」へ変換する。再試行しない |
+| 一人の貸出中と延滞の貸出は5冊まで | `loans` | `SERIALIZABLE`のtransactionで件数を読んでから書く | commit時 | SQLSTATE `40001`なら transaction 全体を最大3回再試行する |
+| 現在の版は最後のイベントの版 | `loans`、`loan_base_events` | 条件付きUPDATE（`current_version = 読んだ版`）と、`loan_id, version`の一意制約を同じtransactionで組み合わせる | 状態変更時 | 更新件数0なら読み直さずに競合として返す |
+| 成功と失敗はどちらか一つ | `overdue_notice_succeeded_events`、`overdue_notice_failed_events` | 両表の`request_id`主キーと、書く前に他方を確かめる同じtransaction内の存在確認 | 書込み時 | 他方が先にあれば書かずに終える |
 
 ## 物理化の方針
 
-### 物理写像: 会議室の占有時間範囲
+### 物理写像: 貸出の現在の姿
 
-- 論理上の意味: 同じ会議室について、成立中の予約時間帯は重ならない
-- 物理実装: `room_booking_claims`の開始・終了から半開区間を作り、`room_code`とのGiST排他制約で競合を拒否する
-- 一次データと同期: 予約の現在状態と同じtransactionで占有を追加・削除し、単独ではcommitしない
-- 再構築・撤去: 成立中予約から占有を再構築して検査後に切り替える。別方式へ移る場合も予約の一次データは変えない
-- 不変条件の保存: 時間帯の境界接触は許し、実際に重なる二予約だけを拒否する論理制約を保つ
+- 論理上の意味: 貸出の現在の状態と返却期限を、毎回の貸出と返却で読む
+- 物理実装: `loans`を一次データの投影として持ち、業務イベントと同じtransactionで更新する
+- 一次データと同期: 基底イベントと詳細イベントが一次データである。`loans`の更新とイベントの追加は同じtransactionで確定し、片方だけをcommitしない
+- 再構築・撤去: 基底イベントを`version`順に畳み込んで`loans`を作り直せる。作り直した表と現在の表を比べてから切り替える
+- 不変条件の保存: `current_version`は最後の基底イベントの`version`と一致する
 
 | 論理上の判断 | 物理化 | 理由 |
 |---|---|---|
-| 会議室と利用枠の重複禁止 | `btree_gist`を利用したGiST排他制約 | まだ行がない空き時間も、書込み時の範囲競合として判定できる |
-| 予約の現在version | `bigint`のNOT NULL、1以上 | 基底イベントのversionと比較し、同じ事前状態からの二重成立を検出する |
-| イベント発生日時 | 基底イベントの`occurred_at`だけに保持 | 詳細イベントへ時刻を重複させず、業務上の成立時刻を一意にする |
-| リソース成立日時 | リソース系テーブルの`created_at`に保持 | イベント発生日時と、現在の占有・期限が作られた日時を区別する |
-| 任意の詳細 | イベント種類ごとの詳細テーブルへ分離 | 種類によって使わない列をNULLにしない |
-
-物理設計の資料には、論理設計にあるテーブルとカラムの定義表を複製しない。migrationはこの判断を実装する別成果物として管理し、対象バージョンで制約が有効になったことを検証する。
+| 状態 | `text`と、`lent`・`overdue`・`returned`だけを許すCHECK | 業務の値域をDBでも拒む。値を増やすときはmigrationを伴う |
+| イベントの時刻 | 基底イベントの`occurred_at`だけ | 一つの出来事に時刻を一本だけ持つ論理設計を保つ |
+| 詳細イベントの主キー | 基底イベントの`event_id`を主キー兼外部キーにする | 基底と詳細の一対一を構造で保証する |
 
 ## index
 
-### index: `room_booking_claims_room_time_excl`
+### index: `loans_book_active_key`
 
-- 対象: `room_booking_claims`の`room_code`、`tstzrange(starts_at, ends_at, '[)')`
-- 種類: GiST排他制約を支えるindex
-- 目的: 同じ会議室の重なる占有を拒否し、指定会議室・指定期間の重なり検索を支える
-- 列の順番: 会議室を等価条件で限定してから、その会議室内の時間範囲を重なり演算子で調べる。時間範囲を先にして全会議室を候補に広げない
-- 対象Read・更新: 同時仮押さえ、Read-001
-- 根拠: 有効予約160万件相当の占有でBitmap Index Scan、対象180件、p95 18msという仮想結果を置く
-- 更新費用: 仮押さえの追加と、取消・期限切れの削除で更新する。ピーク150件/秒でp95 24msを上限とする
+- 対象: `loans (book_number)` の部分一意index。`status IN ('lent', 'overdue')`の行だけ
+- 種類: B-tree部分一意index
+- 目的: 一冊の本の貸出中か延滞の貸出を一つに限り、Read-001の本の確認を支える
+- 列の順番: 単一列
+- 対象Read・更新: 本を借りる、Read-001
+- 根拠: 同時15万行のうち一冊の確認は1行を読む
+- 更新費用: 貸出で追加、返却で対象外になる
 - 検証状態: planned
 
-### index: `tentative_hold_deadlines_expires_at_reservation_id_idx`
+### index: `loans_user_active_idx`
 
-- 対象: `tentative_hold_deadlines (expires_at, reservation_id)`
-- 種類: B-tree複合index
-- 目的: 期限が到来した仮押さえを時刻順に100件ずつ取得する
-- 列の順番: 全予約を対象に`expires_at <= 現在日時`という範囲を先に絞り、同時刻の行を`reservation_id`で安定して並べる。`reservation_id`を先にすると、全体の期限到来走査を支えられない
-- 対象Read・更新: 期限切れ処理
-- 根拠: 50万件中100件取得でIndex Scan、p95 7msという検証条件を置く
-- 更新費用: 仮押さえで追加し、確定・取消・期限切れで削除する
+- 対象: `loans (user_number)` の部分index。`status IN ('lent', 'overdue')`の行だけ。`status`をINCLUDEする
+- 種類: B-tree部分index
+- 目的: 一人の貸出中と延滞の貸出を数え、延滞の有無を同時に見る
+- 列の順番: 単一列
+- 対象Read・更新: Read-001
+- 根拠: 利用者あたり最大5行を読むIndex Only Scanという仮想結果を置く
+- 更新費用: 貸出で追加、延滞でINCLUDE列を更新、返却で対象外になる
 - 検証状態: planned
 
-### index: `reservation_base_events_reservation_id_version_key`
+### index: `loans_due_lent_idx`
 
-- 対象: `reservation_base_events (reservation_id, version)`
-- 種類: 一意制約が作るB-tree複合index
-- 目的: イベントversionの一意性と、一予約の履歴をversion順に読む処理を支える
-- 列の順番: `reservation_id`の等価条件で一予約に絞り、続く`version`で範囲検索と昇順取得を行う。`version`を先にすると一予約の履歴がindex上で連続しない
-- 対象Read・更新: 全状態変更、Read-003
-- 根拠: 一意制約が同じindexを作るため、同じ列の追加indexは作らない
-- 更新費用: 業務イベント成立ごとに一エントリ増える
-- 検証状態: planned
-
-### index: `reservations_customer_upcoming_idx`
-
-- 対象: `reservations (customer_code, starts_at, reservation_id)`。`status`が`tentative`または`confirmed`の行だけを対象とし、返却列をINCLUDEする
+- 対象: `loans (due_on, loan_id)` の部分index。`status = 'lent'`の行だけ
 - 種類: B-tree複合・部分index
-- 目的: 予約者本人が今後の予約を開始日時順に読む
-- 列の順番: `customer_code`の等価条件を先頭にし、`starts_at`の範囲条件と並び順を続け、同時刻の予約を`reservation_id`で安定してページングする。この順番を変えると一予約者の範囲走査か安定順のどちらかを失う
+- 目的: 延滞にする候補（返却期限を過ぎた貸出中の貸出）を返却期限の順に走査する
+- 列の順番: `due_on`の範囲を先に絞り、同じ日の行を`loan_id`で安定して並べる
 - 対象Read・更新: Read-002
-- 根拠: 500万件中の有効予約160万件を対象にIndex Only Scan、p95 12msという検証条件を置く
-- 更新費用: 仮押さえで追加、確定でINCLUDE列を更新、取消・期限切れで除外される。終端状態の検索には使えない
+- 根拠: 貸出中15万行のうち、一日分の候補は平均400行という仮想結果を置く
+- 更新費用: 貸出で追加、延滞と返却で対象外になる
 - 検証状態: planned
 
-### index: 各詳細イベントの`base_event_id`一意index
+### index: `overdue_notice_open_requests_idx`
 
-- 対象: 4つの詳細イベントそれぞれの`base_event_id`
-- 種類: 一意制約が作る単一列B-tree index
-- 目的: 一つの基底イベントへ同種の詳細を二重登録せず、Read-003の結合を支える
-- 列の順番: 単一列なので順番の選択はない。結合キー以外を足すと一対一検査に不要な更新費用が増えるため追加しない
-- 対象Read・更新: 全イベント書込み、Read-003
-- 根拠: 一意制約と結合の双方を同じindexで満たす
-- 更新費用: 対応するイベント成立時に一エントリだけ増える
+- 対象: `overdue_notice_requested_events (requested_at, request_id)`。成功も失敗も無い要求を探す走査に使う
+- 種類: B-tree複合index
+- 目的: 回収できる要求を古い順に探す
+- 列の順番: `requested_at`の順に読み、同じ時刻を`request_id`で安定して並べる
+- 対象Read・更新: Read-003、Read-004
+- 根拠: 要求は削除しないので累計は増え続ける。成功と失敗の主キーに対するアンチ結合で、未完了の要求だけを読む。未完了が100件以下なら p95 10ms という仮想結果を置く。累計が100万件を超えたら部分indexか派生の予定表へ切り替えを再検討する
+- 更新費用: 要求の追加ごとに一エントリ増える
+- 検証状態: planned
+
+### index: `overdue_notice_claimed_events_request_version_key`
+
+- 対象: `overdue_notice_claimed_events (request_id, version)`
+- 種類: 一意制約が作るB-tree複合index
+- 目的: 同じ要求の同じ版の回収を一つに限り、最新の回収を引く
+- 列の順番: `request_id`で一つの要求に絞り、`version`の降順で最新を取る
+- 対象Read・更新: 回収、Read-003
+- 根拠: 一意制約が同じindexを作るので、別のindexを足さない
+- 更新費用: 回収ごとに一エントリ増える
 - 検証状態: planned
 
 ## トランザクションと分離レベル
 
-### 分離性判断: 同じ空き時間への同時仮押さえ
+分離レベルと再試行は、この節が操作ごとに決める。実装はここで決めた指定をtransactionへ渡すだけにする。
 
-- 同時に進む操作: 同じ会議室の重なる時間へ二つの占有を追加する
-- 許してはいけない結果: 二つの予約が同じ時間帯を占有する
-- 発生し得る現象: 事前確認だけでは書き込みスキューに相当する重複占有が起きる
-- 選択する分離レベル: READ COMMITTED
-- 併用する仕組み: GiST排他制約
-- 対象バージョンでの確認: 二つのsessionから同じ範囲を書き、先行commit後に後発がSQLSTATE `23P01`になることを確認する
-- 競合時の扱い: 後発transactionを再試行せず、利用枠を確保できなかった結果へ変換する
+### 分離性判断: 貸出上限
+
+- 同時に進む操作: 同じ利用者が二冊を同時に借りる
+- 許してはいけない結果: 借りている冊数が4冊のときに、二冊とも成立して6冊になる
+- 発生し得る現象: 書き込みスキュー。どちらも4冊を数えてから書く
+- 選択する分離レベル: SERIALIZABLE
+- 併用する仕組み: `loans_user_active_idx`で件数を読み、同じtransactionで貸出を追加する
+- 対象バージョンでの確認: 二つのsessionで同じ利用者の4冊の状態から同時に借り、一方がSQLSTATE `40001`で中断することを確かめる
+- 競合時の扱い: SQLSTATE `40001`だけを、transaction全体で最大3回、10〜50msのjitterを置いて再試行する。再試行で5冊を数えたら「貸出上限に達している利用者が本を借りる」を返す
 - 検証状態: planned
 
-空き時間にはロック対象の行が存在しないため、`SELECT ... FOR UPDATE`だけでは守れない。空き検索は利用者への応答には使えるが、成立の最終判断は排他制約へ任せる。
+集計列（利用者ごとの借りている冊数）を足せば一行の問題にできるが、一次データが二つになり、返却のたびに二か所を直すことになる。件数は最大5行なので、数えるほうを選んだ。
 
-#### 具体的な解決手順
+### 分離性判断: 同じ本を二人が借りる
 
-1. 予約、占有、期限、基底イベント、仮押さえ成立イベントを一つのtransactionで書く。
-2. 占有の追加時に排他制約で重なりを判定する。
-3. SQLSTATE `23P01`ならtransaction全体をrollbackし、先に書いた予約やイベントも残さない。
-4. lock timeoutだけ最大1回再試行し、排他制約違反は再試行しない。
+- 同時に進む操作: 同じ本を二人の利用者が同時に借りる
+- 許してはいけない結果: 一冊の本に貸出中の貸出が二つできる
+- 発生し得る現象: 事前の確認だけでは二つとも「まだ無い」と読む
+- 選択する分離レベル: SERIALIZABLE（貸出上限と同じtransactionのため）
+- 併用する仕組み: `loans_book_active_key`の部分一意index
+- 対象バージョンでの確認: 二つのsessionで同じ本を借り、後発がSQLSTATE `23505`で中断することを確かめる
+- 競合時の扱い: `23505`は再試行せず「貸出中の本を借りる」を返す
+- 検証状態: planned
 
-```sql
-BEGIN;
-SET LOCAL lock_timeout = '2s';
+### 分離性判断: 延滞にするのと返却が重なる
 
-INSERT INTO reservations (
-    reservation_id, room_code, customer_code, starts_at, ends_at,
-    status, current_version, created_at, updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, 'tentative', 1, $7, $7);
-
-INSERT INTO room_booking_claims
-    (reservation_id, room_code, starts_at, ends_at, created_at)
-VALUES ($1, $3, $5, $6, $7);
-
-INSERT INTO tentative_hold_deadlines (reservation_id, expires_at, created_at)
-VALUES ($1, $8, $7);
-
-INSERT INTO reservation_base_events
-    (id, reservation_id, event_type, version, actor_code, occurred_at)
-VALUES ($9, $1, 'tentative_created', 1, $4, $7);
-
-INSERT INTO reservation_tentative_created_events
-    (id, base_event_id, room_code, customer_code, starts_at, ends_at, expires_at)
-VALUES ($10, $9, $2, $3, $4, $5, $6, $8);
-COMMIT;
-```
-
-- 競合の検知: SQLSTATE `23P01`
-- 業務結果への変換: 「その利用枠は先に確保された」
-- 再試行: lock timeoutだけ最大1回、50〜150msのjitter後。`23P01`は再試行しない
-- 失敗時の原子性: 8テーブルのどこにも後発予約の行を残さない
-
-### 分離性判断: 確定と期限切れの競合
-
-- 同時に進む操作: 同じ仮押さえ予約を確定する処理と期限切れにする処理
-- 許してはいけない結果: 同じ現在version 1から、確定と期限切れがともにversion 2として成立する
+- 同時に進む操作: 同じ貸出を延滞にする処理と、本を返す処理
+- 許してはいけない結果: 返却済みの貸出が延滞になる。同じ版から二つの出来事が成立する
 - 発生し得る現象: ロストアップデート
 - 選択する分離レベル: READ COMMITTED
-- 併用する仕組み: 予約行の`FOR UPDATE`、状態とcurrent_versionの再検査、基底イベントの一意制約
-- 対象バージョンでの確認: 二つのsessionで同じ予約を進め、後発がロック取得後に新しい状態を観測して書込みを中止することを確認する
-- 競合時の扱い: 後発は再試行せず、先に成立した現在状態を返す
+- 併用する仕組み: 読んだ`current_version`を条件にしたUPDATEと、`loan_id, version`の一意制約
+- 対象バージョンでの確認: 二つのsessionで版1の貸出を同時に進め、後発の更新件数が0になることを確かめる
+- 競合時の扱い: 再試行しない。延滞にする側は、その貸出を次の走査に任せる
 - 検証状態: planned
 
-#### 具体的な解決手順
+### 分離性判断: 通知の要求の回収
 
-1. 予約行を`FOR UPDATE`で取得し、同じ予約の状態変更を直列化する。
-2. ロック取得後に`status`と`current_version`を再検査し、**同じ行ロックの下で`expires_at`も読む。**
-3. 判定時刻`$2`と`expires_at`を比べ、次に進む状態を決める。`$2 < expires_at`なら確定、`$2 >= expires_at`なら期限切れである。**業務ルールでは期限ちょうどは確定できないので、境界は期限切れ側に倒す。**
-4. 決めた状態へ予約をversion 2へ進め、期限を削除し、期限切れなら占有も削除する。
-5. `UPDATE`の更新件数が0なら、他方が先に進めているので**そのtransactionをrollbackし、現在状態を読み直して返す。**
-6. 基底イベントと、確定または期限切れの詳細イベントを同じtransactionで追加する。
-
-確定要求として届いた処理も、期限を過ぎていれば期限切れとして確定する。**確定処理が遅れて届いても、掲載SQLだけで誤って確定予約にならない。**
-
-```sql
-BEGIN;
-
--- 手順2: 状態・version・期限を同じロックの下で読む
-SELECT r.status, r.current_version, d.expires_at
-FROM reservations AS r
-LEFT JOIN tentative_hold_deadlines AS d USING (reservation_id)
-WHERE r.reservation_id = $1
-FOR UPDATE OF r;
-
--- 手順3・4: $2 は判定時刻。期限ちょうど以降は 'expired' に倒す
-WITH decided AS (
-    SELECT CASE WHEN $2 < d.expires_at THEN 'confirmed' ELSE 'expired' END AS next_status
-    FROM tentative_hold_deadlines AS d
-    WHERE d.reservation_id = $1
-)
-UPDATE reservations AS r
-SET status = (SELECT next_status FROM decided),
-    current_version = r.current_version + 1,
-    updated_at = $2
-WHERE r.reservation_id = $1
-  AND r.status = 'tentative'
-  AND r.current_version = $3
-RETURNING r.status, r.current_version;
--- 更新件数が0なら手順5へ。ROLLBACK して現在状態を読み直す
-
-DELETE FROM tentative_hold_deadlines WHERE reservation_id = $1;
-
--- 期限切れのときだけ占有も解放する。確定なら占有は残す
-DELETE FROM room_booking_claims
-WHERE reservation_id = $1
-  AND (SELECT status FROM reservations WHERE reservation_id = $1) = 'expired';
-
-INSERT INTO reservation_base_events
-    (id, reservation_id, event_type, version, actor_code, occurred_at)
-SELECT $4, $1, r.status, r.current_version, $5, $2
-FROM reservations AS r
-WHERE r.reservation_id = $1;
-
--- 詳細イベントは、いま積んだ基底イベントの種別に対応する1テーブルへ1行だけ入れる
-INSERT INTO reservation_confirmed_events (id, base_event_id)
-SELECT $6, $4
-WHERE (SELECT status FROM reservations WHERE reservation_id = $1) = 'confirmed';
-
-INSERT INTO reservation_expired_events (id, base_event_id)
-SELECT $6, $4
-WHERE (SELECT status FROM reservations WHERE reservation_id = $1) = 'expired';
-
-COMMIT;
-```
-
-**対象バージョンでの確認**: 二つのsessionで同じ仮押さえ予約を進め、次の3通りを確かめる。
-
-| session Aの操作と判定時刻 | session Bの操作と判定時刻 | 期待する結果 |
-|---|---|---|
-| 確定・期限の1分前 | 期限切れ処理・期限ちょうど | Aがversion 2の確定予約を作り、Bは更新件数0でrollbackし、現在の確定予約を返す |
-| 期限切れ処理・期限ちょうど | 確定・期限の10秒後 | Aがversion 2の期限切れ予約を作り、Bは更新件数0でrollbackする。**Bが確定予約を作らないことがこの表の要点である** |
-| どちらも確定・期限の1分前 | — | 先にロックを取った一方だけがversion 2を作り、他方は更新件数0で終わる |
-
-3行目の期限切れ処理が数分遅れて動いた場合も、判定時刻が期限以降であれば`next_status`は`expired`になる。**遅延した確定要求が期限後に確定予約を作ることはない。**
-
-- 競合の検知: ロック後の状態不一致、条件付きUPDATEの更新件数0、またはversion一意制約違反
-- 業務結果への変換: 後発へ現在の確定済みまたは期限切れを返す
-- 再試行: lock timeoutとデッドロックだけ最大1回。状態不一致は再試行しない
-- 失敗時の原子性: 現在状態、期限、占有、基底イベント、詳細イベントをまとめてcommitまたはrollbackする
-
-### 分離性判断: 取消と別の仮押さえの競合
-
-- 同時に進む操作: 既存占有を削除する取消と、同じ時間へ新しい占有を追加する仮押さえ
-- 許してはいけない結果: 取消がrollbackしたのに新しい占有も成立する
-- 発生し得る現象: 未commitの取消に依存した占有の成立（PostgreSQLはどの分離レベルでもダーティライトを起こさないため、ここで防ぐのは「取消がrollbackしたのに新しい占有だけが残る」ことである）
+- 同時に進む操作: 二つの送り手が同じ要求を回収する
+- 許してはいけない結果: 同じ要求の同じ版の回収が二つ成立する
+- 発生し得る現象: 二つとも未回収と読んで回収を書く
 - 選択する分離レベル: READ COMMITTED
-- 併用する仕組み: 予約行ロックと、未commitの競合行を待つGiST排他制約
-- 対象バージョンでの確認: 取消を未commitのまま新しい占有を書き、取消のcommit時だけ新規占有が成立することを確認する
-- 競合時の扱い: lock timeoutを超えた場合だけ最大1回再試行する
+- 併用する仕組み: `request_id, version`の一意制約。候補の走査は`FOR UPDATE SKIP LOCKED`で他の送り手が掴んだ要求を飛ばす
+- 対象バージョンでの確認: 二つのsessionで同時に回収し、一方だけが回収を書き、他方は別の要求を取ることを確かめる
+- 競合時の扱い: `23505`は再試行せず、次の候補へ進む。外部への送信は回収のtransactionをcommitしてから行う
 - 検証状態: planned
-
-#### 具体的な解決手順
-
-1. 取消側は予約行をロックし、予約状態とcurrent_versionを再検査する。
-2. 予約を取消済みへ進め、占有と仮押さえ期限を削除し、取消の基底・詳細イベントを追加する。
-3. 新しい仮押さえ側は占有を書き、排他制約が取消transactionの終了を待って成否を決める。
-4. 取消がrollbackしたら旧占有が残り、新しい仮押さえは成立しない。
-
-取消側と仮押さえ側のSQLを、実行順とともに示す。
-
-```sql
--- session A（取消）
-BEGIN;
-SELECT status, current_version FROM reservations
-WHERE reservation_id = $1 FOR UPDATE;
-
-DELETE FROM room_booking_claims WHERE reservation_id = $1;
-DELETE FROM tentative_hold_deadlines WHERE reservation_id = $1;
-
-UPDATE reservations
-SET status = 'cancelled', current_version = current_version + 1, updated_at = $2
-WHERE reservation_id = $1 AND status IN ('tentative', 'confirmed');
--- ここでcommitもrollbackもしないまま session B が動く
-
--- session B（同じ利用枠への新しい仮押さえ）
-BEGIN;
-INSERT INTO room_booking_claims (reservation_id, room_code, starts_at, ends_at, created_at)
-VALUES ($3, $4, $5, $6, $7);
--- 排他制約が session A の終了を待ってブロックする
-
--- session A が COMMIT した場合  : session B の INSERT が成立する
--- session A が ROLLBACK した場合: 旧占有が戻るため session B は 23P01 で失敗する
-```
-
-- 競合の検知: 排他制約待機、SQLSTATE `23P01`、lock timeout
-- 業務結果への変換: 取消commit後にだけ新規仮押さえを成立させる。旧占有が残れば利用枠を確保できなかった結果にする
-- 再試行: lock timeoutだけ最大1回。排他制約違反は再試行しない
-- 失敗時の原子性: 取消の現在状態、占有、期限、基底イベント、詳細イベントは同じtransactionで確定する
 
 ## パーティションと配置
 
-初期リリースでは8テーブルすべてを非partitionとする。基底イベント1,300万件で、予約番号による履歴取得と日次バックアップが目標内に収まるという仮想結果を置く。
-
-基底イベントが5,000万件を超えるか、保持期限を過ぎたイベントの月次削除が30分を超えた時点で、`occurred_at`による月次partitionを再検討する。詳細イベントは基底イベントと同じ保持単位で扱い、孤立させない。
+初期は9テーブルとも非partitionとする。基底イベントが3,000万件を超えたら、`occurred_at`による年次partitionを再検討する。通知の要求は削除しないので、累計100万件で走査の方法を見直す（index: `overdue_notice_open_requests_idx`）。
 
 ## 容量・性能・運用
 
 | 観点 | 前提・観測値 | 設計判断 | 確認方法・閾値 |
 |---|---|---|---|
-| データ量 | 予約500万件、有効予約160万件、基底イベント1,300万件 | 初期は非partition、イベント7年保持 | 月次件数と総容量を記録し、基底イベント3,000万件で再評価 |
-| 主要な書込み | 平常30件/秒、ピーク150件/秒 | 排他制約を含む仮押さえを一transactionに閉じる | p95 100ms、排他制約待機p99 500ms |
-| 主要なRead | 一会議室31日分、予約者の20件、予約履歴100件 | 4つの根拠付きindexを使う | 各ReadのSLOと実行計画を継続確認 |
-| 統計 | 会議室と時間帯に偏りがある | 毎日`ANALYZE`、変更率20%で自動解析 | 推定行数と実行行数が10倍乖離したら調査 |
-| バックアップ | RPO 5分、RTO 60分 | 継続アーカイブと日次base backup | 四半期ごとに別環境へ復旧し60分以内を確認 |
+| データ量 | 貸出300万件、基底イベント700万件 | 非partition | 基底イベント3,000万件で再評価 |
+| 貸出の書込み | ピーク20件/秒 | 貸出を`SERIALIZABLE`の一transactionに閉じる | p95 50ms、`40001`の再試行率1%未満 |
+| 通知の滞留 | 月2万件 | 未完了の要求だけを読む | Read-004で未完了が1,000件を超えたら警告 |
 
 ## 採用するRDB機能
 
-### 機能: GiST排他制約
+### 機能: 部分一意index
 
-- 採用箇所: 同じ会議室の重なる時間帯を`room_booking_claims`から排除する
-- 採用理由: まだ存在しない空き時間をロックせず、書込み時に重複時間を拒否できる
-- 利用可能な版: 9.0（排他制約の導入版）
-- 根拠: https://www.postgresql.org/docs/16/sql-createtable.html#SQL-CREATETABLE-EXCLUDE
+- 採用箇所: `loans_book_active_key`
+- 採用理由: 返却済みの行を残したまま、貸出中と延滞の行だけを一冊一つに限れる
+- 利用可能な版: 対象版で利用できる
+- 根拠: https://www.postgresql.org/docs/16/indexes-partial.html
 - 検証状態: planned
-- 対象バージョンで確認すること: `btree_gist`を有効化し、境界接触する二範囲は共存し、一分でも重なる範囲は拒否されること
-- 運用上の注意: extensionをmigration前に確認し、GiST indexの膨張率を月次監視する
 
-### 機能: transaction単位の行ロック
+### 機能: SERIALIZABLEの直列化失敗の検出
 
-- 採用箇所: 同じ予約に対する確定、取消、期限切れ
-- 採用理由: 状態とcurrent_versionを再検査するまで後発の更新を待機させられる
-- 利用可能な版: 対象版より前の現行版すべてで利用できる
-- 根拠: https://www.postgresql.org/docs/16/explicit-locking.html#LOCKING-ROWS
+- 採用箇所: 貸出上限
+- 採用理由: 件数を根拠にした判断を、集計列を足さずに守れる
+- 利用可能な版: 対象版で利用できる
+- 根拠: https://www.postgresql.org/docs/16/transaction-iso.html#XACT-SERIALIZABLE
 - 検証状態: planned
-- 対象バージョンで確認すること: 待機後のstatementが最新状態を読み、同じversionから二つの状態変更を作らないこと
-- 運用上の注意: transaction内で外部通知を行わず、ロック保持時間を100ms以内にする
+
+### 機能: FOR UPDATE SKIP LOCKED
+
+- 採用箇所: 通知の要求の回収
+- 採用理由: 複数の送り手が同じ要求を待たずに、別の要求を取れる
+- 利用可能な版: 対象版で利用できる
+- 根拠: https://www.postgresql.org/docs/16/sql-select.html#SQL-FOR-UPDATE-SHARE
+- 検証状態: planned
 
 ## 物理設計の完了条件
 
 ### 検証: 競合時の業務結果
 
-- 対象: 同時仮押さえ、確定対期限切れ、取消対新規仮押さえ
+- 対象: 貸出上限、同じ本、延滞と返却、通知の回収
 - 状態: planned
 - 方法: PostgreSQL 16.4の二sessionで各transactionを交差実行する
-- 合格条件: 論理設計が禁止する二重成立がなく、後発へ定義済みの業務結果を返す
-- 見直し条件: DBMS版、分離レベル、制約、retry方針の変更
+- 合格条件: 論理設計が許さない結果が起きず、後発へ決めた業務結果か再試行を返す
+- 見直し条件: DBMS版、分離レベル、制約、再試行の方針の変更
 - 根拠: この記載例は仮想条件であり、実機証拠は未作成
 
 ### 検証: 代表Readの性能
 
-- 対象: Read-001からRead-003と、それらを支えるindex
+- 対象: Read-001からRead-004と、それを支えるindex
 - 状態: planned
 - 方法: 想定件数と分布を再現し、`EXPLAIN (ANALYZE, BUFFERS)`と反復計測を行う
-- 合格条件: 各ReadのSLOを満たし、書込み費用と保守時間が品質要求内である
-- 見直し条件: 件数、分布、hot key、Read/Write比、SLOの変化
+- 合格条件: 各ReadのSLOを満たす
+- 見直し条件: 件数、分布、通知の滞留の変化
 - 根拠: この記載例の計測値は説明用の仮想結果
 
 ## 未決
 
-- 実環境の500万件相当データで、GiST indexの更新p99とVACUUM時間を再計測する
-- イベント7年保持は法務判断待ちであり、2026-09-30までに確定する
+- 通知のリース10分と回収の上限5回は、論理設計の仮説を写した。送り先の応答時間が分かれば確定する
+- 貸出上限の再試行の上限3回は、ピークの競合率を実測してから確定する
 
 ## 代表的な読み取り
 
-以下はindexと配置を決めるためのReadである。CUDの業務規則を確かめるBDDではなく、物理設計で保証する検索条件、鮮度、一貫性、性能を固定する。
+Readには、利用者の問い合わせだけでなく、背景処理の走査、監視の集計、書込みの中の判定条件も載せる。どれも件数とともに遅くなるからである。
 
-### Read-001: 会議室の占有時間を読み、予約可能時間を判断する
+### Read-001: 本を借りる前に、利用者の貸出状況と本の貸出を読む
 
-- 利用者と目的: 予約者が、指定会議室を指定期間に予約できるか判断する
-- 入力・検索条件: `room_code`の等価条件と、対象期間に重なる半開時間範囲
+- 利用者と目的: 本を借りる処理が、貸出上限と延滞の有無、本がほかに貸出中でないかを判断する（書込みの中の判定条件）
+- 入力・検索条件: `user_number`の等価条件と`status IN ('lent', 'overdue')`、`book_number`の等価条件
 - 結合: なし
-- 並び順と上限: `starts_at, reservation_id`の昇順、最大500件
-- 返す情報: 予約番号、利用開始、利用終了
-- 鮮度と一貫性: primaryから読む。ただし検索結果は成立保証ではなく、書込み時の排他制約が最終判断する
-- 想定件数: 占有160万件（有効予約と一対一）、対象は平均180件、繁忙会議室で最大500件
-- SLO: p95 50ms、p99 100ms、statement timeout 300ms
-- 支えるindex: `room_booking_claims_room_time_excl`
+- 並び順と上限: なし。利用者は最大5行、本は最大1行
+- 返す情報: 借りている冊数、延滞の貸出があるか、本の貸出の有無
+- 鮮度と一貫性: 貸出を書くのと同じ`SERIALIZABLE`のtransactionで読む
+- 想定件数: 同時15万行のうち、利用者あたり最大5行
+- SLO: p95 5ms
+- 支えるindex: `loans_user_active_idx`、`loans_book_active_key`
 
-```sql
-SELECT reservation_id, starts_at, ends_at
-FROM room_booking_claims
-WHERE room_code = $1
-  AND tstzrange(starts_at, ends_at, '[)') && tstzrange($2, $3, '[)')
-ORDER BY starts_at, reservation_id
-LIMIT 500;
-```
+### Read-002: 延滞にする候補を返却期限の順に走査する
 
-**対象バージョンでの確認**: 占有160万件相当でGiSTのBitmap Index Scan、推定186行、実行180行、p95 18msという仮想結果を置く。
-
-### Read-002: 予約者が今後の自分の予約を読む
-
-- 利用者と目的: 予約者本人が、今後の仮押さえ予約と確定予約を確認する
-- 入力・検索条件: `customer_code`の等価条件、現在日時以降の`starts_at`、予約中の二状態
+- 利用者と目的: 延滞にする処理（背景処理）が、判定日に返却期限を過ぎた貸出中の貸出を探す
+- 入力・検索条件: `status = 'lent'`、`due_on < 判定日`
 - 結合: なし
-- 並び順と上限: `starts_at, reservation_id`の昇順、20件
-- 返す情報: 予約番号、会議室、利用開始、利用終了、予約状態
-- 鮮度と一貫性: 直前の取消や確定を反映するためprimaryからstatement単位で読む
-- 想定件数: 予約500万件、有効予約160万件、予約者あたり平均3件、最大120件
-- SLO: p95 30ms、p99 80ms、statement timeout 200ms
-- 支えるindex: `reservations_customer_upcoming_idx`
+- 並び順と上限: `due_on, loan_id`の昇順、100件ずつ
+- 返す情報: 貸出、読んだ版
+- 鮮度と一貫性: primaryから読む。延滞にするUPDATEが版で確かめるので、読んだ後の変化は許す
+- 想定件数: 貸出中15万行のうち、一日分の候補は平均400行
+- SLO: 100件の取得で p95 20ms
+- 支えるindex: `loans_due_lent_idx`
 
-```sql
-SELECT reservation_id, room_code, starts_at, ends_at, status
-FROM reservations
-WHERE customer_code = $1
-  AND starts_at >= $2
-  AND status IN ('tentative', 'confirmed')
-ORDER BY starts_at, reservation_id
-LIMIT 20;
-```
+### Read-003: 回収できる通知の要求を探す
 
-**対象バージョンでの確認**: 予約500万件相当でIndex Only Scan、推定4行、実行3行、heap fetch 0、p95 12msという仮想結果を置く。
+- 利用者と目的: 延滞の通知の送り手（背景処理）が、成功も失敗も無く、生きている回収も無い要求を古い順に探す
+- 入力・検索条件: 成功と失敗の表に無い要求、最新の回収が無いか`claimed_at`からリースの10分を過ぎたもの
+- 結合: 成功と失敗の表とのアンチ結合、回収の表の最新版との結合
+- 並び順と上限: `requested_at, request_id`の昇順、20件
+- 返す情報: 要求、知らせる相手、次の回収の版
+- 鮮度と一貫性: primaryから`FOR UPDATE SKIP LOCKED`で読む
+- 想定件数: 要求の累計は月2万件ずつ増える。未完了は通常100件以下
+- SLO: 20件の取得で p95 10ms
+- 支えるindex: `overdue_notice_open_requests_idx`、`overdue_notice_claimed_events_request_version_key`
 
-### Read-003: 予約の現在状態と業務イベントを同じ時点で読む
+### Read-004: 通知の滞留と打ち切りを数える
 
-- 利用者と目的: 予約業務責任者が、一つの予約へ何が起きたか説明する
-- 入力・検索条件: 一つの`reservation_id`
-- 結合: 基底イベントから、`event_type`に対応する4つの詳細イベントへ`base_event_id`で外部結合する
-- 並び順と上限: `version`の昇順、最大10件
-- 返す情報: 予約の現在状態・現在version、各イベントのversion・種類・行為者・発生日時・種類固有の事実
-- 鮮度と一貫性: primary上のREAD ONLY REPEATABLE READ transactionで同じsnapshotを使う
-- 想定件数: 予約500万件、基底イベント1,300万件、一予約あたり平均2.6件、最大3件。論理設計の状態遷移では、仮押さえ成立・確定・取消／期限切れの3イベントが上限になる。上限10件は将来イベント種別が増えた場合の余裕であり、現在のモデルで10件に達することはない
-- SLO: transaction全体でp95 20ms、p99 50ms、statement timeout 200ms
-- 支えるindex: `reservations_pkey`、`reservation_base_events_reservation_id_version_key`、各詳細イベントの`base_event_id`一意index
-
-```sql
-BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
-
-SELECT reservation_id, status, current_version, updated_at
-FROM reservations
-WHERE reservation_id = $1;
-
-SELECT e.version, e.event_type, e.actor_code, e.occurred_at,
-       t.room_code, t.starts_at, t.ends_at, t.expires_at,
-       (c.base_event_id IS NOT NULL) AS confirmed,
-       (x.base_event_id IS NOT NULL) AS cancelled,
-       (d.base_event_id IS NOT NULL) AS expired
-FROM reservation_base_events AS e
-LEFT JOIN reservation_tentative_created_events AS t ON t.base_event_id = e.id
-LEFT JOIN reservation_confirmed_events AS c ON c.base_event_id = e.id
-LEFT JOIN reservation_cancelled_events AS x ON x.base_event_id = e.id
-LEFT JOIN reservation_expired_events AS d ON d.base_event_id = e.id
-WHERE e.reservation_id = $1
-ORDER BY e.version
-LIMIT 100;
-
-COMMIT;
-```
-
-**対象バージョンでの確認**: 基底イベント1,300万件相当で予約ごとのIndex Scanと詳細の一意indexによる結合を使い、3イベント取得p95 9msという仮想結果を置く。
+- 利用者と目的: 運用担当者（監視）が、未完了の要求の件数と、この24時間に打ち切った件数を見る
+- 入力・検索条件: 成功と失敗の表に無い要求、`failed_at`が直近24時間
+- 結合: 成功と失敗の表とのアンチ結合
+- 並び順と上限: なし（件数だけ）
+- 返す情報: 未完了の件数、最も古い未完了の`requested_at`、打ち切った件数
+- 鮮度と一貫性: 1分遅れてよい
+- 想定件数: 未完了は通常100件以下、打ち切りは一日数件
+- SLO: p95 50ms、1分ごと
+- 支えるindex: `overdue_notice_open_requests_idx`
