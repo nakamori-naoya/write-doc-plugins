@@ -26,7 +26,7 @@
 | 返却期限 | DueDate | 業務用語 |
 | 判定日時 | CheckedAt | 業務用語 |
 | 貸出上限 | LoanLimit | 業務用語 |
-| 貸出状況 | LoanStatus | 業務用語 |
+| 貸出状況 | BorrowerStanding | 業務用語 |
 | 借りている冊数 | BorrowingCount | 業務用語 |
 | 本が貸し出された | LoanLent | 業務イベント |
 | 本が返却された | LoanReturned | 業務イベント |
