@@ -1,1386 +1,658 @@
-# RDB論理設計 — 貸会議室の予約
+# 図書館の貸出の論理データモデル
 
-<!-- これは`rdb-logical-data-modeling`型の記載例である。**構成の基準資料ではなく、粒度と具体性の見本として読む。**
-     RoomFlowは、組織内の共用会議室を予約する架空のサービスである。 -->
+<!-- これは`rdb-logical-data-modeling`型の記載例である。**構成の基準資料ではなく、分量と具体性の見本として読む。**
+     架空の題材「図書館の貸出」の業務知識から作った。業務イベントは貸出、技術的な処理は延滞の通知である。 -->
 
-**この論理設計は、予約の現在の姿を持つリソース系テーブルと、予約に一度起きた事実を積むイベント系テーブルを分ける。** 予約の`current_version`と基底イベントの`version`を対応させ、現在の姿へどの出来事まで反映済みかを説明できるようにする。
-
-## 目的と範囲
-
-- 支える業務: 会議室の仮押さえ、確定、予約者本人による取消、期限切れ
-- 永続化の目的: 現在の予約可否へ答えながら、成立済みの業務イベントを上書きせず説明できるようにする
-- 対象外: 予約待ちと顧客の予約資格の記録（別の論理設計）、会議室設備の管理、通知の送達結果
-- 業務知識の正式な定義: [貸会議室予約の業務知識・コアドメイン](domain-rule.example.md)
-- 対応する具体例: 業務知識のBDD-001（仮押さえ成立）、BDD-002（確定）、BDD-003（確定予約の取消）、BDD-004（同時仮押さえ）、BDD-005（期限到来）、BDD-013（隣接する利用枠）、BDD-014（重なる利用枠の拒否）、BDD-015（期限同時刻の確定）、BDD-016（第三者による取消の拒否）、BDD-024（仮押さえ予約の取消）。業務知識のBDD-006からBDD-012、BDD-017からBDD-023は、予約待ちと顧客の予約資格を扱うため、この論理設計の範囲外である
+図書館の窓口と利用者が「誰が、どの一冊を、いつまでに返す約束か」と「いつ延滞になったか」を後から説明できるように、貸出を現在の姿と起きたことに分けて残す。延滞になった利用者へ知らせる処理は、業務の決まりではないが、頼んだ通知が必ず一度は終わるように、要求から成功か失敗までを追加のみで残す。
 
 ## リソース系とイベント系
 
-| 分類 | テーブル | 役割 | 時刻 |
-|---|---|---|---|
-| リソース系 | `reservations` | 予約の現在の姿と、反映済みの最新versionを持つ | `created_at`、`updated_at` |
-| リソース系 | `room_booking_claims` | 現在占有されている会議室と利用枠を持つ | `created_at` |
-| リソース系 | `tentative_hold_deadlines` | 現在有効な仮押さえ期限を持つ | `created_at` |
-| イベント系 | `reservation_base_events` | イベント共通の対象、種類、version、行為者、発生日時を積む | `occurred_at` |
-| イベント系 | `reservation_tentative_created_events` | 仮押さえ成立時点の予約内容と期限を残す | 基底イベントの`occurred_at`を使う |
-| イベント系 | `reservation_confirmed_events` | 予約が確定した事実を基底イベントへ結びつける | 基底イベントの`occurred_at`を使う |
-| イベント系 | `reservation_cancelled_events` | 予約者が予約を取り消した事実を基底イベントへ結びつける | 基底イベントの`occurred_at`を使う |
-| イベント系 | `reservation_expired_events` | 仮押さえ期限が到来した事実を基底イベントへ結びつける | 基底イベントの`occurred_at`を使う |
+| 系列 | 性質 | 論理テーブル | 正式な定義 | 時刻 | 変化 | 根拠 |
+|---|---|---|---|---|---|---|
+| リソース系 | 業務 | `loans` | 現在状態 | `due_on`（返却期限） | 更新あり | 業務知識「貸出」 |
+| イベント系 | 業務 | `loan_base_events` | イベント列 | `occurred_at` | 追加のみ | 業務知識「業務イベント」 |
+| イベント系 | 業務 | `loan_lent_events` | イベント列 | なし（基底イベントの`occurred_at`） | 追加のみ | 業務イベント「本が貸し出された」 |
+| イベント系 | 業務 | `loan_returned_events` | イベント列 | なし（基底イベントの`occurred_at`） | 追加のみ | 業務イベント「本が返却された」 |
+| イベント系 | 業務 | `loan_marked_overdue_events` | イベント列 | なし（基底イベントの`occurred_at`） | 追加のみ | 業務イベント「貸出が延滞になった」 |
+| イベント系 | 技術 | `overdue_notice_requested_events` | イベント列 | `requested_at` | 追加のみ | 延滞を利用者へ知らせる要求 |
+| イベント系 | 技術 | `overdue_notice_claimed_events` | イベント列 | `claimed_at` | 追加のみ | 同上 |
+| イベント系 | 技術 | `overdue_notice_succeeded_events` | イベント列 | `succeeded_at` | 追加のみ | 同上 |
+| イベント系 | 技術 | `overdue_notice_failed_events` | イベント列 | `failed_at` | 追加のみ | 同上 |
 
-イベント系テーブルに`created_at`は持たせない。業務上の成立時刻は基底イベントの`occurred_at`で一度だけ表す。詳細イベントは、対応する基底イベントがどの種類の事実であり、種類固有の何を残すかを表す。
-
-## シナリオと記録の対応
-
-列は後述する全8テーブルと過不足なく一致させる。`tce`・`ce`・`cae`・`ee`は詳細イベントの略で、順に仮押さえ成立・確定・取消・期限切れを指す。
-
-| シナリオ | `reservations` | `room_booking_claims` | `tentative_hold_deadlines` | `reservation_base_events` | `..._tentative_created_events`（tce） | `..._confirmed_events`（ce） | `..._cancelled_events`（cae） | `..._expired_events`（ee） |
-|---|---|---|---|---|---|---|---|---|
-| BDD-001 仮押さえ | 追加 | 追加 | 追加 | 追加（version 1） | 追加 | 変更なし | 変更なし | 変更なし |
-| BDD-002 期限時刻の確定 | 更新 | 削除 | 削除 | 追加（version 2） | 変更なし | 変更なし | 変更なし | 追加 |
-| BDD-003 確定 | 更新 | 変更なし | 削除 | 追加（version 2） | 変更なし | 追加 | 変更なし | 変更なし |
-| BDD-004 取消 | 更新 | 削除 | 変更なし | 追加（version 3） | 変更なし | 変更なし | 追加 | 変更なし |
-| BDD-005 同時仮押さえ | 追加（成立した一件だけ） | 追加（成立した一件だけ） | 追加（成立した一件だけ） | 追加（成立した予約のversion 1だけ） | 追加（成立した一件だけ） | 変更なし | 変更なし | 変更なし |
-| BDD-006 仮押さえの取消 | 更新 | 削除 | 削除 | 追加（version 2） | 変更なし | 変更なし | 追加 | 変更なし |
-| BDD-007 第三者による取消 | 変更なし | 変更なし | 変更なし | 変更なし | 変更なし | 変更なし | 変更なし | 変更なし |
-| BDD-008 隣接する利用枠 | 追加 | 追加 | 追加 | 追加（新しい予約のversion 1） | 追加 | 変更なし | 変更なし | 変更なし |
-| BDD-009 期限切れ | 更新 | 削除 | 削除 | 追加（version 2） | 変更なし | 変更なし | 変更なし | 追加 |
-| BDD-010 重複する利用枠 | 変更なし | 変更なし | 変更なし | 変更なし | 変更なし | 変更なし | 変更なし | 変更なし |
+貸出はイベント列を選んだ。貸出、返却、延滞という名前のある出来事が順に起き、「延滞になった後に返した」のような経過を後から説明する必要があるからである。貸出中の本と借りている冊数は毎回の貸出で読むので、現在の姿を`loans`に持つ。`loans`は基底イベントから作り直せる投影でもある。
 
 ## 論理データモデル図
 
-図は8テーブルの関係、全論理列、PostgreSQL型、キー、NULL制約、多重度を示す。値域と業務制約は後続の定義表と本文を正式な定義にする。indexやDDLは物理設計で決める。
-
 ```mermaid
 erDiagram
-    reservations {
-        uuid reservation_id PK "予約番号 / NOT NULL"
-        text room_code "会議室 / NOT NULL"
-        text customer_code "予約者 / NOT NULL"
-        timestamptz started_at "利用開始 / NOT NULL"
-        timestamptz ended_at "利用終了 / NOT NULL"
-        text status "予約状態 / NOT NULL"
-        bigint current_version "現在version / NOT NULL"
-        timestamptz created_at "作成日時 / NOT NULL"
-        timestamptz updated_at "最終更新日時 / NOT NULL"
+    loans {
+        uuid loan_id PK "貸出"
+        text user_number "利用者番号"
+        text book_number "資料番号"
+        date due_on "返却期限"
+        text status "貸出中 lent / 延滞 overdue / 返却済み returned"
+        bigint current_version "反映済みの最後の版"
     }
-    room_booking_claims {
-        uuid reservation_id PK, FK "予約番号 / NOT NULL"
-        text room_code "会議室 / NOT NULL"
-        timestamptz started_at "利用開始 / NOT NULL"
-        timestamptz ended_at "利用終了 / NOT NULL"
-        timestamptz created_at "作成日時 / NOT NULL"
+    loan_base_events {
+        uuid event_id PK "イベント"
+        uuid loan_id FK "貸出"
+        text event_type "lent / returned / marked_overdue"
+        bigint version "貸出の中の順序"
+        timestamptz occurred_at "起きた時刻"
     }
-    tentative_hold_deadlines {
-        uuid reservation_id PK, FK "予約番号 / NOT NULL"
-        timestamptz expired_at "期限 / NOT NULL"
-        timestamptz created_at "作成日時 / NOT NULL"
+    loan_lent_events {
+        uuid event_id PK, FK "基底イベント"
+        text user_number "利用者番号"
+        text book_number "資料番号"
+        date lent_on "貸出日"
+        date due_on "返却期限"
     }
-    reservation_base_events {
-        uuid id PK "基底イベント番号 / NOT NULL"
-        uuid reservation_id FK "予約番号 / NOT NULL"
-        text event_type "イベント種別 / NOT NULL"
-        bigint version "イベントversion / NOT NULL"
-        text actor_code "行為者 / NOT NULL"
-        timestamptz occurred_at "発生日時 / NOT NULL"
+    loan_returned_events {
+        uuid event_id PK, FK "基底イベント"
     }
-    reservation_tentative_created_events {
-        uuid id PK "仮押さえ成立イベント番号 / NOT NULL"
-        uuid base_event_id FK, UK "基底イベント番号 / NOT NULL"
-        text room_code "会議室 / NOT NULL"
-        text customer_code "予約者 / NOT NULL"
-        timestamptz started_at "利用開始 / NOT NULL"
-        timestamptz ended_at "利用終了 / NOT NULL"
-        timestamptz expired_at "期限 / NOT NULL"
+    loan_marked_overdue_events {
+        uuid event_id PK, FK "基底イベント"
+        date judged_on "判定日"
     }
-    reservation_confirmed_events {
-        uuid id PK "予約確定イベント番号 / NOT NULL"
-        uuid base_event_id FK, UK "基底イベント番号 / NOT NULL"
+    overdue_notice_requested_events {
+        uuid request_id PK "要求"
+        uuid source_event_id FK "延滞になった基底イベント"
+        text user_number "知らせる相手"
+        timestamptz requested_at "要求した時刻"
     }
-    reservation_cancelled_events {
-        uuid id PK "予約取消イベント番号 / NOT NULL"
-        uuid base_event_id FK, UK "基底イベント番号 / NOT NULL"
+    overdue_notice_claimed_events {
+        uuid claim_id PK "回収"
+        uuid request_id FK "要求"
+        bigint version "要求の中の回収の順序"
+        timestamptz claimed_at "回収した時刻"
     }
-    reservation_expired_events {
-        uuid id PK "予約期限切れイベント番号 / NOT NULL"
-        uuid base_event_id FK, UK "基底イベント番号 / NOT NULL"
+    overdue_notice_succeeded_events {
+        uuid request_id PK, FK "要求"
+        uuid claim_id FK "成功した回収"
+        timestamptz succeeded_at "成功した時刻"
     }
-
-    reservations ||--o| room_booking_claims : "現在の利用枠を占有する"
-    reservations ||--o| tentative_hold_deadlines : "仮押さえ中だけ期限を持つ"
-    reservations ||--|{ reservation_base_events : "出来事がversion順に積み上がる"
-    reservation_base_events ||--o| reservation_tentative_created_events : "種別がtentative_createdのとき持つ"
-    reservation_base_events ||--o| reservation_confirmed_events : "種別がconfirmedのとき持つ"
-    reservation_base_events ||--o| reservation_cancelled_events : "種別がcancelledのとき持つ"
-    reservation_base_events ||--o| reservation_expired_events : "種別がexpiredのとき持つ"
+    overdue_notice_failed_events {
+        uuid request_id PK, FK "要求"
+        uuid claim_id FK "打ち切った回収"
+        text reason "打ち切った理由"
+        timestamptz failed_at "打ち切った時刻"
+    }
+    loans ||--|{ loan_base_events : "起きたこと"
+    loan_base_events ||--o| loan_lent_events : "貸出の事実"
+    loan_base_events ||--o| loan_returned_events : "返却の事実"
+    loan_base_events ||--o| loan_marked_overdue_events : "延滞の事実"
+    loan_base_events ||--o| overdue_notice_requested_events : "知らせる要求"
+    overdue_notice_requested_events ||--o{ overdue_notice_claimed_events : "回収"
+    overdue_notice_requested_events ||--o| overdue_notice_succeeded_events : "成功"
+    overdue_notice_requested_events ||--o| overdue_notice_failed_events : "失敗"
 ```
 
 ## 論理テーブル定義
 
-### `reservations`（予約）
+### `loans`（貸出）
 
-予約番号が同じなら、状態が変わっても同じ予約である。`current_version`は現在の姿へ最後に反映した基底イベントの`version`と一致する。
+一冊の本を一人の利用者へ預けている約束の、いまの姿である。`loan_id`が同じなら同じ貸出である。
 
-- 役割: 一つの予約について、現在の姿と反映済みの最新versionを一行で表す
-- 識別: 予約番号が同じなら同じ予約である
-- 対応するシナリオ: BDD-001からBDD-010
-
-PostgreSQL型、NULL制約、値域、キーの詳細は、この定義表と業務制約を正式な定義にする。図は全列とテーブル間の関係を把握するために使う。すべての列はNOT NULLである。
-
-| 論理列 | 論理型・キー・値域 | 業務上の意味 | 値を決める事実 |
+| 論理列 | 型 | 必須性 | 業務上の意味 |
 |---|---|---|---|
-| `reservation_id`（予約番号） | `uuid`、PK | 予約を追跡する番号 | 仮押さえ成立時に一意に採番する |
-| `room_code`（会議室） | `text` | 予約対象の会議室 | 仮押さえ申込みで指定された会議室 |
-| `customer_code`（予約者） | `text` | 利用する予約者 | 仮押さえを申し込んだ予約者 |
-| `started_at`（利用開始） | `timestamptz`、`ended_at`より前 | 利用枠の始点 | 仮押さえ申込みで指定された利用開始 |
-| `ended_at`（利用終了） | `timestamptz` | 利用枠の終点 | 仮押さえ申込みで指定された利用終了 |
-| `status`（予約状態） | `text`、`tentative`・`confirmed`・`cancelled`・`expired` | 仮押さえ・確定・取消済み・期限切れのどれか | 最後に成立した基底イベントの種別 |
-| `current_version`（現在version） | `bigint`、1以上 | 現在の姿へ最後に反映した基底イベントのversion | 最後に成立した基底イベントのversion |
-| `created_at`（作成日時） | `timestamptz` | 予約が成立した日時 | 仮押さえ成立イベントの発生日時 |
-| `updated_at`（最終更新日時） | `timestamptz` | 現在の姿へ最後に変わった日時 | 最後に反映した基底イベントの発生日時 |
+| `loan_id` | uuid | 常に必要 | 貸出を見分ける識別子 |
+| `user_number` | text | 常に必要 | 借りた利用者の利用者番号 |
+| `book_number` | text | 常に必要 | 借りた本の資料番号 |
+| `due_on` | date | 常に必要 | 返却期限。貸出日の14日後で、貸出の間変わらない |
+| `status` | text | 常に必要 | 貸出中`lent`、延滞`overdue`、返却済み`returned` |
+| `current_version` | bigint | 常に必要 | 最後に反映した基底イベントの`version` |
 
-#### 業務制約: 予約期間は正の長さ
+#### 業務制約: 一冊の本の貸出中か延滞の貸出は一つ
 
-- 守ること: 利用開始は利用終了より前である
-- 根拠となるシナリオ: BDD-001
+`book_number`が同じで`status`が`lent`か`overdue`の行は、一つしか無い（BDD-003、BDD-011）。
 
-#### 業務制約: 現在versionは最後のイベントversionと一致する
+#### 業務制約: 一人の貸出中と延滞の貸出は5冊まで
 
-- 守ること: 予約の現在versionは、その予約で最後に成立した基底イベントのversionと一致する
-- 根拠となるシナリオ: BDD-001からBDD-010
+`user_number`が同じで`status`が`lent`か`overdue`の行は、5行を超えない（BDD-002）。複数の行にまたがる件数なので、並行実行で必要な保証に書いた。
 
-### `room_booking_claims`（予約枠占有）
+#### 業務制約: 現在の版は最後のイベントの版
 
-仮押さえ予約または確定予約が現在占有している利用枠を表す。取消済み予約と期限切れ予約には存在しない。
+`current_version`は、その貸出の`loan_base_events`の最大の`version`と等しい。
 
-- 役割: いま占有されている会議室と利用枠を一行で表す
-- 識別: 予約番号が同じなら同じ占有である
-- 対応するシナリオ: BDD-001からBDD-006、BDD-008からBDD-010
+### `loan_base_events`（貸出に起きたこと）
 
-| 論理列 | 論理型・キー・値域 | 業務上の意味 | 値を決める事実 |
+貸出に起きた業務イベントに共通する事実である。`loan_id`と`version`の組は一意である。
+
+| 論理列 | 型 | 必須性 | 業務上の意味 |
 |---|---|---|---|
-| `reservation_id`（予約番号） | `uuid`、PK・FK、NOT NULL | 占有を持つ予約 | 占有を生んだ仮押さえ予約 |
-| `room_code`（会議室） | `text`、NOT NULL | 占有されている会議室 | 予約の会議室 |
-| `started_at`（利用開始） | `timestamptz`、NOT NULL、`ended_at`より前 | 半開区間の始点 | 予約の利用開始 |
-| `ended_at`（利用終了） | `timestamptz`、NOT NULL | 半開区間の終点 | 予約の利用終了 |
-| `created_at`（作成日時） | `timestamptz`、NOT NULL | 占有が成立した日時 | 仮押さえ成立イベントの発生日時 |
+| `event_id` | uuid | 常に必要 | イベントの識別子 |
+| `loan_id` | uuid | 常に必要 | 起きた貸出 |
+| `event_type` | text | 常に必要 | `lent`、`returned`、`marked_overdue` |
+| `version` | bigint | 常に必要 | 貸出の中の順序。1から1ずつ増える |
+| `occurred_at` | timestamptz | 常に必要 | 出来事が起きた時刻 |
 
-同じ会議室の時間帯は、境界接触を除いて二つの占有に属さない。
+### `loan_lent_events`（本が貸し出された）
 
-#### 業務制約: 同じ会議室の占有は重ならない
+貸出が生まれたときの事実である。
 
-- 守ること: 同じ会議室では、境界接触を除いて利用時間帯が重なる占有を二つ成立させない
-- 根拠となるシナリオ: BDD-005、BDD-008、BDD-010
-
-### `tentative_hold_deadlines`（仮押さえ期限）
-
-- 役割: いま有効な仮押さえ期限を一行で表す
-- 識別: 予約番号が同じなら同じ期限である
-- 対応するシナリオ: BDD-001からBDD-004、BDD-006、BDD-008、BDD-009
-
-| 論理列 | 論理型・キー・値域 | 業務上の意味 | 値を決める事実 |
+| 論理列 | 型 | 必須性 | 業務上の意味 |
 |---|---|---|---|
-| `reservation_id`（予約番号） | `uuid`、PK・FK、NOT NULL | 期限が適用される仮押さえ予約 | 期限を生んだ仮押さえ予約 |
-| `expired_at`（期限） | `timestamptz`、NOT NULL | 確定しなければ占有を解放する時刻 | 仮押さえ成立イベントの発生日時から15分後 |
-| `created_at`（作成日時） | `timestamptz`、NOT NULL | 期限が成立した日時 | 仮押さえ成立イベントの発生日時 |
+| `event_id` | uuid | 常に必要 | 基底イベント |
+| `user_number` | text | 常に必要 | 借りた利用者 |
+| `book_number` | text | 常に必要 | 借りた本 |
+| `lent_on` | date | 常に必要 | 貸出日 |
+| `due_on` | date | 常に必要 | 返却期限 |
 
-#### 業務制約: 仮押さえだけが期限を持つ
+### `loan_returned_events`（本が返却された）
 
-- 守ること: 仮押さえ予約だけが期限を持ち、確定・取消・期限切れの成立時には期限を残さない
-- 根拠となるシナリオ: BDD-001からBDD-004、BDD-006、BDD-009
+返却に固有の事実は無い。種類ごとの表として置く。
 
-### `reservation_base_events`（予約基底イベント）
-
-基底イベントは予約へ起きた出来事をversion順に積む。追加後は書き換えない。同じ予約の`version`は重複せず、1から欠番なく進む。
-
-- 役割: 予約へ起きた出来事を一件ずつ、version順に積む
-- 識別: 基底イベント番号が同じなら同じ出来事である。予約番号とversionの組でも一意に決まる
-- 対応するシナリオ: BDD-001からBDD-006、BDD-008、BDD-009
-
-| 論理列 | 論理型・キー・値域 | 業務上の意味 | 値を決める事実 |
+| 論理列 | 型 | 必須性 | 業務上の意味 |
 |---|---|---|---|
-| `id`（基底イベント番号） | `uuid`、PK、NOT NULL | 一つの出来事を追跡する番号 | 出来事の成立時に一意に採番する |
-| `reservation_id`（予約番号） | `uuid`、FK・複合UK、NOT NULL | 出来事が属する予約 | 出来事の対象になった予約 |
-| `event_type`（イベント種別） | `text`、NOT NULL、`tentative_created`・`confirmed`・`cancelled`・`expired` | 仮押さえ成立・確定・取消・期限切れのどれか | 成立した業務イベントの種類 |
-| `version`（イベントversion） | `bigint`、複合UK、NOT NULL、1以上 | 同じ予約で出来事が成立した順序 | 同じ予約の直前のversionに1を足した値。最初は1 |
-| `actor_code`（行為者） | `text`、NOT NULL | 予約者または期限管理 | 出来事を起こした主体 |
-| `occurred_at`（発生日時） | `timestamptz`、NOT NULL | 業務上、出来事が成立した日時 | 業務イベントが成立した時刻 |
+| `event_id` | uuid | 常に必要 | 基底イベント |
 
-#### 業務制約: イベントversionは予約内で一意
+### `loan_marked_overdue_events`（貸出が延滞になった）
 
-- 守ること: 同じ予約に同じversionの基底イベントを二つ成立させない
-- 根拠となるシナリオ: BDD-001からBDD-006、BDD-008、BDD-009
+| 論理列 | 型 | 必須性 | 業務上の意味 |
+|---|---|---|---|
+| `event_id` | uuid | 常に必要 | 基底イベント |
+| `judged_on` | date | 常に必要 | 延滞と判断した判定日。返却期限の翌日以降 |
 
-#### 業務制約: 基底イベントと詳細イベントは一対一
+### `overdue_notice_requested_events`（延滞の通知を頼んだ）
 
-- 守ること: 一つの基底イベントは対応する詳細イベントを一つだけ持つ
-- 根拠となるシナリオ: BDD-001からBDD-010
+延滞になった貸出の利用者へ知らせる要求である。「貸出が延滞になった」と同じ一つの変更で記録する。一つの基底イベントに要求は一つである。
 
-#### 業務制約: 基底イベントの種類と詳細の種類が一致する
+| 論理列 | 型 | 必須性 | 業務上の意味 |
+|---|---|---|---|
+| `request_id` | uuid | 常に必要 | 要求 |
+| `source_event_id` | uuid | 常に必要 | 延滞になった基底イベント |
+| `user_number` | text | 常に必要 | 知らせる相手 |
+| `requested_at` | timestamptz | 常に必要 | 要求した時刻 |
 
-- 守ること: 基底イベントのイベント種別と、存在する詳細イベントの種類を一致させる
-- 根拠となるシナリオ: BDD-001からBDD-010
+### `overdue_notice_claimed_events`（延滞の通知を引き受けた）
 
-### 詳細イベント
+送る側が要求を引き受けた事実である。回収から10分（リース。仮説）を過ぎても成功も失敗も無ければ、要求は再び回収できる。`request_id`と`version`の組は一意である。
 
-一つの基底イベントは、`event_type`に対応する詳細イベントを一つだけ持つ。詳細イベントには`created_at`も`occurred_at`も持たせず、発生日時は基底イベントから読む。
+| 論理列 | 型 | 必須性 | 業務上の意味 |
+|---|---|---|---|
+| `claim_id` | uuid | 常に必要 | 回収 |
+| `request_id` | uuid | 常に必要 | 要求 |
+| `version` | bigint | 常に必要 | 要求の中の回収の順序 |
+| `claimed_at` | timestamptz | 常に必要 | 回収した時刻 |
 
-| テーブル | 対応するイベント種別 | 残す事実 |
-|---|---|---|
-| `reservation_tentative_created_events` | `tentative_created` | 仮押さえ成立時点の予約内容と期限 |
-| `reservation_confirmed_events` | `confirmed` | 予約が確定した事実 |
-| `reservation_cancelled_events` | `cancelled` | 予約者が取り消した事実 |
-| `reservation_expired_events` | `expired` | 仮押さえ期限が到来した事実 |
+### `overdue_notice_succeeded_events`（延滞の通知を送った）
 
-詳細イベントの列はすべてNOT NULLである。
+| 論理列 | 型 | 必須性 | 業務上の意味 |
+|---|---|---|---|
+| `request_id` | uuid | 常に必要 | 要求。要求ごとに一件 |
+| `claim_id` | uuid | 常に必要 | 送った回収 |
+| `succeeded_at` | timestamptz | 常に必要 | 送った時刻 |
 
-| テーブル | 論理列 | 論理型・キー |
-|---|---|---|
-| 仮押さえ成立 | `id` | `uuid`、PK |
-| 仮押さえ成立 | `base_event_id` | `uuid`、FK・UK |
-| 仮押さえ成立 | `room_code` | `text` |
-| 仮押さえ成立 | `customer_code` | `text` |
-| 仮押さえ成立 | `started_at` | `timestamptz` |
-| 仮押さえ成立 | `ended_at` | `timestamptz` |
-| 仮押さえ成立 | `expired_at` | `timestamptz` |
-| 予約確定 | `id` | `uuid`、PK |
-| 予約確定 | `base_event_id` | `uuid`、FK・UK |
-| 予約取消 | `id` | `uuid`、PK |
-| 予約取消 | `base_event_id` | `uuid`、FK・UK |
-| 期限切れ | `id` | `uuid`、PK |
-| 期限切れ | `base_event_id` | `uuid`、FK・UK |
+### `overdue_notice_failed_events`（延滞の通知を打ち切った）
 
-## ライフサイクルと時間軸
+再試行しても結果が変わらないと分かった要求と、回収の回数が上限に達した要求を、候補から外す事実である。一時的な失敗は記録しない。
 
-| 論理テーブル | 生成のきっかけ | 変化のしかた | 終了・残存 | 時間軸の扱い |
-|---|---|---|---|---|
-| `reservations` | 仮押さえ成立 | 確定、取消、期限切れで状態・現在version・最終更新日時を更新 | 行は消さず終端状態を持つ | 現在の姿として保持 |
-| `room_booking_claims` | 仮押さえ成立 | 更新しない | 取消または期限切れで削除 | 現在の占有だけ保持 |
-| `tentative_hold_deadlines` | 仮押さえ成立 | 更新しない | 確定、取消、期限切れで削除 | 現在の期限だけ保持 |
-| `reservation_base_events` | 各業務イベントの成立 | 更新しない | 終了しない | version順に保持 |
-| 4つの詳細イベント | 対応する業務イベントの成立 | 更新しない | 終了しない | 基底イベントと同じ期間保持 |
+| 論理列 | 型 | 必須性 | 業務上の意味 |
+|---|---|---|---|
+| `request_id` | uuid | 常に必要 | 要求。要求ごとに一件 |
+| `claim_id` | uuid | 常に必要 | 打ち切った回収 |
+| `reason` | text | 常に必要 | 打ち切った理由。どの失敗で打ち切るかは実装のエラーの分類が決める |
+| `failed_at` | timestamptz | 常に必要 | 打ち切った時刻 |
+
+#### 業務制約: 成功と失敗はどちらか一つ
+
+同じ`request_id`が`overdue_notice_succeeded_events`と`overdue_notice_failed_events`の両方に現れない。
 
 ## 並行実行で必要な保証
 
-| 同時に進む操作 | 許される結果 | 許されない結果 | 対応シナリオ |
-|---|---|---|---|
-| 同じ利用枠への二つの仮押さえ | 一方の予約、占有、期限、version 1イベントだけが成立する | 二つの占有と二組のイベントが残る | BDD-005 |
-| 確定と期限切れ | 一方だけが予約のversion 2になる | 同じ予約へversion 2が二つ積まれる | BDD-002、BDD-003 |
-| 取消と別予約者の仮押さえ | 取消の成立後なら別予約者が占有を得る | 古い占有と新しい占有が重なる | BDD-004、BDD-008 |
-| 予約者本人の取消と第三者による取消 | 予約者本人による取消だけが予約の次versionになる | 第三者の行為で状態やイベントが変わる | BDD-007 |
+同じ利用者が二冊を同時に借りるとき、借りている冊数が4冊なら、成立するのは一冊だけである。二冊とも成立して6冊になることを許さない。競合するのは、その利用者の`status`が`lent`か`overdue`の`loans`の行の集まりである。一行の版では守れないので、どう守るかは物理設計が決める。
 
-## 論理設計の完了条件
+同じ本を二人が同時に借りるとき、成立するのは一人だけである。競合するのは、その本の`lent`か`overdue`の`loans`の行である（BDD-011）。
 
-- リソース系3テーブルとイベント系5テーブルを区別した
-- 予約の`current_version`と基底イベントの`version`を対応させた
-- イベントの発生日時を`occurred_at`、リソースの成立日時を`created_at`で表した
-- すべてのカラムをNOT NULLとし、イベント種別ごとの違いをNULLで隠していない
-- BDD-001からBDD-010で作成、更新、削除、時間境界、権限、拒否、同時進行を確かめた
+延滞にするのと本を返すのが同じ貸出で重なったとき、先に反映した方だけが成立する。後の方は、読んだ`current_version`が変わっているので成立しない（BDD-006）。
+
+同じ要求を二つの送り手が同時に回収するとき、同じ`version`の回収は一つしか成立しない（BDD-009）。
+
+## 業務知識のシナリオとの対応
+
+| 業務知識のBDD | この資料のBDD | 対象外の理由 |
+|---|---|---|
+| BDD-001 | BDD-001 | |
+| BDD-002 | | 4冊目までの貸出は BDD-001 と同じ記録になる |
+| BDD-003 | BDD-002 | |
+| BDD-004 | | 延滞の有無は貸出状況で判断し、拒否は記録を変えない。BDD-002 と同じ形 |
+| BDD-005 | BDD-003 | |
+| BDD-006 | | 本人の確認で拒まれ、記録に届かない |
+| BDD-007 | | 返却の記録は BDD-004 と同じ形 |
+| BDD-008 | BDD-004 | |
+| BDD-009 | | 返却済みは状態で拒まれ、記録を変えない |
+| BDD-010 | BDD-005 | |
+| BDD-011 | | 延滞にする前に拒まれ、記録を変えない |
+| BDD-012 | BDD-006 | |
+| BDD-013 | BDD-011 | |
 
 ## 未決
 
-- 基底イベントと詳細イベントの保持期間は、予約業務責任者と法務が決める
-- 期限管理を行為者としてどの業務コードで表すか
+貸出を見分ける`loan_id`は、業務知識に語が無い。ドメインモデルが「貸出番号」を業務知識へ提案している。
+
+回収のリースを10分、打ち切るまでの回収の回数を5回と仮に置いた。通知を送る相手の応答時間が分かれば確定する。
 
 ## BDD
 
-以下のBDDは互いに独立している。前のBDDの結果は引き継がず、8テーブルすべてをBeforeとAfterへ記載する。0件のテーブルも見出し行と区切り行だけの表として置き、データ行を置かない。各表の前後は空行1行で区切り、テーブル名の太字行が次の表との境界になる。変化しないテーブルも全行を再掲する。
-
-### [BDD-001] 空き枠を仮押さえする
+### [BDD-001] 本を借りると貸出と貸出の事実が生まれる
 
 ```gherkin
-Given: 顧客C-4102は予約可能顧客である
-  And: 会議室M-301の2026年9月18日 10:00から11:30までの利用枠には予約枠占有がない
-  And: 現在日時は2026年9月1日 09:00である
-When: C-4102が会議室M-301の2026年9月18日 10:00から11:30までを仮押さえする
-Then: 予約R-20260901-0101が会議室M-301の2026年9月18日 10:00から11:30までの仮押さえ予約として成立する
-  And: 予約の現在versionと基底イベントのversionは1で一致する
-  And: 仮押さえ成立イベントに成立時点の予約内容が残る
+Given: 利用者 U-0001 は本を1冊も借りておらず、延滞の貸出も無い
+  And: 本 B-1001 はどの貸出にも属していない
+When: 利用者 U-0001 が2026年10月1日 10:00に本 B-1001 を借りる
+Then: 貸出 L-001 が貸出中で生まれる
+  And: 返却期限は2026年10月15日である
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
 
-**`room_booking_claims`**
+**`loan_base_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
+| event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
 
-**`tentative_hold_deadlines`**
+**`loan_lent_events`**
 
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+| event_id | user_number | book_number | lent_on | due_on |
+|---|---|---|---|---|
 
 **After**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| **R-20260901-0101** | **M-301** | **C-4102** | **2026年9月18日 10:00** | **2026年9月18日 11:30** | **tentative** | **1** | **2026年9月1日 09:00** | **2026年9月1日 09:00** |
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| **L-001** | **U-0001** | **B-1001** | **2026年10月15日** | **lent** | **1** |
 
-**`room_booking_claims`**
+**`loan_base_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
+| event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
-| **R-20260901-0101** | **M-301** | **2026年9月18日 10:00** | **2026年9月18日 11:30** | **2026年9月1日 09:00** |
+| **E-001** | **L-001** | **lent** | **1** | **2026年10月1日 10:00** |
 
-**`tentative_hold_deadlines`**
+**`loan_lent_events`**
 
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-| **R-20260901-0101** | **2026年9月1日 09:15** | **2026年9月1日 09:00** |
+| event_id | user_number | book_number | lent_on | due_on |
+|---|---|---|---|---|
+| **E-001** | **U-0001** | **B-1001** | **2026年10月1日** | **2026年10月15日** |
 
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| **BE-0101-01** | **R-20260901-0101** | **tentative_created** | **1** | **C-4102** | **2026年9月1日 09:00** |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| **TE-0101-01** | **BE-0101-01** | **M-301** | **C-4102** | **2026年9月18日 10:00** | **2026年9月18日 11:30** | **2026年9月1日 09:15** |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-### [BDD-002] 仮押さえ期限と同時刻の確定を期限切れとして記録する
+### [BDD-002] 5冊借りている利用者の6冊目は記録されない
 
 ```gherkin
-Given: 予約R-20260901-0101は現在version 1の仮押さえ予約である
-  And: 利用枠は会議室M-301の2026年9月18日 10:00から11:30までである
-  And: 仮押さえ期限は2026年9月1日 09:15である
-  And: 予約を確定したイベントはない
-When: 予約者C-4102が2026年9月1日 09:15に予約を確定する
-Then: 予約は現在version 2の期限切れ予約になる
-  And: 予約枠占有と仮押さえ期限は削除される
-  And: 予約確定イベントではなく予約期限切れイベントが追加される
+Given: 利用者 U-0001 は貸出中の本を5冊借りており、延滞の貸出は無い
+When: 利用者 U-0001 が2026年10月1日 10:00に本 B-1006 を借りる
+Then: 貸出は生まれない
+  NOTE: Rule: 貸出上限に達している利用者が本を借りる
+    Reason: 一人の貸出中と延滞の貸出は5冊を超えない
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | tentative | 1 | 2026年9月1日 09:00 | 2026年9月1日 09:00 |
-
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:00 |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-| R-20260901-0101 | 2026年9月1日 09:15 | 2026年9月1日 09:00 |
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-001 | U-0001 | B-1001 | 2026年10月10日 | lent | 1 |
+| L-002 | U-0001 | B-1002 | 2026年10月10日 | lent | 1 |
+| L-003 | U-0001 | B-1003 | 2026年10月12日 | lent | 1 |
+| L-004 | U-0001 | B-1004 | 2026年10月12日 | lent | 1 |
+| L-005 | U-0001 | B-1005 | 2026年10月14日 | lent | 1 |
 
 **After**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | **expired** | **2** | 2026年9月1日 09:00 | **2026年9月1日 09:15** |
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-001 | U-0001 | B-1001 | 2026年10月10日 | lent | 1 |
+| L-002 | U-0001 | B-1002 | 2026年10月10日 | lent | 1 |
+| L-003 | U-0001 | B-1003 | 2026年10月12日 | lent | 1 |
+| L-004 | U-0001 | B-1004 | 2026年10月12日 | lent | 1 |
+| L-005 | U-0001 | B-1005 | 2026年10月14日 | lent | 1 |
 
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| **BE-0101-02** | **R-20260901-0101** | **expired** | **2** | **期限管理** | **2026年9月1日 09:15** |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| **EE-0101-02** | **BE-0101-02** |
-
-### [BDD-003] 仮押さえ予約を確定する
+### [BDD-003] ほかの利用者に貸出中の本は記録されない
 
 ```gherkin
-Given: 予約R-20260901-0101は現在version 1の仮押さえ予約である
-  And: 利用枠は会議室M-301の2026年9月18日 10:00から11:30までである
-  And: version 1の仮押さえ成立イベントと仮押さえ期限がある
-  And: 現在日時は期限前の2026年9月1日 09:05である
-When: 予約者C-4102が予約を確定する
-Then: 予約は現在version 2の確定予約になる
-  And: 確定予約の利用枠は会議室M-301の2026年9月18日 10:00から11:30までのままである
-  And: 仮押さえ期限は削除される
-  And: version 2の基底イベントと予約確定イベントが追加される
+Given: 本 B-1001 は利用者 U-0001 に貸出中である
+When: 利用者 U-0003 が2026年10月2日 11:00に本 B-1001 を借りる
+Then: 貸出は生まれない
+  NOTE: Rule: 貸出中の本を借りる
+    Reason: 一冊の本の貸出中か延滞の貸出は一つ
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | tentative | 1 | 2026年9月1日 09:00 | 2026年9月1日 09:00 |
-
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:00 |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-| R-20260901-0101 | 2026年9月1日 09:15 | 2026年9月1日 09:00 |
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-001 | U-0001 | B-1001 | 2026年10月15日 | lent | 1 |
 
 **After**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | **confirmed** | **2** | 2026年9月1日 09:00 | **2026年9月1日 09:05** |
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-001 | U-0001 | B-1001 | 2026年10月15日 | lent | 1 |
 
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:00 |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| **BE-0101-02** | **R-20260901-0101** | **confirmed** | **2** | **C-4102** | **2026年9月1日 09:05** |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| **CE-0101-02** | **BE-0101-02** |
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-### [BDD-004] 確定予約を取り消す
+### [BDD-004] 延滞の本を返すと返却済みになり、返却の事実が積まれる
 
 ```gherkin
-Given: 予約R-20260901-0101は現在version 2の確定予約である
-  And: 利用枠は会議室M-301の2026年9月18日 10:00から11:30までである
-  And: version 1の仮押さえ成立イベントとversion 2の予約確定イベントがある
-  And: 現在日時は利用開始前である
-When: 予約者C-4102が自分の予約を取り消す
-Then: 予約は現在version 3の取消済み予約になる
-  And: 予約枠占有は削除される
-  And: version 3の基底イベントと予約取消イベントが追加される
+Given: 貸出 L-002 は利用者 U-0002 の延滞の貸出で、版は2である
+When: 2026年10月20日 15:00に本 B-1002 が返される
+Then: 貸出 L-002 は返却済みになり、版は3になる
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | confirmed | 2 | 2026年9月1日 09:00 | 2026年9月1日 09:05 |
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-002 | U-0002 | B-1002 | 2026年10月15日 | overdue | 2 |
 
-**`room_booking_claims`**
+**`loan_base_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
+| event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:00 |
+| E-011 | L-002 | lent | 1 | 2026年10月1日 09:00 |
+| E-012 | L-002 | marked_overdue | 2 | 2026年10月16日 00:05 |
 
-**`tentative_hold_deadlines`**
+**`loan_returned_events`**
 
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| BE-0101-02 | R-20260901-0101 | confirmed | 2 | C-4102 | 2026年9月1日 09:05 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| CE-0101-02 | BE-0101-02 |
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+| event_id |
+|---|
 
 **After**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | **cancelled** | **3** | 2026年9月1日 09:00 | **2026年9月10日 14:20** |
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-002 | U-0002 | B-1002 | 2026年10月15日 | **returned** | **3** |
 
-**`room_booking_claims`**
+**`loan_base_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
+| event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
+| E-011 | L-002 | lent | 1 | 2026年10月1日 09:00 |
+| E-012 | L-002 | marked_overdue | 2 | 2026年10月16日 00:05 |
+| **E-013** | **L-002** | **returned** | **3** | **2026年10月20日 15:00** |
 
-**`tentative_hold_deadlines`**
+**`loan_returned_events`**
 
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
+| event_id |
+|---|
+| **E-013** |
 
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| BE-0101-02 | R-20260901-0101 | confirmed | 2 | C-4102 | 2026年9月1日 09:05 |
-| **BE-0101-03** | **R-20260901-0101** | **cancelled** | **3** | **C-4102** | **2026年9月10日 14:20** |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| CE-0101-02 | BE-0101-02 |
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| **CAE-0101-03** | **BE-0101-03** |
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-### [BDD-005] 同じ空き時間への同時仮押さえは一方だけ成立する
+### [BDD-005] 返却期限の翌日に延滞になり、通知の要求が同時に積まれる
 
 ```gherkin
-Given: 顧客C-4102と顧客C-5821は予約可能顧客である
-  And: 会議室M-301の2026年9月18日 10:00から11:30までの利用枠には予約枠占有がない
-When: 二人が会議室M-301の2026年9月18日 10:00から11:30までを同時に仮押さえする
-Then: 先に成立した一方だけが現在version 1の仮押さえ予約になる
-  And: 成立した予約のリソース系3行とイベント系2行だけが追加される
-  And: もう一方に属する行は8テーブルのどこにも作られない
+Given: 貸出 L-001 は利用者 U-0001 の貸出中の貸出で、返却期限は2026年10月15日、版は1である
+When: 図書館が判定日2026年10月16日に、00:05に貸出 L-001 を延滞にする
+Then: 貸出 L-001 は延滞になり、版は2になる
+  And: 利用者 U-0001 へ知らせる要求が同じ変更で積まれる
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-001 | U-0001 | B-1001 | 2026年10月15日 | lent | 1 |
 
-**`room_booking_claims`**
+**`loan_base_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
+| event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
+| E-001 | L-001 | lent | 1 | 2026年10月1日 10:00 |
 
-**`tentative_hold_deadlines`**
+**`loan_marked_overdue_events`**
 
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
+| event_id | judged_on |
 |---|---|
 
-**`reservation_cancelled_events`**
+**`overdue_notice_requested_events`**
 
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-After（C-4102の操作が先に成立した場合）:
-
-**`reservations`**
-
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| **R-20260901-0101** | **M-301** | **C-4102** | **2026年9月18日 10:00** | **2026年9月18日 11:30** | **tentative** | **1** | **2026年9月1日 09:00** | **2026年9月1日 09:00** |
-
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| **R-20260901-0101** | **M-301** | **2026年9月18日 10:00** | **2026年9月18日 11:30** | **2026年9月1日 09:00** |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-| **R-20260901-0101** | **2026年9月1日 09:15** | **2026年9月1日 09:00** |
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| **BE-0101-01** | **R-20260901-0101** | **tentative_created** | **1** | **C-4102** | **2026年9月1日 09:00** |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| **TE-0101-01** | **BE-0101-01** | **M-301** | **C-4102** | **2026年9月18日 10:00** | **2026年9月18日 11:30** | **2026年9月1日 09:15** |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-C-5821に属する予約、占有、期限、基底イベント、詳細イベントは、8テーブルのどこにも存在しない。
-
-### [BDD-006] 仮押さえ予約を取り消す
-
-```gherkin
-Given: 予約R-20260901-0101は現在version 1の仮押さえ予約である
-  And: 利用枠は会議室M-301の2026年9月18日 10:00から11:30までである
-  And: version 1の仮押さえ成立イベントと仮押さえ期限がある
-  And: 現在日時は利用開始前の2026年9月1日 09:05である
-When: 予約者C-4102が自分の予約を取り消す
-Then: 予約は現在version 2の取消済み予約になる
-  And: 予約枠占有と仮押さえ期限は削除される
-  And: version 2の基底イベントと予約取消イベントが追加される
-```
-
-#### データの状態
-
-**Before**
-
-**`reservations`**
-
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | tentative | 1 | 2026年9月1日 09:00 | 2026年9月1日 09:00 |
-
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:00 |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-| R-20260901-0101 | 2026年9月1日 09:15 | 2026年9月1日 09:00 |
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+| request_id | source_event_id | user_number | requested_at |
+|---|---|---|---|
 
 **After**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | **cancelled** | **2** | 2026年9月1日 09:00 | **2026年9月1日 09:05** |
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-001 | U-0001 | B-1001 | 2026年10月15日 | **overdue** | **2** |
 
-**`room_booking_claims`**
+**`loan_base_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
+| event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
+| E-001 | L-001 | lent | 1 | 2026年10月1日 10:00 |
+| **E-002** | **L-001** | **marked_overdue** | **2** | **2026年10月16日 00:05** |
 
-**`tentative_hold_deadlines`**
+**`loan_marked_overdue_events`**
 
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| **BE-0101-02** | **R-20260901-0101** | **cancelled** | **2** | **C-4102** | **2026年9月1日 09:05** |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
+| event_id | judged_on |
 |---|---|
+| **E-002** | **2026年10月16日** |
 
-**`reservation_cancelled_events`**
+**`overdue_notice_requested_events`**
 
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| **CAE-0101-02** | **BE-0101-02** |
+| request_id | source_event_id | user_number | requested_at |
+|---|---|---|---|
+| **R-001** | **E-002** | **U-0001** | **2026年10月16日 00:05** |
 
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-### [BDD-007] 第三者による確定予約の取消を拒む
+### [BDD-006] 返却が先に反映された貸出は延滞にならない
 
 ```gherkin
-Given: 顧客C-4102の確定予約R-20260901-0101がある
-  And: 利用枠は会議室M-301の2026年9月18日 10:00から11:30までである
-  And: 現在日時は利用開始前の2026年9月10日 14:20である
-  And: 顧客C-5821はR-20260901-0101の予約者ではない
-When: C-5821がR-20260901-0101を取り消す
-Then: R-20260901-0101は現在version 2の確定予約のままである
-  And: 予約枠占有と成立済みイベントは変わらない
-  And: 予約取消イベントは追加されない
-  NOTE: Rule: 自分の予約と予約待ちだけを取り消せる
-    Source: [業務知識・コアドメイン](domain-rule.example.md)
-    Reason: 取り消そうとしたC-5821がR-20260901-0101の予約者ではないため
+Given: 貸出 L-001 は版1の貸出中の貸出として読まれた
+  And: その後、2026年10月15日 18:00の返却が先に反映され、版は2になった
+When: 図書館が判定日2026年10月16日に、読んだ版1の貸出 L-001 を延滞にする
+Then: 延滞は成立せず、貸出 L-001 は返却済みのまま変わらない
+  NOTE: Rule: 返却済みの貸出は変わらない
+    Reason: 読んだ版と現在の版が違う
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | confirmed | 2 | 2026年9月1日 09:00 | 2026年9月1日 09:05 |
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-001 | U-0001 | B-1001 | 2026年10月15日 | returned | 2 |
 
-**`room_booking_claims`**
+**`loan_base_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
+| event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:00 |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| BE-0101-02 | R-20260901-0101 | confirmed | 2 | C-4102 | 2026年9月1日 09:05 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| CE-0101-02 | BE-0101-02 |
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+| E-001 | L-001 | lent | 1 | 2026年10月1日 10:00 |
+| E-003 | L-001 | returned | 2 | 2026年10月15日 18:00 |
 
 **After**
 
-**`reservations`**
+**`loans`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | confirmed | 2 | 2026年9月1日 09:00 | 2026年9月1日 09:05 |
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| L-001 | U-0001 | B-1001 | 2026年10月15日 | returned | 2 |
 
-**`room_booking_claims`**
+**`loan_base_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
+| event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:00 |
+| E-001 | L-001 | lent | 1 | 2026年10月1日 10:00 |
+| E-003 | L-001 | returned | 2 | 2026年10月15日 18:00 |
 
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| BE-0101-02 | R-20260901-0101 | confirmed | 2 | C-4102 | 2026年9月1日 09:05 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| CE-0101-02 | BE-0101-02 |
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-### [BDD-008] 確定予約に隣接する利用枠を仮押さえする
+### [BDD-007] 通知の要求を回収して送ると成功が積まれる
 
 ```gherkin
-Given: 顧客C-4102の確定予約R-20260901-0101がある
-  And: 予約は会議室M-301の2026年9月18日 10:00から11:00までを占有している
-  And: 顧客C-5821は予約可能顧客である
-When: C-5821が同じ会議室の2026年9月18日 11:00から12:00までを仮押さえする
-Then: 予約R-20260901-0201が会議室M-301の2026年9月18日 11:00から12:00までの仮押さえ予約として成立する
-  And: 二つの予約枠占有は境界で接するだけで重ならない
-  And: R-20260901-0201のversion 1イベントと仮押さえ期限が追加される
+Given: 要求 R-001 には回収も成功も失敗も無い
+When: 送り手が2026年10月16日 00:06に要求 R-001 を回収し、00:06に送り終える
+Then: 回収と成功が一件ずつ積まれ、要求 R-001 は以後回収されない
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`overdue_notice_claimed_events`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | confirmed | 2 | 2026年9月1日 09:00 | 2026年9月1日 09:05 |
+| claim_id | request_id | version | claimed_at |
+|---|---|---|---|
 
-**`room_booking_claims`**
+**`overdue_notice_succeeded_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | 2026年9月1日 09:00 |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
+| request_id | claim_id | succeeded_at |
 |---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| BE-0101-02 | R-20260901-0101 | confirmed | 2 | C-4102 | 2026年9月1日 09:05 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| CE-0101-02 | BE-0101-02 |
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
 
 **After**
 
-**`reservations`**
+**`overdue_notice_claimed_events`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | confirmed | 2 | 2026年9月1日 09:00 | 2026年9月1日 09:05 |
-| **R-20260901-0201** | **M-301** | **C-5821** | **2026年9月18日 11:00** | **2026年9月18日 12:00** | **tentative** | **1** | **2026年9月1日 09:10** | **2026年9月1日 09:10** |
+| claim_id | request_id | version | claimed_at |
+|---|---|---|---|
+| **C-001** | **R-001** | **1** | **2026年10月16日 00:06** |
 
-**`room_booking_claims`**
+**`overdue_notice_succeeded_events`**
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | 2026年9月1日 09:00 |
-| **R-20260901-0201** | **M-301** | **2026年9月18日 11:00** | **2026年9月18日 12:00** | **2026年9月1日 09:10** |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
+| request_id | claim_id | succeeded_at |
 |---|---|---|
-| **R-20260901-0201** | **2026年9月1日 09:25** | **2026年9月1日 09:10** |
+| **R-001** | **C-001** | **2026年10月16日 00:06** |
 
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| BE-0101-02 | R-20260901-0101 | confirmed | 2 | C-4102 | 2026年9月1日 09:05 |
-| **BE-0201-01** | **R-20260901-0201** | **tentative_created** | **1** | **C-5821** | **2026年9月1日 09:10** |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | 2026年9月1日 09:15 |
-| **TE-0201-01** | **BE-0201-01** | **M-301** | **C-5821** | **2026年9月18日 11:00** | **2026年9月18日 12:00** | **2026年9月1日 09:25** |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| CE-0101-02 | BE-0101-02 |
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-### [BDD-009] 未確定のまま仮押さえ期限が到来する
+### [BDD-008] リースが切れた要求は再び回収される
 
 ```gherkin
-Given: 予約R-20260901-0101は現在version 1の仮押さえ予約である
-  And: 利用枠は会議室M-301の2026年9月18日 10:00から11:30までである
-  And: version 1の仮押さえ成立イベントと仮押さえ期限がある
-  And: 予約を確定したイベントはない
-When: 2026年9月1日 09:15に仮押さえ期限が到来する
-Then: 予約は現在version 2の期限切れ予約になる
-  And: 予約枠占有と仮押さえ期限は削除される
-  And: version 2の基底イベントと予約期限切れイベントが追加される
+Given: 要求 R-001 は2026年10月16日 00:06に回収 C-001 で回収され、成功も失敗も無い
+  And: 送り手は相手の応答を待つ間に止まった
+When: 別の送り手が2026年10月16日 00:17に回収できる要求を探す
+Then: リースの10分を過ぎているので、要求 R-001 が版2で回収される
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`overdue_notice_claimed_events`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | tentative | 1 | 2026年9月1日 09:00 | 2026年9月1日 09:00 |
-
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:00 |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-| R-20260901-0101 | 2026年9月1日 09:15 | 2026年9月1日 09:00 |
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+| claim_id | request_id | version | claimed_at |
+|---|---|---|---|
+| C-001 | R-001 | 1 | 2026年10月16日 00:06 |
 
 **After**
 
-**`reservations`**
+**`overdue_notice_claimed_events`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | **expired** | **2** | 2026年9月1日 09:00 | **2026年9月1日 09:15** |
+| claim_id | request_id | version | claimed_at |
+|---|---|---|---|
+| C-001 | R-001 | 1 | 2026年10月16日 00:06 |
+| **C-002** | **R-001** | **2** | **2026年10月16日 00:17** |
 
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| **BE-0101-02** | **R-20260901-0101** | **expired** | **2** | **期限管理** | **2026年9月1日 09:15** |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:30 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| **EE-0101-02** | **BE-0101-02** |
-
-### [BDD-010] 確定予約と重なる利用枠の仮押さえを拒む
+### [BDD-009] 同じ要求を二つの送り手が同時に回収すると一方だけが回収する
 
 ```gherkin
-Given: 顧客C-4102の確定予約R-20260901-0101がある
-  And: 予約は会議室M-301の2026年9月18日 10:00から11:00までを占有している
-  And: 顧客C-5821は予約可能顧客である
-When: C-5821が同じ会議室の2026年9月18日 10:30から11:30までを仮押さえする
-Then: C-5821の仮押さえ予約は成立しない
-  And: R-20260901-0101の現在の姿と成立済みイベントは変わらない
-  And: C-5821に属する予約、占有、期限、イベントは追加されない
-  NOTE: Rule: 同じ会議室の重なる利用枠へ、現在有効な予約は一つしか存在しない
-    Source: [業務知識・コアドメイン](domain-rule.example.md)
-    Reason: 10:30から11:00までが既存の確定予約の占有と重なり、二つ目の占有になるため
+Given: 要求 R-002 には回収も成功も失敗も無い
+When: 二つの送り手が2026年10月16日 00:06に同時に要求 R-002 を版1で回収する
+Then: 回収は一件だけ積まれる
 ```
 
 #### データの状態
 
 **Before**
 
-**`reservations`**
+**`overdue_notice_claimed_events`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | confirmed | 2 | 2026年9月1日 09:00 | 2026年9月1日 09:05 |
-
-**`room_booking_claims`**
-
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | 2026年9月1日 09:00 |
-
-**`tentative_hold_deadlines`**
-
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
-
-**`reservation_base_events`**
-
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| BE-0101-02 | R-20260901-0101 | confirmed | 2 | C-4102 | 2026年9月1日 09:05 |
-
-**`reservation_tentative_created_events`**
-
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | 2026年9月1日 09:15 |
-
-**`reservation_confirmed_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| CE-0101-02 | BE-0101-02 |
-
-**`reservation_cancelled_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-
-**`reservation_expired_events`**
-
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+| claim_id | request_id | version | claimed_at |
+|---|---|---|---|
 
 **After**
 
-**`reservations`**
+**`overdue_notice_claimed_events`**
 
-| 予約番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 状態 | 現在version | 作成日時 | 最終更新日時 |
-|---|---|---|---|---|---|---:|---|---|
-| R-20260901-0101 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | confirmed | 2 | 2026年9月1日 09:00 | 2026年9月1日 09:05 |
+| claim_id | request_id | version | claimed_at |
+|---|---|---|---|
+| **C-011** | **R-002** | **1** | **2026年10月16日 00:06** |
 
-**`room_booking_claims`**
+### [BDD-010] 送り先の無い要求は失敗として打ち切られ、以後回収されない
 
-| 予約番号 | 会議室 | 利用開始 | 利用終了 | 作成日時 |
-|---|---|---|---|---|
-| R-20260901-0101 | M-301 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | 2026年9月1日 09:00 |
+```gherkin
+Given: 要求 R-003 の利用者 U-0009 には連絡先が登録されていない
+  And: 要求 R-003 は2026年10月16日 00:06に回収 C-021 で回収された
+When: 送り手が送り先を得られないと分かる
+Then: 失敗が積まれ、要求 R-003 は以後回収されない
+```
 
-**`tentative_hold_deadlines`**
+#### データの状態
 
-| 予約番号 | 期限 | 作成日時 |
-|---|---|---|
+**Before**
 
-**`reservation_base_events`**
+**`overdue_notice_claimed_events`**
 
-| 基底イベント番号 | 予約番号 | 種別 | version | 行為者 | 発生日時 |
-|---|---|---|---:|---|---|
-| BE-0101-01 | R-20260901-0101 | tentative_created | 1 | C-4102 | 2026年9月1日 09:00 |
-| BE-0101-02 | R-20260901-0101 | confirmed | 2 | C-4102 | 2026年9月1日 09:05 |
+| claim_id | request_id | version | claimed_at |
+|---|---|---|---|
+| C-021 | R-003 | 1 | 2026年10月16日 00:06 |
 
-**`reservation_tentative_created_events`**
+**`overdue_notice_failed_events`**
 
-| 詳細番号 | 基底イベント番号 | 会議室 | 予約者 | 利用開始 | 利用終了 | 期限 |
-|---|---|---|---|---|---|---|
-| TE-0101-01 | BE-0101-01 | M-301 | C-4102 | 2026年9月18日 10:00 | 2026年9月18日 11:00 | 2026年9月1日 09:15 |
+| request_id | claim_id | reason | failed_at |
+|---|---|---|---|
 
-**`reservation_confirmed_events`**
+**After**
 
-| 詳細番号 | 基底イベント番号 |
-|---|---|
-| CE-0101-02 | BE-0101-02 |
+**`overdue_notice_claimed_events`**
 
-**`reservation_cancelled_events`**
+| claim_id | request_id | version | claimed_at |
+|---|---|---|---|
+| C-021 | R-003 | 1 | 2026年10月16日 00:06 |
 
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+**`overdue_notice_failed_events`**
 
-**`reservation_expired_events`**
+| request_id | claim_id | reason | failed_at |
+|---|---|---|---|
+| **R-003** | **C-021** | **no_destination** | **2026年10月16日 00:06** |
 
-| 詳細番号 | 基底イベント番号 |
-|---|---|
+### [BDD-011] 同じ本を二人が同時に借りると一人の貸出だけが記録される
 
-C-5821に属する予約、占有、期限、基底イベント、詳細イベントは、8テーブルのどこにも存在しない。
+```gherkin
+Given: 本 B-1009 はどの貸出にも属していない
+When: 利用者 U-0001 と利用者 U-0003 が2026年10月1日 10:00に同時に本 B-1009 を借りる
+Then: 先に反映した利用者 U-0001 の貸出だけが記録される
+  And: 利用者 U-0003 は「貸出中の本を借りる」で拒まれる
+```
+
+#### データの状態
+
+**Before**
+
+**`loans`**
+
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+
+**After**
+
+**`loans`**
+
+| loan_id | user_number | book_number | due_on | status | current_version |
+|---|---|---|---|---|---|
+| **L-021** | **U-0001** | **B-1009** | **2026年10月15日** | **lent** | **1** |
