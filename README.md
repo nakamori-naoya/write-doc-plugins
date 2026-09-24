@@ -1,12 +1,12 @@
 # write-doc
 
-素材から Markdown 資料を1本書いて保存する package である。公開入口は自己完結skill `write-doc` 1つで、読み手と目的の固定、型の選択、構成、直接執筆、推敲の自己監査、保存を同じagentが一気通貫で行う。内部skill、設定解決script、中間YAML、外部playbookは使わない。
+素材から Markdown の資料を1本書いて保存する plugin である。外から呼べる skill は `write-doc` の一つだけで、読み手を決める、型を選ぶ、構成を決める、書く、読み直す、保存する、を同じ agent が最後まで続けて行う。ほかの skill や、設定を組み立てる script、途中の YAML は使わない。
 
 ## 使い方
 
-`write-doc` に `material` と保存先を直接渡す。新規作成では `output_directory` と `name`、更新では `update_target` を渡す。`document_type` と `references` は任意である。保存先と名前は依頼で示された資料構成に従い、日本語のdirectory名・file名を使える。
+`write-doc` に、素材の `material` と保存先を渡す。新しく作るなら `output_directory` と `name` を、書き直すなら `update_target` を渡す。文書型の `document_type` と、追加で従う資料の `references` は省略してよい。保存先と名前は依頼のとおりに使い、日本語の directory 名や file 名も使える。
 
-外部packageからは公開契約 `write-doc/write-doc` v2 で呼ぶ。入力、出力、保証は [公開契約](plugins/write-doc/skills/write-doc/CONTRACT.md) を契約定義とする。
+ほかの plugin からは、公開契約 `write-doc/write-doc` の版2で呼ぶ。入力、出力、約束することは [公開契約](plugins/write-doc/skills/write-doc/CONTRACT.md) が決める。
 
 ```yaml
 requires:
@@ -14,36 +14,38 @@ requires:
 steps:
   - id: document
     playbook: write-doc
-    purpose: 完成本文をkind:textのmaterialとして渡し、Markdownを1本保存する
+    purpose: 完成した本文を kind:text の material として渡し、Markdown を1本保存する
     provides: [status, path, reason]
 ```
 
-## 資料の規律
+## 書き方の決まり
 
-資料の冒頭は、読み手の既知の語で書いた本文段落から始め、誰が何を達成するために読み、どこから始まり、何が観測できたら完了かを文章で運ぶ。型・対象・確認日・確認した人のようなメタ情報の一覧や引用blockは冒頭に置かない。型の読み方はtemplateのcommentと型カタログ（`assets/template-examples.yml`）に一度だけ置き、資料本文には書かない。中心の問い、扱う理由、確認日、確認した人のような作業記録は成果物へ写さない。
+どの文書型にも共通する書き方は、[書くときの規範](plugins/write-doc/skills/write-doc/references/writing-norms.md) にまとめてある。書く前に主メッセージを一文で書き、見出しだけの骨組みで話が通るかを確かめてから本文に入る。型ごとの template と見本は、この規範の上に載る。
+
+資料の冒頭は、読み手が知っている言葉で書いた本文の段落から始める。誰が何のために読み、どこから始まり、何が見えたら終わりなのかを文章で書き、型や確認した日の一覧を冒頭に置かない。型の読み方は template の注釈と型の一覧（`assets/template-examples.yml`）に一度だけ書き、資料の本文には書かない。
 
 ## 構成
 
 ```text
 plugins/write-doc/
-├── .claude-plugin/plugin.json      両runtime manifest
+├── .claude-plugin/plugin.json      二つの実行環境の manifest
 ├── .codex-plugin/plugin.json
 ├── LICENSE
-└── skills/write-doc/               公開入口（公開playbook）
-    ├── SKILL.md                    目的・入力・判断基準・手順・停止条件・出力
-    ├── playbook.yml                同じagentが辿る7工程の宣言順
-    ├── CONTRACT.md                 公開契約 v2
-    ├── references/                 文章原則、正確性の確認、図表の役割
-    └── assets/                     templates 20型、examples、personas、visual-guidance、型カタログ
+└── skills/write-doc/               外から呼べる skill
+    ├── SKILL.md                    目的、入力、判断基準、手順、止まるとき、出力
+    ├── playbook.yml                同じ agent が進める7つの工程の順番
+    ├── CONTRACT.md                 公開契約の版2
+    ├── references/                 書くときの規範、保存する前の読み直し、本文と表と図の受け持ち
+    └── assets/                     20の型の template と見本、読み手の像、図の参考、型の一覧
 ```
 
-## 検証
+## 検査
 
 ```bash
 bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/write-doc-plugins/scripts/validate.sh
 bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/scripts/validate.sh /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/write-doc-plugins
 ```
 
-保守用tool（root契約の構造検査、回帰検査、release、eval）の参照元は兄弟checkoutの `../harness-tools/` であり、このrepositoryは複製を持たない。`scripts/validate.sh` は `../harness-tools/tools/` の実在を確認してから呼び、無ければ止まる。CIの `validate.yml` も `harness-tools` を兄弟checkoutして `harness-tools/ci/validate.sh` を実行する。
+保守の道具（構造の検査、回帰の検査、release、eval）は、隣に checkout した `../harness-tools/` のものを使い、この repository には写しを置かない。`scripts/validate.sh` は `../harness-tools/tools/` があるかを確かめてから呼び、無ければ止まる。CI の `validate.yml` も `harness-tools` を隣に checkout して、`harness-tools/ci/validate.sh` を動かす。
 
-構造検査の成功は文章の妥当性を保証しない。SKILL.md、templates、生成資料は読んで根拠付きで評価する。契約 v1 からの移行記録は [契約 v2 移行表](docs/contract-v2-migration.md) にある。
+構造の検査が通っても、文章が良いことにはならない。SKILL.md、template、書いた資料は、読んで根拠を挙げて評価する。契約の版1からの移り変わりは [契約 v2 移行表](docs/contract-v2-migration.md) にある。

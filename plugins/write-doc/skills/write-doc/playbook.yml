@@ -1,6 +1,6 @@
 # write-doc — 素材からMarkdown資料を1本書いて保存する。
-# 公開する入力・出力・保証は CONTRACT.md が契約定義である。工程順の正式な定義はこのYAMLであり、
-# すべての工程を同じagentが同じ文脈で辿る。工程間で運ぶ値は無く、配列順だけが依存である。
+# 外に約束する入力、出力、保証は CONTRACT.md が決める。工程の順番はこの file が決め、
+# すべての工程を同じ agent が同じ文脈で進める。工程の間で受け渡す値は無く、並びの順だけが前後の関係である。
 version: 2
 name: write-doc
 description: 素材からMarkdown資料を1本書いて保存する
@@ -10,30 +10,30 @@ requires: []
 steps:
   - id: check-input
     agent_work: invoking_agent
-    purpose: 契約入力と保存先を検査し、すべて通るまでfileを作らない
+    purpose: 入力と保存先を確かめ、すべて通るまで file を作らない
     needs: [material, document_type, output_directory, update_target, name, references]
 
   - id: fix-reader
     agent_work: invoking_agent
-    purpose: 主な読み手と読後ゴールを一つずつ固定し、追加参照を読む
+    purpose: 書くときの規範を読み、主な読み手と、読んだ後の判断か行動を一つずつ決める
 
   - id: choose-type
     agent_work: invoking_agent
-    purpose: 型カタログからtemplateと記載例を解決し、最終資産の保存先を確定する
+    purpose: 型の一覧から template と見本を引き、最終版の資産の保存先を決める
 
   - id: outline
     agent_work: invoking_agent
-    purpose: 冒頭の答えと、読後ゴールに必要な論点だけの依存順を決める
+    purpose: 主メッセージを一文で書き、見出しだけの骨組みを順に読んで話が通るかを確かめる
 
   - id: draft
     agent_work: invoking_agent
-    purpose: 本文・表・図の役割を分けてMarkdownをインメモリで組み立てる
+    purpose: 本文、表、図の受け持ちを分けて、Markdown を手元で組み立てる
 
   - id: self-edit
     agent_work: invoking_agent
-    purpose: 読後ゴール照合、引き算、事実と根拠の突合、一文一意の4点を自己監査し、満たすまで草稿へ戻る
+    purpose: 冒頭、削り方、事実と素材の突き合わせ、骨組みの通読の四つを確かめ、欠ければ草稿へ戻る
 
   - id: save
     agent_work: invoking_agent
-    purpose: 最終資産とMarkdownを保存し、読み直してから結果を返す
+    purpose: 最終版の資産と Markdown を保存し、読み直してから結果を返す
     provides: [status, path, reason]
