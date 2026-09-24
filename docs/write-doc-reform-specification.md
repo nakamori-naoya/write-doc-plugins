@@ -7,6 +7,9 @@
 > **作成日**: 2026-09-15  
 > **合意形成**: Gemini (Antigravity) & Astra (GPT-6) の合同レビューに基づく確定仕様
 
+
+> この仕様書は2026-09-15の改革の記録である。その後、文章原則の参照 core-principles.md は、どの文書型にも共通する「書くときの規範」writing-norms.md に置き換えた。構成の図と受け入れ条件の参照名は、今の名前に合わせてある。
+
 ---
 
 ## 1. 改革の背景と目的
@@ -45,7 +48,7 @@
 │   └── skills/authoring/author-document/
 │       ├── SKILL.md              # 内部 Skill: 読者確認・構成・執筆・推敲・保存を一気通貫
 │       ├── references/
-│       │   ├── core-principles.md    # 参照1: 目的、構成、文、用語、推敲
+│       │   ├── writing-norms.md      # 参照1: 書くときの規範（主メッセージ、見出し、文、用語、推敲）
 │       │   ├── visuals-and-tables.md # 参照2: 表、図、コード、強調
 │       │   └── integrity-check.md    # 参照3: 根拠、数値、重要条件、読後の確認
 │       └── assets/                   # ← content-types から完全継承
@@ -84,7 +87,7 @@
   - 読者・目的の固定 → 構成決定（テンプレート参照） → Markdown 直接執筆 → 推敲・正確性確認 → ファイル保存 までを一気通貫で実行。
   - シェルスクリプトによる設定解決や状態管理を行わず、エージェント自身のインメモリ推論で完結させる。
 
-- **参照 1: `references/core-principles.md`（文章原則）**:
+- **参照 1: `references/writing-norms.md`（書くときの規範。旧 core-principles.md）**:
   - **読後ゴールの固定**: 主な読み手と、読後にできる判断・行動を決める。
   - **答えを先に示す**: 冒頭で読者の問いに答える。見出しは答えまたは対象を示す。
   - **1 文 1 メッセージ**: 1 つの文で伝える中心内容を 1 つにする。独立した主張は接続助詞で繋がず分ける。日本語説明文は 40〜60 文字程度を目安とし、因果関係が明瞭な文は無理に分割しない。
@@ -137,7 +140,7 @@
 - 各テンプレート・記載例が `author-document/SKILL.md` から直接参照可能であること。
 
 ### AC 4: 参照ドキュメントの 3 本集約と文章規律の適正化
-- 参照ドキュメントが `core-principles.md`, `visuals-and-tables.md`, `integrity-check.md` の 3 本のみに集約されていること。
+- 参照ドキュメントが `writing-norms.md`, `visuals-and-tables.md`, `integrity-check.md` の 3 本のみに集約されていること。
 - 旧 12 本の参照ファイル（728 行）が廃止されていること。
 - 数値による過剰な形式主義（40〜60文字絶対化、20〜30%削減義務、毎節三段構成強制）が排除され、Astra レビューで合意された本質的規律になっていること。
 
@@ -154,7 +157,7 @@ Astra（GPT-6）は、以下の手順に従って実装を段階的に進めて�
 1. **Phase 1: 資産の移動と新スキルの作成**
    - ディレクトリ `/Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/write-doc-plugins/plugins/skills/authoring/author-document` を作成。
    - `content-types/assets` を `author-document/assets` へ移動。
-   - `author-document/references/` 配下に 3 本の参照ドキュメント（`core-principles.md`, `visuals-and-tables.md`, `integrity-check.md`）を作成。
+   - `author-document/references/` 配下に 3 本の参照ドキュメント（`writing-norms.md`, `visuals-and-tables.md`, `integrity-check.md`）を作成。
    - `author-document/SKILL.md` を作成。
 2. **Phase 2: テンプレートの過密要件チューニング**
    - `author-document/assets/templates/` 内の図表過密指示（全列・全制約を図に描かせる等）を修正。

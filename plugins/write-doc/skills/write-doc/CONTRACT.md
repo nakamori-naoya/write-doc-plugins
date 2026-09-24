@@ -15,7 +15,7 @@
 | 名前 | 必須 | 型 | 意味 |
 |---|---|---|---|
 | `material` | 必須 | object[] | 本文の根拠にする素材。下記の要素を1つ以上 |
-| `document_type` | 任意 | string | テンプレート一覧にある文書型 slug。省略時は目的に合う型を選ぶ |
+| `document_type` | 任意 | string | 型の一覧（`assets/template-examples.yml`）にある文書型の名前。省略時は目的に合う型を選ぶ |
 | `output_directory` | 条件付き | absolute path | 新規作成先。`name` と組み合わせる |
 | `update_target` | 条件付き | absolute path | 更新する既存 Markdown ファイル |
 | `name` | 条件付き | string | 新規作成する `.md` ファイル名 |
