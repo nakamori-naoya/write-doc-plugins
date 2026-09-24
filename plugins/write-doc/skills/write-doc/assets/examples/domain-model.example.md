@@ -30,7 +30,7 @@ classDiagram
     class CheckedAt["判定日時"] {
         <<値オブジェクト>>
     }
-    class LoanStatus["貸出状況"] {
+    class BorrowerStanding["貸出状況"] {
         <<値オブジェクト>>
         借りている冊数
         延滞の貸出があるか
@@ -48,7 +48,7 @@ classDiagram
     Loan --> BookNumber : どの一冊か
     Loan *-- LentAt
     Loan *-- DueDate
-    Loan ..> LoanStatus : 受け取る
+    Loan ..> BorrowerStanding : 受け取る
     Loan ..> CheckedAt : 受け取る
     Loan ..> LoanLent : 発する
     Loan ..> LoanReturned : 発する
