@@ -98,4 +98,5 @@ flowchart LR
 | WL-001 | 検索120件/秒 | 類似サービスからの推定、hypothesis | REQ-002、読み取り容量 |
 | WL-002 | 予約系20件/秒と同一枠への集中 | 電話台帳からの推定、hypothesis | REQ-002、DRV-001、競合制御 |
 | WL-003 | 通知60配送/秒 | 通知先数はagreed_decision、率はhypothesis | REQ-004、非同期化 |
+| WL-004 | 利用枠の公開・更新8件/秒 | 仮説、hypothesis | REQ-001、検索への反映 |
 | WL-OQ-001 | 年末繁忙期の倍率 | open_question | 最大容量、可用性、費用 |
