@@ -198,16 +198,19 @@ Then: 貸出 L-001 が貸出中で生まれる
 
 | loan_id | user_number | book_number | due_on | status | current_version |
 |---|---|---|---|---|---|
+| （行なし） | | | | | |
 
 **`loan_base_events`**
 
 | event_id | loan_id | event_type | version | occurred_at |
 |---|---|---|---|---|
+| （行なし） | | | | |
 
 **`loan_lent_events`**
 
 | event_id | due_on |
 |---|---|
+| （行なし） | |
 
 **After**
 
@@ -322,6 +325,7 @@ Then: 貸出 L-002 は返却済みになり、版は3になる
 
 | event_id |
 |---|
+| （行なし） |
 
 **After**
 
@@ -374,11 +378,13 @@ Then: 貸出 L-001 は延滞になり、版は2になる
 
 | event_id |
 |---|
+| （行なし） |
 
 **`overdue_notice_requested_events`**
 
 | request_id | source_event_id | occurred_at |
 |---|---|---|
+| （行なし） | | |
 
 **After**
 
@@ -466,11 +472,13 @@ Then: 回収と成功が一件ずつ積まれ、要求 R-001 は以後回収さ�
 
 | claim_id | request_id | version | occurred_at |
 |---|---|---|---|
+| （行なし） | | | |
 
 **`overdue_notice_succeeded_events`**
 
 | request_id | claim_id | occurred_at |
 |---|---|---|
+| （行なし） | | |
 
 **After**
 
@@ -530,6 +538,7 @@ Then: 回収は一件だけ積まれる
 
 | claim_id | request_id | version | occurred_at |
 |---|---|---|---|
+| （行なし） | | | |
 
 **After**
 
@@ -562,6 +571,7 @@ Then: 失敗が積まれ、要求 R-003 は以後回収されない
 
 | request_id | claim_id | reason | occurred_at |
 |---|---|---|---|
+| （行なし） | | | |
 
 **After**
 
@@ -594,6 +604,7 @@ Then: 先に記録した利用者 U-0001 の貸出だけが記録される
 
 | loan_id | user_number | book_number | due_on | status | current_version |
 |---|---|---|---|---|---|
+| （行なし） | | | | | |
 
 **After**
 
