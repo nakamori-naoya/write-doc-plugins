@@ -1,7 +1,7 @@
 {
   "name": "write-doc",
   "version": "10.0.0",
-  "description": "素材からMarkdown資料を直接執筆して保存する公開playbook write-docを提供する",
+  "description": "素材からMarkdown資料を直接執筆して保存する write-doc を提供する",
   "author": {
     "name": "NaoyaNakamori"
   },
@@ -17,42 +17,7 @@
   "metadata": {
     "harness": {
       "marketplace": "write-doc",
-      "contractVersion": 2,
-      "playbooks": {
-        "write-doc": "./skills/write-doc"
-      },
-      "implements": [
-        {
-          "id": "write-doc/write-doc",
-          "version": 2,
-          "kind": "playbook",
-          "playbook": "write-doc",
-          "types": [
-            "north-star",
-            "strategy",
-            "domain-rule",
-            "domain-model",
-            "user-journey-bdd",
-            "rdb-logical-data-modeling",
-            "rdb-physical-design",
-            "requirements-discovery",
-            "workload-model",
-            "quality-requirements",
-            "cloud-architecture",
-            "architecture",
-            "readme",
-            "how-to",
-            "concept",
-            "troubleshooting",
-            "adr",
-            "period-digest",
-            "agent-session-digest",
-            "pr-walkthrough",
-            "deferred-scope",
-            "document-map"
-          ]
-        }
-      ]
+      "contractVersion": 2
     }
   }
 }
