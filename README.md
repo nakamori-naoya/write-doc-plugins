@@ -23,7 +23,7 @@ plugins/write-doc/
 ├── LICENSE
 └── skills/write-doc/               公開入口
     ├── SKILL.md                    目的、入力、判断基準、手順、止まるとき、出力
-    ├── references/                 書くときの規範、保存する前の読み直し、本文と表と図の受け持ち
+    ├── references/writing-norms.md 書くときの規範
     └── assets/                     型ごとのテンプレート（冒頭に検査が読む目印）と見本、読み手の像、型の一覧
 ```
 
@@ -35,5 +35,3 @@ bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/scripts/validate.
 ```
 
 保守の道具（構造の検査、回帰の検査、release、eval）は、隣に checkout した `../harness-tools/` のものを使い、このリポジトリには写しを置かない。`scripts/validate.sh` は `../harness-tools/tools/` があるかを確かめてから呼び、無ければ止まる。CI の `validate.yml` も `harness-tools` を隣に checkout して、`harness-tools/ci/validate.sh` を動かす。
-
-構造の検査が通っても、文章が良いことにはならない。SKILL.md、テンプレート、書いた資料は、読んで根拠を挙げて評価する。
