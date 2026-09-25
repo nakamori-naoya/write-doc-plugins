@@ -44,7 +44,7 @@ CODEX="$PACKAGE/.codex-plugin/plugin.json"
 ENTRY="$PACKAGE/skills/write-doc"
 
 # ── 配置: package root にだけ manifest、公開入口は skills/write-doc の1つ ─────
-for file in "$CLAUDE" "$CODEX" "$PACKAGE/LICENSE" "$ENTRY/SKILL.md" "$ENTRY/playbook.yml" "$ENTRY/CONTRACT.md"; do
+for file in "$CLAUDE" "$CODEX" "$PACKAGE/LICENSE" "$ENTRY/SKILL.md"; do
   if [ -f "$file" ]; then pass "必須ファイル: ${file#"$ROOT"/}"; else fail "必須ファイル: ${file#"$ROOT"/}"; fi
 done
 
@@ -59,14 +59,13 @@ if same_set "$skill_files" "plugins/write-doc/skills/write-doc/SKILL.md"; then p
 skill_dirs=$(find "$PACKAGE/skills" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
 if same_set "$skill_dirs" "write-doc"; then pass "skills/直下はwrite-docだけ"; else fail "skills/直下はwrite-docだけ"; fi
 
-# ── manifest: 両runtime一致、identity、公開契約宣言 ──────────────────────
+# ── manifest: 両runtime一致、identity ──────────────────────
 claude_identity=$(jq -c '{name,version,skills,harness:.metadata.harness}' "$CLAUDE")
 codex_identity=$(jq -c '{name,version,skills,harness:.metadata.harness}' "$CODEX")
 if [ "$claude_identity" = "$codex_identity" ]; then pass "Claude/Codex package identity一致"; else fail "Claude/Codex package identity一致"; fi
 expect "package version 10.0.0" jq -e '.version=="10.0.0"' "$CODEX"
 expect "harness marketplace / contractVersion" jq -e '.metadata.harness.marketplace=="write-doc" and .metadata.harness.contractVersion==2 and (.metadata.harness|has("installationSurface")|not) and (.metadata.harness|has("entryRoot")|not) and (.metadata.harness|has("internalPlugins")|not)' "$CODEX"
-expect "implements は write-doc/write-doc v2 の1件" jq -e '.metadata.harness.implements==[{"id":"write-doc/write-doc","version":2,"kind":"playbook","playbook":"write-doc","types":.metadata.harness.implements[0].types}]' "$CODEX"
-expect "公開入口はskills/write-docの1つでplaybooksにも載る" jq -e '.skills==["./skills/write-doc"] and .metadata.harness.playbooks=={"write-doc":"./skills/write-doc"}' "$CODEX"
+expect "公開入口はskills/write-docの1つ" jq -e '.skills==["./skills/write-doc"] and (.metadata.harness|has("playbooks")|not) and (.metadata.harness|has("implements")|not)' "$CODEX"
 for market in .claude-plugin/marketplace.json .agents/plugins/marketplace.json; do
   if jq -e '.name=="write-doc" and (.plugins|length)==1 and .plugins[0].name=="write-doc" and .plugins[0].version=="10.0.0"
             and ((.plugins[0].source=="./plugins/write-doc") or (.plugins[0].source=={"source":"local","path":"./plugins/write-doc"}))' "$ROOT/$market" >/dev/null; then
@@ -76,14 +75,9 @@ for market in .claude-plugin/marketplace.json .agents/plugins/marketplace.json; 
   fi
 done
 
-# ── 公開入口: frontmatter name と隣接 playbook.yml ─────────────────────────
+# ── 公開入口: frontmatter name ─────────────────────────────────────────
 frontmatter_name=$(awk 'NR==1 { if ($0 != "---") exit 2; next } $0=="---" { exit } { print }' "$ENTRY/SKILL.md" | yq -r '.name')
 if [ "$frontmatter_name" = "write-doc" ]; then pass "SKILL frontmatter name = write-doc"; else fail "SKILL frontmatter name = write-doc"; fi
-playbook_json=$(yq -o=json -I=0 '.' "$ENTRY/playbook.yml")
-expect "playbook.yml identity（version 2 / name write-doc / requires []）" jq -e '.version==2 and .name=="write-doc" and .requires==[]' <<<"$playbook_json"
-expect "steps は agent_work だけで工程idが一意" jq -e '(.steps|type)=="array" and (.steps|length)==7 and all(.steps[]; .agent_work=="invoking_agent" and (has("script") or has("skill") or has("playbook")|not) and (.id|type)=="string" and (.id|length)>0) and ((.steps|map(.id)|unique|length)==(.steps|length))' <<<"$playbook_json"
-expect "self-edit工程が草稿と保存の間にある" jq -e '(.steps|map(.id)|index("self-edit")) as $s | (.steps|map(.id)|index("draft")) < $s and $s < (.steps|map(.id)|index("save"))' <<<"$playbook_json"
-expect "最終工程がstatus/path/reasonをprovideする" jq -e '.steps[-1].provides==["status","path","reason"]' <<<"$playbook_json"
 
 # ── 参照文書と資産の閉じた集合 ────────────────────────────────────────────
 reference_list=$(find "$ENTRY/references" -maxdepth 1 -type f -name '*.md' -exec basename {} \; | sort)
@@ -148,8 +142,6 @@ map_paths=$(awk '/^    (template|example): / {print $2}' "$map_file")
 if [ "$(printf '%s\n' "$map_paths" | sed '/^$/d' | wc -l | tr -d ' ')" -eq 44 ] && paths_exist "$ENTRY" "$map_paths"; then pass "型対応表22組の参照先が存在"; else fail "型対応表22組の参照先が存在"; fi
 if ! paths_exist "$ENTRY" "assets/templates/missing.md"; then pass "self-test: 対応表の欠損参照を拒否"; else fail "self-test: 対応表の欠損参照を拒否"; fi
 map_slugs=$(awk '/^  [a-z0-9-]+:$/ {sub(/^  /, ""); sub(/:$/, ""); print}' "$map_file" | sort)
-manifest_slugs=$(jq -r '.metadata.harness.implements[0].types[]' "$CODEX" | sort)
-if same_set "$map_slugs" "$manifest_slugs"; then pass "対応表slugとimplements.types一致"; else fail "対応表slugとimplements.types一致"; fi
 map_records=$(awk '/^  [a-z0-9-]+:$/ {slug=$1; sub(/:$/, "", slug)} /^    (template|example): / {field=$1; sub(/:$/, "", field); print slug "|" field "|" $2}' "$map_file" | sort)
 expected_map_records=$(canonical_map_records "$map_slugs" | sort)
 if same_set "$map_records" "$expected_map_records"; then pass "各slugのtemplate/example path対応一致"; else fail "各slugのtemplate/example path対応一致"; fi
@@ -166,7 +158,7 @@ fi
 if printf '> 型: x ／ 読み手: y\n' | rg -q '^> 型:'; then pass "self-test: > 型: 行を検出できる"; else fail "self-test: > 型: 行を検出できる"; fi
 
 # ── Zero-Plumbing: 配布指示に禁止参照形と旧runtime呼び出しが無い ───────────
-if rg -n --fixed-strings -e '${.' -e '<!-- BEGIN shared:' -e 'CLAUDE_PLUGIN_ROOT' -e 'BUNDLE_ROOT' "$ENTRY/SKILL.md" "$ENTRY/CONTRACT.md" "$ENTRY/playbook.yml" "$ENTRY/references" >/dev/null; then
+if rg -n --fixed-strings -e '${.' -e '<!-- BEGIN shared:' -e 'CLAUDE_PLUGIN_ROOT' -e 'BUNDLE_ROOT' "$ENTRY/SKILL.md" "$ENTRY/references" "$ENTRY/assets/templates" >/dev/null; then
   fail "配布指示に禁止参照形が無い"
 else
   pass "配布指示に禁止参照形が無い"

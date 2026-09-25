@@ -6,17 +6,7 @@
 
 `write-doc` に、素材の `material` と保存先を渡す。新しく作るなら `output_directory` と `name` を、書き直すなら `update_target` を渡す。文書型の `document_type` と、追加で従う資料の `references` は省略してよい。保存先と名前は依頼のとおりに使い、日本語のディレクトリ名やファイル名も使える。
 
-外部 package からは、公開契約 `write-doc/write-doc` の版2で呼ぶ。入力、出力、約束することは [公開契約](plugins/write-doc/skills/write-doc/CONTRACT.md) が決める。
-
-```yaml
-requires:
-  - {plugin: write-doc, marketplace: write-doc}
-steps:
-  - id: document
-    playbook: write-doc
-    purpose: 完成した本文を kind:text の material として渡し、Markdown を1本保存する
-    provides: [status, path, reason]
-```
+ほかの package からも同じ入力で呼び、`status` と `path`（失敗なら `reason`）を受け取る。ほかの package の検査が資料から読んでよいのは、各型のテンプレートの冒頭にある「検査が読む目印」だけである。
 
 ## 書き方の決まり
 
@@ -31,12 +21,10 @@ plugins/write-doc/
 ├── .claude-plugin/plugin.json      二つの実行環境の manifest
 ├── .codex-plugin/plugin.json
 ├── LICENSE
-└── skills/write-doc/               公開入口。工程の順番を playbook.yml で宣言するので、公開 playbook でもある
+└── skills/write-doc/               公開入口
     ├── SKILL.md                    目的、入力、判断基準、手順、止まるとき、出力
-    ├── playbook.yml                同じ agent が進める7つの工程の順番
-    ├── CONTRACT.md                 公開契約の版2
     ├── references/                 書くときの規範、保存する前の読み直し、本文と表と図の受け持ち
-    └── assets/                     22の型のテンプレートと見本、読み手の像、図の参考、型の一覧
+    └── assets/                     型ごとのテンプレート（冒頭に検査が読む目印）と見本、読み手の像、型の一覧
 ```
 
 ## 検査
@@ -48,4 +36,4 @@ bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/scripts/validate.
 
 保守の道具（構造の検査、回帰の検査、release、eval）は、隣に checkout した `../harness-tools/` のものを使い、このリポジトリには写しを置かない。`scripts/validate.sh` は `../harness-tools/tools/` があるかを確かめてから呼び、無ければ止まる。CI の `validate.yml` も `harness-tools` を隣に checkout して、`harness-tools/ci/validate.sh` を動かす。
 
-構造の検査が通っても、文章が良いことにはならない。SKILL.md、テンプレート、書いた資料は、読んで根拠を挙げて評価する。契約の版1からの移り変わりは [契約 v2 移行表](docs/contract-v2-migration.md) にある。
+構造の検査が通っても、文章が良いことにはならない。SKILL.md、テンプレート、書いた資料は、読んで根拠を挙げて評価する。
