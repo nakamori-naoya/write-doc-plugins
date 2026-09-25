@@ -34,7 +34,7 @@ tags:
      素材はセッションごとのrecordsで、各recordには source / source_id / source_path / source_fingerprint / relation / parent_source_id / target_date / display / observed_at / collector が入っている。本文に載せるのは `display` が真のセッションだけである。`source_path` の原文は要約するときにだけ読み、全文も途中の要約もnative compact summaryも保存しない。
      front matterには、素材が与える値（`input_hash`、`session_count`、`sessions` の各値、`target_date`）をそのまま置き、分からない値を推測で埋めない。`generator.model` には実際に要約したmodel IDを、`prompt_ref` にはこの文書型の名前を入れる。`validation` は、実行した確認だけを `passed` か `failed` にし、実行していない確認は `not_checked` のままにする。`human_reviewed` は保存時には `false` にする。
      `tags` に入れてよいのは、利用者が設定か依頼で明示した公開可能な別名（alias）だけで、短く、表記を変えない値にする。顧客名、repository名、案件名を原文から推測して入れない。明示が無ければ空配列にする。
-     冒頭は地の文の段落で始める。誰が何のために読むのか、どの日を扱うのか、読み終えたら何ができるのかを、その段落で書く。型・対象・日付・確認者を並べた一覧や引用blockは冒頭に置かない。 -->
+     冒頭は地の文の段落で始める。誰が何のために読むのか、どの日を扱うのか、読み終えたら何ができるのかを、その段落で書く。 -->
 
 <!-- 共有してよい範囲: この型の資料は、共有されるものとして書く。原文にあったことは、書いてよい理由にならない。
      出さないもの: 氏名、メールアドレス、アカウント名、顧客名、組織名など、誰かを特定できる情報。token、credential、secret、cookie、内部URL、非公開のhost名。native session ID、絶対path、cwd、branch名、repository URL、利用者が承認していないrepository名や案件名。system prompt、tool の入出力、ログ、コードや会話の原文の長い引用。契約、価格、脆弱性、未公開機能のように、公開してよいかを確かめられない内容。native compact summary。
