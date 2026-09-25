@@ -17,11 +17,6 @@ sessions:
 generator:
   model: claude-opus-5
   prompt_ref: agent-session-digest
-validation:
-  privacy: passed
-  structure: passed
-  source_unchanged: passed
-human_reviewed: false
 tags:
   projects: [roomflow]
   repositories: []
@@ -80,10 +75,6 @@ tags:
 ### 採用した判断と理由
 
 保持期間は確定値として書かず、暫定値のまま資料に残すことにした。法務の確認より前に値を確定させると、根拠の無い値が成果物に残ってしまうからである。
-
-### 却下した選択肢
-
-なし
 
 ### 実行した検証と結果
 
