@@ -10,8 +10,7 @@
   ],
   "metadata": {
     "harness": {
-      "marketplace": "write-doc",
-      "contractVersion": 2
+      "marketplace": "write-doc"
     }
   }
 }
