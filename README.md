@@ -34,4 +34,4 @@ bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/write-doc-plugins
 bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/scripts/validate.sh /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/write-doc-plugins
 ```
 
-保守の道具（構造の検査、回帰の検査、release、eval）は、隣に checkout した `../harness-tools/` のものを使い、このリポジトリには写しを置かない。`scripts/validate.sh` は `../harness-tools/tools/` があるかを確かめてから呼び、無ければ止まる。CI の `validate.yml` も `harness-tools` を隣に checkout して、`harness-tools/ci/validate.sh` を動かす。
+保守の道具（構造の検査、回帰の検査、release）は、隣に checkout した `../harness-tools/` のものを使い、このリポジトリには写しを置かない。`scripts/validate.sh` は `../harness-tools/tools/` があるかを確かめてから呼び、無ければ止まる。CI の `validate.yml` も `harness-tools` を隣に checkout して、`harness-tools/ci/validate.sh` を動かす。
