@@ -6,9 +6,9 @@ pairs:
   concept:
     template: assets/templates/concept.md
     example: assets/examples/concept.example.md
-  domain-rule:
-    template: assets/templates/domain-rule.md
-    example: assets/examples/domain-rule.example.md
+  business-knowledge:
+    template: assets/templates/business-knowledge.md
+    example: assets/examples/business-knowledge.example.md
   domain-model:
     template: assets/templates/domain-model.md
     example: assets/examples/domain-model.example.md
@@ -33,9 +33,12 @@ pairs:
   pr-walkthrough:
     template: assets/templates/pr-walkthrough.md
     example: assets/examples/pr-walkthrough.example.md
-  rdb-logical-data-modeling:
-    template: assets/templates/rdb-logical-data-modeling.md
-    example: assets/examples/rdb-logical-data-modeling.example.md
+  command-data-model:
+    template: assets/templates/command-data-model.md
+    example: assets/examples/command-data-model.example.md
+  query-data-model:
+    template: assets/templates/query-data-model.md
+    example: assets/examples/query-data-model.example.md
   rdb-physical-design:
     template: assets/templates/rdb-physical-design.md
     example: assets/examples/rdb-physical-design.example.md

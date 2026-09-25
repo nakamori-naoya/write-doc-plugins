@@ -75,7 +75,7 @@ APIからワーカーへの受け渡しには Cloud Tasks を使う。仮押さ�
 | 秘密情報 | Secret Manager | 版ごとに保持 | Secret Managerの版から戻す |
 | アクセスログ・アプリケーションログ | Cloud Logging | 30日 | 復元しない |
 
-論理データモデルは[貸会議室予約のRDB論理設計](rdb-logical-data-modeling.example.md)、業務の決まりは[貸会議室予約の業務知識・コアドメイン](domain-rule.example.md)が参照元である。この資料はそれらを繰り返さない。
+テーブルの形は[コマンドデータモデル](command-data-model.example.md)、業務の決まりは[業務知識](business-knowledge.example.md)が参照元である。この資料はそれらを繰り返さない。
 
 ## 環境
 
@@ -104,5 +104,5 @@ APIからワーカーへの受け渡しには Cloud Tasks を使う。仮押さ�
 |---|---|
 | なぜCloud Tasksで期限処理をするか | [ADR](adr.example.md) |
 | デプロイ・復旧・期限タスクの再登録の手順 | [ハウツーガイド](how-to.example.md) |
-| テーブル定義・論理データモデル | [RDB論理設計](rdb-logical-data-modeling.example.md) |
-| 業務の決まり | [業務知識・コアドメイン](domain-rule.example.md) |
+| テーブルの形 | [コマンドデータモデル](command-data-model.example.md) |
+| 業務の決まり | [業務知識](business-knowledge.example.md) |
