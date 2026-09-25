@@ -63,12 +63,12 @@ if same_set "$skill_dirs" "write-doc"; then pass "skills/直下はwrite-docだ�
 claude_identity=$(jq -c '{name,version,skills,harness:.metadata.harness}' "$CLAUDE")
 codex_identity=$(jq -c '{name,version,skills,harness:.metadata.harness}' "$CODEX")
 if [ "$claude_identity" = "$codex_identity" ]; then pass "Claude/Codex package identity一致"; else fail "Claude/Codex package identity一致"; fi
-expect "package version 9.4.3" jq -e '.version=="9.4.3"' "$CODEX"
+expect "package version 10.0.0" jq -e '.version=="10.0.0"' "$CODEX"
 expect "harness marketplace / contractVersion" jq -e '.metadata.harness.marketplace=="write-doc" and .metadata.harness.contractVersion==2 and (.metadata.harness|has("installationSurface")|not) and (.metadata.harness|has("entryRoot")|not) and (.metadata.harness|has("internalPlugins")|not)' "$CODEX"
 expect "implements は write-doc/write-doc v2 の1件" jq -e '.metadata.harness.implements==[{"id":"write-doc/write-doc","version":2,"kind":"playbook","playbook":"write-doc","types":.metadata.harness.implements[0].types}]' "$CODEX"
 expect "公開入口はskills/write-docの1つでplaybooksにも載る" jq -e '.skills==["./skills/write-doc"] and .metadata.harness.playbooks=={"write-doc":"./skills/write-doc"}' "$CODEX"
 for market in .claude-plugin/marketplace.json .agents/plugins/marketplace.json; do
-  if jq -e '.name=="write-doc" and (.plugins|length)==1 and .plugins[0].name=="write-doc" and .plugins[0].version=="9.4.3"
+  if jq -e '.name=="write-doc" and (.plugins|length)==1 and .plugins[0].name=="write-doc" and .plugins[0].version=="10.0.0"
             and ((.plugins[0].source=="./plugins/write-doc") or (.plugins[0].source=={"source":"local","path":"./plugins/write-doc"}))' "$ROOT/$market" >/dev/null; then
     pass "$market identityとsource"
   else
