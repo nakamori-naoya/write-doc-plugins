@@ -11,7 +11,7 @@
 
 ### 借りている本を確かめる
 
-`loans`から、その利用者の`user_number`で、`status`が`lent`か`overdue`の行を選ぶ。返却済みの`returned`の行はここで外れる。並べるのは`due_on`の昇順で、同じ返却期限なら借りた時点の早い順にする。借りた時点は`loans`に無いので、`loan_base_events`の`event_type`が`lent`の行を`loan_id`で結び付け、その`occurred_at`を使う。返すのは、資料番号、返却期限、延滞かどうか（`status`）である。`loans`の一行が貸出として読めない値を持つときは、その一行を除いて残りを返す。`loans`そのものを読めないときは、何も返さず、確かめられなかったと返す。
+`loans`から、その利用者の`user_number`で、`status`が`lent`か`overdue`の行を選ぶ。返却済みの`returned`の行はここで外れる。並べるのは`due_on`の昇順で、同じ返却期限なら借りた時点の早い順にする。借りた時点は`loans`に無いので、`loan_base_events`の`event_type`が`lent`の行を`loan_id`で結び付け、その`occurred_at`を使う。返すのは、資料番号、返却期限、延滞かどうか（`status`）である。
 
 ### 延滞にする貸出を探す
 
