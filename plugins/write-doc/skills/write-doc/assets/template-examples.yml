@@ -24,6 +24,9 @@ pairs:
   agent-session-digest:
     template: assets/templates/agent-session-digest.md
     example: assets/examples/agent-session-digest.example.md
+  problem-hypothesis:
+    template: assets/templates/problem-hypothesis.md
+    example: assets/examples/problem-hypothesis.example.md
   north-star:
     template: assets/templates/north-star.md
     example: assets/examples/north-star.example.md
