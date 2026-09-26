@@ -10,7 +10,7 @@
       "source": "./plugins/write-doc",
       "description": "素材からMarkdown資料を直接執筆して保存する",
       "category": "Productivity",
-      "version": "13.0.0"
+      "version": "13.1.0"
     }
   ]
 }
