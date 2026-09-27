@@ -14,10 +14,10 @@
 
 ```typescript
 ▼［ロジック変更なし］公開する関数名・引数・戻り型を維持したため、呼び出し元は変えなくてよい
-export async function createTentativeHold(input: HoldInput, repository: Repository) {
+export async function createTentativeHold(request: HoldRequest, repository: Repository) {
   try {
-    ▼［新規］旧実装の return repository.createTentativeHold(input); を置き換えた。await を足して非同期の失敗を catch へ渡す
-    return await repository.createTentativeHold(input);
+    ▼［新規］旧実装の return repository.createTentativeHold(request); を置き換えた。await を足して非同期の失敗を catch へ渡す
+    return await repository.createTentativeHold(request);
   } catch (error) {
     ▼［新規］対象の制約違反だけを競合結果へ変え、それ以外は従来どおり呼び出し元へ返す
     if (error instanceof ExclusionViolation && error.constraint === "room_booking_claims_room_time_excl") return slotUnavailable();
