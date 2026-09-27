@@ -1,52 +1,25 @@
-# RoomFlow
+# READMEの見本（抜粋）
 
-RoomFlowは、貸会議室を顧客へ時間単位で販売するサンプルサービスである。空き利用枠の検索、仮押さえ予約、確定予約、取消、順番待ちを提供する。このREADMEでは起動と空き確認までを案内し、予約作成の手順は[90分の利用枠を予約する](how-to.example.md)へ委ねる。
+この見本は、READMEで判断が分かれやすい箇所だけを抜き出したものである。題材の値や言い回しは写さず、どこで何を判断したかを見る。節の構成はテンプレートが持つ。
 
-## インストール
+## 冒頭で、何であり、どこまで案内するかを言い切る
 
-対応環境はmacOSまたはLinux、Docker 26以降、空いているTCP 8080番ポートである。認証を使うAPIを試す場合は、ローカル開発用tokenを`ROOMFLOW_ACCESS_TOKEN`へ設定する。
+READMEは入口なので、何のサービスかと、このREADMEが案内する範囲を冒頭で言い切り、範囲の外は手順書へ委ねた。範囲が狭い道具なら、委ね先を書かずに使い方まで書き切ってよい。
 
-1. `git clone <RoomFlowのリポジトリURL>`を実行する。
-2. `cd roomflow`を実行する。
-3. `docker compose up -d`を実行する。
-4. `docker compose ps`を実行し、`api`と`db`が`running`になっていることを確かめる。
+> RoomFlowは、貸会議室を顧客へ時間単位で販売するサンプルサービスである。このREADMEでは起動と空き確認までを案内し、予約作成の手順は手順書へ委ねる。
 
-## 使い方（最小の例）
+## 最小の例は、成功が見て分かる一つにする
+
+最小の例は、認証が要らず一回で結果が分かる操作を一つだけ選び、成功したときに返るものを書いた。
 
 ```bash
 curl 'http://localhost:8080/v1/rooms/M-301/availability?from=2026-09-18T10:00:00%2B09:00&to=2026-09-18T11:30:00%2B09:00'
 ```
 
-HTTP 200と`{"available":true}`が返れば利用できる。仮押さえ予約の作成は[90分の利用枠を予約する](how-to.example.md)で確認する。
+> HTTP 200と`{"available":true}`が返れば利用できる。
 
-## トラブルシューティング
+## よく当たる失敗は、症状と原因を一文で書く
 
-8080番ポートを使えない場合は、[トラブルシューティング](troubleshooting.example.md)を確認する。
+最初に当たりやすい失敗だけを、症状と原因の組で書いた。詳しい切り分けが要るものはトラブルシューティングへ送る。
 
-`ROOMFLOW_ACCESS_TOKEN`が未設定のまま予約作成APIを呼ぶとHTTP 401が返る。空き確認APIだけならtokenなしで試せる。
-
-## 開発で最初に見る場所
-
-| 知りたいこと | 入口 |
-|---|---|
-| 予約状態の意味 | [コンセプト](concept.example.md) |
-| 予約の手順 | [90分の利用枠を予約する](how-to.example.md) |
-| 予約が作れないとき | [トラブルシューティング](troubleshooting.example.md) |
-
-## 更新履歴
-
-利用者へ影響する変更は[期間ダイジェスト](period-digest.example.md)に記録する。
-
-## メンテナー
-
-RoomFlowチーム。連絡先は`#roomflow-dev`である。
-
-## ライセンス
-
-MIT License。原文はリポジトリの`LICENSE`に置く。
-
-## もっと詳しく
-
-- [90分の利用枠を予約する](how-to.example.md)
-- [コンセプト](concept.example.md)
-- [トラブルシューティング](troubleshooting.example.md)
+> `ROOMFLOW_ACCESS_TOKEN`が未設定のまま予約作成APIを呼ぶとHTTP 401が返る。空き確認APIだけならtokenなしで試せる。
