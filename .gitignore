@@ -8,6 +8,7 @@ __pycache__/
 !/.agents/
 !/.claude-plugin/
 !/plugins/
+!/evals/
 !/scripts/
 !/AGENTS.md
 !/CLAUDE.md
@@ -16,3 +17,6 @@ __pycache__/
 !/SECURITY.md
 !/.gitignore
 !/tests/
+
+# claude plugin eval の実行結果
+/evals/results/

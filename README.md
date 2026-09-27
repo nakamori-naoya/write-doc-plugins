@@ -35,3 +35,18 @@ bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/scripts/validate.
 ```
 
 保守の道具（構造の検査、回帰の検査、release）は、隣に checkout した `../harness-tools/` のものを使い、このリポジトリには写しを置かない。`scripts/validate.sh` は `../harness-tools/tools/` があるかを確かめてから呼び、無ければ止まる。CI の `validate.yml` も `harness-tools` を隣に checkout して、`harness-tools/ci/validate.sh` を動かす。
+
+## 出来の eval
+
+write-doc が素材に無い事実で埋めず、確かさを書き分け、見出しと文章で書けるかは、`evals/` の下のケースで確かめる。実行は `claude plugin eval` が受け持ち、資料の出来の採点は、書いたエージェントとは別の Claude（採点役）が、条件ごとに判定と根拠を書いて受け持つ。素材には、決まったこと、確認中のこと、測っていない見込み、打ち合わせの経緯を混ぜてあり、資料がそれを書き分けるかを見る。素材が主メッセージに足りないときに止まるかも、止まったときの報告だけで判定するケースで確かめる。
+
+`evals/criteria/` には採点役への指示 `brief.md` と共通の条件 `document.md` を、ケースの `grading/` には固有の条件と較正の資料（実際の成果と、既知の欠陥を埋めた写し、それぞれの期待する判定）を置く。条件の重みは、利用者の原則の芯を3、資料の骨組みを2、細部を1とし、85点以上を「実用に足る」、70点以上を「手直しで使える」とする。
+
+```bash
+claude plugin eval . --case delegation-record-adr --runs 1 --ablation none \
+  --keep-temp --scaffold --allow-tools Write Edit Bash --max-cost-usd 5 --no-publish
+bash /Users/naoya-nakamoriq/Documents/Github/harness-pluginsv2/harness-tools/tools/grade-eval.sh \
+  "$(pwd)/evals/delegation-record/delegation-record-adr" /private/tmp/e-XXXXXX
+```
+
+条件や採点役への指示を変えたら、先に較正の資料へ採点役をかけ、期待する判定を再現できるかを確かめる。結果は `evals/results/` に書かれ、git の管理から外してある。
