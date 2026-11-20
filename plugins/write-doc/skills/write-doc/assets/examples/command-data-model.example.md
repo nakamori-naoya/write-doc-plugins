@@ -23,23 +23,34 @@
 
 借りている冊数、いまの状態、最後の版は出来事から導けるため、論理テーブルの列にしない。返した出来事に種類固有の事実が無ければ、基底イベントの種類だけで表せるので、識別子だけの返却詳細表も置かない。制約や読み取りのために導出値を保存するかと、その整合の保ち方は物理設計が決める。
 
-```mermaid
-erDiagram
-    loans {
-        id loan_id PK "貸出"
-        text user_number "借りた利用者"
-        text book_number "借りた本"
-        date due_on "業務が与えた値。借りたときに決まる返却期限"
-    }
-    loan_base_events {
-        id event_id PK "イベント"
-        id loan_id FK "貸出"
-        text event_type "lent / returned / marked_overdue"
-        integer version "貸出の中の順序"
-        timestamp occurred_at "起きた時点"
-    }
-    loans ||--|{ loan_base_events : "起きたこと"
-```
+![貸出に、起きた出来事の基底イベントが版の順に続く](command-data-model.example.assets/loans.drawio.svg)
+
+| 関係元 | 関係先 | 多重度 | 意味 |
+|---|---|---|---|
+| `loans` | `loan_base_events` | 1対1以上 | 起きたこと |
+
+### `loans`（貸出）
+
+一回の貸出。借りたときに決まる返却期限を持ち、状態や冊数は持たない。
+
+| 列 | 型 | キー | 意味 |
+|---|---|---|---|
+| `loan_id` | id | PK | 貸出 |
+| `user_number` | text | | 借りた利用者 |
+| `book_number` | text | | 借りた本 |
+| `due_on` | date | | 業務が与えた値。借りたときに決まる返却期限 |
+
+### `loan_base_events`（貸出に起きたこと）
+
+貸出に起きた出来事に共通する事実。
+
+| 列 | 型 | キー | 意味 |
+|---|---|---|---|
+| `event_id` | id | PK | イベント |
+| `loan_id` | id | FK | 貸出 |
+| `event_type` | text | | lent / returned / marked_overdue |
+| `version` | integer | | 貸出の中の順序 |
+| `occurred_at` | timestamp | | 起きた時点 |
 
 ## BDD の Before と After は、変わる事実を具体の値で見せた
 

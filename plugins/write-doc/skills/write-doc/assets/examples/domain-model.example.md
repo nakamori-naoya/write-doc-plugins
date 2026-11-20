@@ -4,21 +4,22 @@
 
 ## 判断の関係
 
-```mermaid
-classDiagram
-    class Loan["貸出"] {
-        <<集約ルート>>
-        +本を借りる(貸出状況)
-    }
-    class BorrowerStanding["貸出状況"] {
-        <<値オブジェクト>>
-    }
-    class UserNumber["利用者番号"] {
-        <<値オブジェクト・文脈共有>>
-    }
-    Loan ..> BorrowerStanding : 借りるときに使う
-    Loan --> UserNumber : 誰の貸出か
-```
+![判断の持ち主と値の関係](.assets/domain-model-relations.drawio.svg)
+
+<!-- domain-model:elements -->
+
+| 識別子 | 名前 | 種別 |
+| --- | --- | --- |
+| Loan | 貸出 | 集約ルート |
+| BorrowerStanding | 貸出状況 | 値オブジェクト |
+| UserNumber | 利用者番号 | 値オブジェクト・文脈共有 |
+
+<!-- domain-model:relations -->
+
+| 関係元 | 関係先 | 種類 | 関係 |
+| --- | --- | --- | --- |
+| Loan | BorrowerStanding | 依存 | 借りるときに使う |
+| Loan | UserNumber | 参照 | 誰の貸出か |
 
 ## 一冊の貸出を境界にする案
 
