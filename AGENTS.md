@@ -8,5 +8,6 @@
 - `write-doc`は自身の`SKILL.md`、`references/`、`assets/`だけで資料を直接執筆して保存する。
 - BDD、対話、収集、PR、product、agent作業方針をこのrepositoryへ同梱しない。
 - 資料の形は各型のtemplateが持ち、検査が読む目印もそのtemplateの冒頭に置く。文書型は `assets/templates/<型>.md` と `assets/examples/<型>.example.md` の組で置く。
+- 業務の種類によって判断の見え方が違う型は、組の見本に加えて `assets/examples/<型>.examples/` に種類ごとの見本を置く。
 - templateの冒頭は本文段落で始め、メタ情報の一覧・引用block・型の解説を置かない。作業記録の欄を成果物のtemplateへ足さない。
 - Markdownを直接執筆し、明示されていない保存先を補わない。

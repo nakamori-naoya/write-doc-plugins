@@ -4,6 +4,7 @@
      読み手は、業務を知る人と作り手である。どちらも本文で決まりを読み、最後の BDD で具体の場面を確かめる。
      一つの事実は一つの節にだけ書く。どの節に書くかは、write-business-knowledge の判断軸が決める。ほかの節の内容が要るときは、その項目の名前で指し、書き直さない。
      BDD は具体例であり、本文と同じ判断を例で示してよい。
+     見本は、対象の業務の型に合うものを読む。状態が一生を持つ業務は `assets/examples/business-knowledge.example.md`、計算が中心、期限つきの義務が続く、読み取りが中心、定義や設定の業務は `assets/examples/business-knowledge.examples/` の `calculation.md`、`deadline-obligation.md`、`read-centered.md`、`definition.md` である。
      冒頭は段落で始め、この業務がどの事実から何を正しい結果とするかを一文で言い切る。 -->
 
 <!-- 検査が読む目印: 見出しは `#` を表題の一つ、`##` を下の八つにし、名前と順を変えない。中身が無い節も消さず、無いことを一文で書く。
